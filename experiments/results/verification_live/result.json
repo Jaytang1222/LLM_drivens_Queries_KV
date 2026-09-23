@@ -1,0 +1,183 @@
+{
+  "trajectoryIds" : [ "A", "B" ],
+  "topK" : [ {
+    "tid" : 1,
+    "trajectoryId" : "A",
+    "distance" : 12.727922061357855
+  }, {
+    "tid" : 2,
+    "trajectoryId" : "B",
+    "distance" : 56.568542494923804
+  } ],
+  "trace" : {
+    "run_id" : "q_fixture_001",
+    "queryId" : "q_fixture_001",
+    "plan_id" : "P_T",
+    "planId" : "P_T",
+    "manifest_id" : "fixture_v1_ready",
+    "nodes" : {
+      "n01" : {
+        "rows" : 4,
+        "bytes" : 128,
+        "elapsedMs" : 4,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n02" : {
+        "rows" : 4,
+        "bytes" : 128,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n03" : {
+        "rows" : 4,
+        "bytes" : 128,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n04" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 1,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n05" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n06" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n07" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n08" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 1,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      },
+      "n09" : {
+        "rows" : 2,
+        "bytes" : 64,
+        "elapsedMs" : 0,
+        "estimated_rows" : null,
+        "estimated_bytes" : null,
+        "rpc_count" : null
+      }
+    },
+    "operator_metrics" : [ {
+      "node_id" : "n01",
+      "actual_rows" : 4,
+      "actual_bytes" : 128,
+      "elapsed_ms" : 4,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n02",
+      "actual_rows" : 4,
+      "actual_bytes" : 128,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n03",
+      "actual_rows" : 4,
+      "actual_bytes" : 128,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n04",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 1,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n05",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n06",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n07",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n08",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 1,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    }, {
+      "node_id" : "n09",
+      "actual_rows" : 2,
+      "actual_bytes" : 64,
+      "elapsed_ms" : 0,
+      "estimated_rows" : null,
+      "estimated_bytes" : null,
+      "rpc_count" : null
+    } ],
+    "totalRows" : 24,
+    "totalBytes" : 768,
+    "elapsedMs" : 7,
+    "candidate_chunks" : 4,
+    "matched_chunks" : 2,
+    "matched_trajectories" : 2,
+    "deduplicated_chunks" : 0,
+    "fetched_chunks" : 4,
+    "filter_passed" : 2,
+    "dtw_cells" : 18,
+    "llm_calls" : null,
+    "llm_tokens" : null,
+    "rpc_count" : null,
+    "dtwCells" : 18,
+    "candidateChunks" : 4,
+    "status" : "OK"
+  },
+  "status" : "OK"
+}

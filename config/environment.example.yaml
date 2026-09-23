@@ -1,0 +1,9 @@
+# Example environment config. Copy to environment.yaml and adjust.
+hbase:
+  site_xml: config/hbase/hbase-site.xml
+catalog:
+  # MVP: file-backed catalog under this directory
+  dir: catalog
+layout_file: config/layout.yaml
+planner_file: config/planner.yaml
+regions_file: config/regions.yaml

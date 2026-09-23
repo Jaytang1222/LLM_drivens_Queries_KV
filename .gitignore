@@ -1,0 +1,34 @@
+# Build
+target/
+*.class
+*.jar
+!**/src/**/*.jar
+
+# IDE / OS
+*.iml
+.idea/
+.classpath
+.project
+.settings/
+.DS_Store
+*.swp
+*~
+
+# Local / runtime (regenerable or machine-specific)
+catalog/
+runs/
+*.log
+*.out
+zookeeper.out
+
+# Accidental Windows path folders (e.g. F:\maven-repository as dir name)
+F*maven-repository/
+
+# Secrets / local env override
+config/environment.yaml
+.env
+.env.*
+
+# Python / editor junk
+__pycache__/
+*.pyc

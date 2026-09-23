@@ -1,0 +1,17 @@
+{
+  "utterance": "Find trajectories similar to R near fixture_box but I do not know the date yet",
+  "dataset_id": "fixture_v1",
+  "response": {
+    "ir_version": "1.0",
+    "source": {"dataset_id": "fixture_v1", "entity": "trajectory"},
+    "spatial": {"region_name": "fixture_box"},
+    "semantics": {"mode": "OBSERVED_POINT", "coupling": "SAME_POINT"},
+    "similarity": {
+      "metric": "DTW",
+      "reference_trajectory_id": "R",
+      "exclude_reference": true
+    },
+    "result": {"mode": "TOP_K", "k": 2},
+    "missing": ["temporal"]
+  }
+}

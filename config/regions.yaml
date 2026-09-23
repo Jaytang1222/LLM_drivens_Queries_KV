@@ -1,0 +1,75 @@
+# Pre-registered region names → WGS84 lon/lat rectangles (OI-10).
+#
+# MVP does NOT call geocoding APIs. Names below are approximate axis-aligned
+# envelopes derived from publicly listed WGS84 centers (± a few km), for NL demos
+# on T-Drive (Beijing 2008). They are NOT cadastral / 行政区划 official boundaries.
+#
+# Sources (centers / notes, 2026-09):
+# - Zhongguancun: latlong.net ≈ (39.983246, 116.315506); Baidu Baike subdistrict description
+# - Wangjing: geocountries / gps-latitude-longitude ≈ (39.993, 116.47)
+# - Guomao / CBD: Wikipedia / Wikidata ≈ (39.909819, 116.455572)
+# - Tiananmen area: commonly cited ≈ (39.9044, 116.3914)
+# - Capital Airport (PEK): Wikipedia / latlong.net ≈ (40.07250, 116.59750)
+# - beijing_core: existing MVP envelope (inner-city demo box)
+#
+# fixture_box: meter coordinates for fixture_v1 only (IrBinder bypasses UTM). Do not use on T-Drive.
+regions:
+  - name: beijing_core
+    min_lon: 116.28
+    min_lat: 39.82
+    max_lon: 116.48
+    max_lat: 39.98
+
+  - name: zhongguancun
+    min_lon: 116.28
+    min_lat: 39.95
+    max_lon: 116.35
+    max_lat: 40.01
+
+  - name: wangjing
+    min_lon: 116.44
+    min_lat: 39.97
+    max_lon: 116.51
+    max_lat: 40.03
+
+  - name: guomao
+    min_lon: 116.43
+    min_lat: 39.89
+    max_lon: 116.48
+    max_lat: 39.93
+
+  - name: beijing_cbd
+    min_lon: 116.43
+    min_lat: 39.89
+    max_lon: 116.48
+    max_lat: 39.93
+
+  - name: tiananmen
+    min_lon: 116.37
+    min_lat: 39.89
+    max_lon: 116.41
+    max_lat: 39.92
+
+  - name: capital_airport
+    min_lon: 116.55
+    min_lat: 40.04
+    max_lon: 116.65
+    max_lat: 40.10
+
+  - name: haidian_central
+    min_lon: 116.25
+    min_lat: 39.95
+    max_lon: 116.36
+    max_lat: 40.05
+
+  - name: chaoyang_central
+    min_lon: 116.42
+    min_lat: 39.90
+    max_lon: 116.55
+    max_lat: 40.02
+
+  - name: fixture_box
+    min_lon: 4
+    min_lat: 4
+    max_lon: 8
+    max_lat: 8

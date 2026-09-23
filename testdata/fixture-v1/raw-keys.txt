@@ -1,0 +1,4 @@
+raw shard=0 tid=4 chunk=0
+raw shard=1 tid=1 chunk=0
+raw shard=2 tid=2 chunk=0
+raw shard=3 tid=3 chunk=0

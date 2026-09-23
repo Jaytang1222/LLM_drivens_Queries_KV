@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kart.local/schemas/draft-ir.schema.json",
+  "title": "DraftIR",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ir_version", "source", "semantics", "result"],
+  "properties": {
+    "ir_version": { "type": "string", "enum": ["1.0"] },
+    "query_id": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "entity"],
+      "properties": {
+        "dataset_id": { "type": "string" },
+        "entity": { "type": "string", "enum": ["trajectory"] }
+      }
+    },
+    "temporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string" },
+        "end": { "type": "string" },
+        "boundary": { "type": "string", "enum": ["[start,end)"] }
+      }
+    },
+    "spatial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "min_lon", "min_lat", "max_lon", "max_lat"],
+          "properties": {
+            "type": { "type": "string", "enum": ["RECTANGLE"] },
+            "min_lon": { "type": "number" },
+            "min_lat": { "type": "number" },
+            "max_lon": { "type": "number" },
+            "max_lat": { "type": "number" }
+          }
+        },
+        "region_name": { "type": "string" },
+        "relation": { "type": "string", "enum": ["INTERSECTS"] },
+        "boundary": { "type": "string", "enum": ["INCLUDED"] }
+      }
+    },
+    "predicates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "op", "value"],
+        "properties": {
+          "field": { "type": "string", "enum": ["vehicle_id"] },
+          "op": { "type": "string", "enum": ["EQ"] },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "coupling"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["OBSERVED_POINT"] },
+        "coupling": { "type": "string", "enum": ["SAME_POINT"] }
+      }
+    },
+    "similarity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "reference_trajectory_id"],
+      "properties": {
+        "metric": { "type": "string", "enum": ["DTW"] },
+        "reference_trajectory_id": { "type": "string" },
+        "exclude_reference": { "type": "boolean" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["TRAJECTORY_IDS", "TOP_K"] },
+        "k": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "sources": { "type": "object" },
+    "missing": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

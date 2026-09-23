@@ -1,0 +1,48 @@
+{
+  "queryHash" : "1c262fa162d2b947fc95c619c793e4e0b9ff5f856896bba918ba10b8389f5eec",
+  "manifestId" : "fixture_v1_ready",
+  "layoutHash" : "589d0440ee5e964044924188ba2ada0016dbcb033edb7b8c06c10889e8c658c6",
+  "compilerVersion" : "kart-compiler-1.0",
+  "scanTasks" : [ {
+    "table" : "idx_time_v1",
+    "startHex" : "000000000000000000000000000000000000000000",
+    "stopHex" : "000000000000000001000000000000000000000000",
+    "columns" : [ ],
+    "caching" : 1000,
+    "sourceNodeId" : "n01",
+    "shard" : 0,
+    "coverageRef" : "bucket:0"
+  }, {
+    "table" : "idx_time_v1",
+    "startHex" : "010000000000000000000000000000000000000000",
+    "stopHex" : "010000000000000001000000000000000000000000",
+    "columns" : [ ],
+    "caching" : 1000,
+    "sourceNodeId" : "n01",
+    "shard" : 1,
+    "coverageRef" : "bucket:0"
+  }, {
+    "table" : "idx_time_v1",
+    "startHex" : "020000000000000000000000000000000000000000",
+    "stopHex" : "020000000000000001000000000000000000000000",
+    "columns" : [ ],
+    "caching" : 1000,
+    "sourceNodeId" : "n01",
+    "shard" : 2,
+    "coverageRef" : "bucket:0"
+  }, {
+    "table" : "idx_time_v1",
+    "startHex" : "030000000000000000000000000000000000000000",
+    "stopHex" : "030000000000000001000000000000000000000000",
+    "columns" : [ ],
+    "caching" : 1000,
+    "sourceNodeId" : "n01",
+    "shard" : 3,
+    "coverageRef" : "bucket:0"
+  } ],
+  "fetchSpec" : {
+    "meta_table" : "traj_meta_v1",
+    "raw_table" : "traj_raw_v1"
+  },
+  "localDag" : "P_T"
+}

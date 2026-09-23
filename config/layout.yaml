@@ -1,0 +1,13 @@
+shard_count: 4
+chunk_max_points: 256
+bucket_ms: 600000
+zorder_level: 8
+hash_version: murmur3_x64_128
+crs: EPSG:32650
+# domain filled by profile-data / fixture (meters in UTM 50N)
+domain:
+  xmin: 0.0
+  xmax: 100.0
+  ymin: 0.0
+  ymax: 100.0
+table_suffix: _v1

@@ -1,0 +1,42 @@
+{
+  "ir_version" : "1.0",
+  "query_id" : "q_fixture_001",
+  "source" : {
+    "dataset_id" : "fixture_v1",
+    "entity" : "trajectory"
+  },
+  "temporal" : {
+    "start_ms" : 1201910400000,
+    "end_ms" : 1201911000000
+  },
+  "spatial" : {
+    "min_x" : 4.0,
+    "min_y" : 4.0,
+    "max_x" : 8.0,
+    "max_y" : 8.0,
+    "relation" : "INTERSECTS",
+    "boundary" : "INCLUDED"
+  },
+  "predicates" : [ ],
+  "semantics" : {
+    "mode" : "OBSERVED_POINT",
+    "coupling" : "SAME_POINT"
+  },
+  "similarity" : {
+    "metric" : "DTW",
+    "reference_tid" : 4,
+    "scope" : "FULL_TRAJECTORY",
+    "exclude_reference" : true,
+    "local_distance" : "EUCLIDEAN",
+    "normalization" : "NONE"
+  },
+  "result" : {
+    "mode" : "TOP_K",
+    "k" : 2,
+    "tie_breaker" : "TID_ASC"
+  },
+  "snapshot" : {
+    "manifest_id" : "fixture_v1_ready",
+    "semantics_version" : "point_dtw_v1"
+  }
+}

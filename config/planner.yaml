@@ -1,0 +1,18 @@
+max_llm_calls: 6
+max_candidates: 8
+max_plan_ms: 5000
+beam_width: 3
+stagnation_steps: 2
+max_candidate_chunks: 200000
+max_dtw_cells: 500000000
+max_zorder_ranges: 64
+fetch_batch_size: 500
+# cost coefficients (uncalibrated)
+cost:
+  calibrated: false
+  c_scan: 1.0
+  c_row: 0.01
+  c_get: 0.05
+  c_byte: 0.000001
+  c_point: 0.0001
+  c_dtw: 0.00001

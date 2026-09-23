@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kart.local/schemas/bound-ir.schema.json",
+  "title": "BoundIR",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ir_version", "source", "semantics", "result", "snapshot"],
+  "properties": {
+    "ir_version": { "type": "string", "enum": ["1.0"] },
+    "query_id": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "entity"],
+      "properties": {
+        "dataset_id": { "type": "string" },
+        "entity": { "type": "string", "enum": ["trajectory"] }
+      }
+    },
+    "temporal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms"],
+      "properties": {
+        "start_ms": { "type": "integer" },
+        "end_ms": { "type": "integer" }
+      }
+    },
+    "spatial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min_x", "min_y", "max_x", "max_y", "relation", "boundary"],
+      "properties": {
+        "min_x": { "type": "number" },
+        "min_y": { "type": "number" },
+        "max_x": { "type": "number" },
+        "max_y": { "type": "number" },
+        "relation": { "type": "string", "enum": ["INTERSECTS"] },
+        "boundary": { "type": "string", "enum": ["INCLUDED"] }
+      }
+    },
+    "predicates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["field", "op", "value"],
+        "properties": {
+          "field": { "type": "string", "enum": ["vehicle_id"] },
+          "op": { "type": "string", "enum": ["EQ"] },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "coupling"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["OBSERVED_POINT"] },
+        "coupling": { "type": "string", "enum": ["SAME_POINT"] }
+      }
+    },
+    "similarity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric", "reference_tid", "scope", "exclude_reference", "local_distance", "normalization"],
+      "properties": {
+        "metric": { "type": "string", "enum": ["DTW"] },
+        "reference_tid": { "type": "integer" },
+        "scope": { "type": "string", "enum": ["FULL_TRAJECTORY"] },
+        "exclude_reference": { "type": "boolean" },
+        "local_distance": { "type": "string", "enum": ["EUCLIDEAN"] },
+        "normalization": { "type": "string", "enum": ["NONE"] }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["TRAJECTORY_IDS", "TOP_K"] },
+        "k": { "type": "integer", "minimum": 1 },
+        "tie_breaker": { "type": "string", "enum": ["TID_ASC"] }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest_id", "semantics_version"],
+      "properties": {
+        "manifest_id": { "type": "string" },
+        "semantics_version": { "type": "string" }
+      }
+    }
+  }
+}
