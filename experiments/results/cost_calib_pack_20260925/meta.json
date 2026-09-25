@@ -31,5 +31,8 @@
     "eta_cell_dtw": 0.0
   },
   "authority": "kart.cli.FitCostCmd / FeedbackCalibrator (CostModel+ScheduleEstimate MAE)",
-  "note": "Freeze planner.yaml during experiment window; do not hot-reload mid-query."
+  "note": "Freeze planner.yaml during experiment window; do not hot-reload mid-query.",
+  "freeze_git_commit": "3118f1434c9c5fa9836b2c1f48f3008956180617",
+  "freeze_git_commit_short": "3118f14",
+  "freeze_tag": "experiment-prep-2026-09-25"
 }
