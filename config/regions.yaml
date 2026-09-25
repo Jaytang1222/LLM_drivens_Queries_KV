@@ -13,6 +13,9 @@
 # - beijing_core: existing MVP envelope (inner-city demo box)
 # - tdrive_smoke_anchor: WGS84 envelope of smoke h_st_1 UTM box (chat-verifiable vs oracle)
 # - tdrive_topk_box: WGS84 envelope of smoke topk_st_1 / h_s_small UTM box
+# - tdrive_topk_wide: WGS84 envelope of smoke topk_st_2 UTM box
+# - tdrive_topk_s1: WGS84 envelope of smoke topk_s_1 UTM box
+# - tdrive_topk_mid: WGS84 envelope of smoke topk_st_3 UTM box
 #
 regions:
   - name: beijing_core
@@ -46,6 +49,13 @@ regions:
     min_lat: 40.127758
     max_lon: 116.660558
     max_lat: 40.140421
+
+  # WGS84 envelope of smoke topk_st_3 UTM box (manual verify Mid Top-K)
+  - name: tdrive_topk_mid
+    min_lon: 116.609394
+    min_lat: 40.094615
+    max_lon: 116.695275
+    max_lat: 40.173549
 
   - name: zhongguancun
     min_lon: 116.28
