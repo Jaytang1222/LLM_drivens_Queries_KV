@@ -10,7 +10,6 @@ import kart.ir.DraftIrParser;
 import kart.ir.IrBinder;
 import kart.ir.IrSchemaValidator;
 import kart.llm.LlmMessage;
-import kart.llm.MockLlmClient;
 import kart.llm.PromptBuilder;
 import kart.llm.ScriptedLlmClient;
 import kart.query.QueryEngine;
@@ -171,24 +170,6 @@ class QueryNlAcceptanceTest {
         Arrays.asList(LlmMessage.user("x")));
     assertEquals(DraftIrParser.STATUS_INVALID_IR, pr.status);
     assertEquals(3, pr.attempts);
-  }
-
-  @Test
-  void mockLlmClientLoadsFixtureExamples() throws Exception {
-    Path mockDir = root.resolve("testdata/llm-mock");
-    if (!Files.isDirectory(mockDir)) {
-      mockDir = root.resolve("../testdata/llm-mock");
-    }
-    assertTrue(Files.isDirectory(mockDir), "testdata/llm-mock required");
-    MockLlmClient mock = new MockLlmClient(mockDir);
-    PromptBuilder pb = new PromptBuilder(regions, "fixture_v1");
-    mock.bindUtterances(pb);
-
-    String completeUtt = "Find the 2 trajectories most similar to R inside fixture_box between "
-        + "2008-02-02T08:00:00+08:00 and 2008-02-02T08:10:00+08:00";
-    String missingUtt = "Find trajectories similar to R near fixture_box but I do not know the date yet";
-    assertNotNull(mock.chat(pb.buildMessages(completeUtt, ""), null, null).content);
-    assertNotNull(mock.chat(pb.buildMessages(missingUtt, ""), null, null).content);
   }
 
   private Dialog.Outcome runDialog(String utterance, ScriptedLlmClient llm, MemoryBackend kv,

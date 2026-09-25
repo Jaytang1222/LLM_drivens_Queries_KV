@@ -247,7 +247,7 @@ interface LlmClient {
     LlmResponse chat(List<Message> messages, JsonNode responseSchemaHint, LlmOptions opts);
 }
 class OpenAiCompatibleClient implements LlmClient  // POST {LLM_BASE_URL}/chat/completions
-class MockLlmClient implements LlmClient           // 从 testdata/llm-mock/*.json 按输入 hash 取固定回复
+// ScriptedLlmClient：src/test only，有序固定回复；实验路径禁止用 mock
 ```
 
 - 请求体：`model`、`messages`、`temperature=0`、可选 `response_format={"type":"json_object"}`（OI-1：是否支持在首次接入时探测，不支持则退化为提示词约束 + 抽取首个 JSON 块）。
@@ -451,7 +451,8 @@ src/main/java/kart/
   config/       AppConfig, LayoutConfig, PlannerConfig（YAML 绑定）
   catalog/      Manifest, IndexDescriptor, StatsSnapshot, CatalogStore
   ir/           DraftIr, BoundIr, IrSchemaValidator, IrBinder, ClarificationDetector
-  llm/          LlmClient, OpenAiCompatibleClient, MockLlmClient, PromptBuilder
+  llm/          LlmClient, OpenAiCompatibleClient, PromptBuilder
+                (+ test-only ScriptedLlmClient under src/test)
   codec/        Bytes(U8/U32/U64), RowKeyCodec, PrefixSuccessor, ZOrder, TimeBucket, VehicleHash
   geo/          Projection(Proj4J 封装), Rect, PointInRect
   data/         TDriveParser, CanonicalPoint, Trajectory, Chunk, Chunker, Cleaner
@@ -469,8 +470,7 @@ src/main/java/kart/
 src/test/java/kart/...        单元、性质、差分测试
 schemas/                      draft-ir / bound-ir / plan / action-selection .schema.json
 config/                       environment.example.yaml, layout.yaml, planner.yaml, regions.yaml, hbase/hbase-site.xml
-testdata/fixture-v1/          第 18 节合成数据
-testdata/llm-mock/            Mock 回复
+testdata/fixture-v1/          第 18 节合成数据（MemoryBackend / build-fixture）
 scripts/                      run.sh, build.sh (WSL)
 ```
 
@@ -485,7 +485,7 @@ scripts/                      run.sh, build.sh (WSL)
 | 性质（jqwik） | 随机轨迹 + 随机矩形/时间：`Oracle(q) == ExactFilter(Candidates(P,q))` 对全部候选计划族成立；边界点、跨桶、跨单元、多 shard、空结果、k>候选 | MemoryBackend |
 | 错误注入 | 故意漏写一个 posting → `verify-snapshot` 必须检出；RowKey 字段顺序错 → CoverageCheck 必须拒绝 | MemoryBackend |
 | 集成 | fixture 写入真实 HBase → `query-ir` 与 Oracle 一致；`verify-snapshot` 通过 | WSL + HBase 2.2.3 |
-| 端到端 | MockLlmClient 驱动 `query-nl`（含一次澄清）| MemoryBackend / HBase |
+| 端到端 | Live LLM 驱动 `query-nl`/`chat`（含澄清）；单元用 ScriptedLlmClient | HBase 实验 / MemoryBackend 单元 |
 
 ---
 

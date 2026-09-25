@@ -93,16 +93,16 @@
 
 ## P3 自然语言到 IR 与多轮澄清
 
-目标：`query-nl` 在 Mock 与真实 API 下均可完成端到端。
+目标：`query-nl`/`chat` 实验路径用真实 API 完成端到端；单元回归用 test-only `ScriptedLlmClient`。
 
 - [x] **T3.1 LlmClient 接口 + OpenAiCompatibleClient** (2026-09-23)：`HttpURLConnection` 实现 chat/completions；temperature=0；超时；调用记录（tokens、延迟、原始输出）；密钥只从环境读。
   验收：对任一 OpenAI 兼容端点发一条固定 prompt 返回 JSON（OI-1：在此探测 `response_format=json_object` 是否可用并记录）。证据：`OpenAiCompatibleClient`；真实端点探测需设 `LLM_*`（本机未强制）。
-- [x] **T3.2 MockLlmClient** (2026-09-23)：按 messages hash 从 `testdata/llm-mock/` 取固定回复；未命中抛错并打印 hash 便于补充。
-  验收：fixture 的两条示例句（完整 / 缺日期）有 Mock 回复。证据：`testdata/llm-mock/example-*.json` + `QueryNlAcceptanceTest.mockLlmClientLoadsFixtureExamples`。
+- [x] **T3.2 ScriptedLlmClient（test-only）** (2026-09-25)：有序固定回复，仅挂在 `src/test`；已移除生产 `MockLlmClient` / `testdata/llm-mock` / CLI `--mock`。
+  验收：Dialog 澄清、DraftIR 修复、LLM policy 接线等用例不依赖 Live API。证据：`src/test/java/kart/llm/ScriptedLlmClient.java` + `QueryNlAcceptanceTest` / `QueryEngineLlmPolicyTest`。
 - [x] **T3.3 PromptBuilder** (2026-09-23)：系统提示 = 逻辑目录（字段、四类查询、语义说明）、DraftIR Schema 摘要、2–3 个示例、"不知道就留空并写入 missing"规则、预注册区域名列表。
   验收：prompt 中不出现表名、RowKey、shard、bucket 等物理词。证据：`PromptBuilder` + acceptance 测试。
 - [x] **T3.4 DraftIR 解析与修复** (2026-09-23)：抽取 JSON → Schema 校验 → 失败附错误重试 ≤2 次 → 仍失败返回 INVALID_IR。
-  验收：Mock 返回一次坏 JSON 再返回好 JSON 的用例通过；三次坏 JSON 返回 INVALID_IR。证据：`DraftIrParser` + `QueryNlAcceptanceTest`。
+  验收：Scripted 返回一次坏 JSON 再返回好 JSON 的用例通过；三次坏 JSON 返回 INVALID_IR。证据：`DraftIrParser` + `QueryNlAcceptanceTest`。
 - [x] **T3.5 ClarificationDetector** (2026-09-23)：按 result mode 推导必填项；对 missing 生成问题列表；已在上下文中的信息不再问。
   验收：缺日期 → 只问日期；缺区域和 K → 一次问两项；用户已给日期 → 不重复。证据：`ClarificationDetector` + acceptance。
 - [x] **T3.6 IrBinder** (2026-09-23)：时区 Asia/Shanghai → epoch_ms；经纬度矩形 → UTM 矩形（四角投影取包围盒）；region_name → 矩形；trajectory_id → tid（查 traj_meta）；跨字段规则（design.md §5.3）；注入 snapshot。
@@ -154,7 +154,7 @@
 - [x] **T5.6 query-ir / query-nl 切换到 Selector** (2026-09-23)：替换 T2.7 的固定顺序。
   验收：T2.9 固定查询集重新跑仍全部与 Oracle 一致。证据：`QueryEngine` → `PlanSelector`；`scripts/run-tdrive-smoke.sh`。
 - [x] **T5.7 失败路径演示脚本** (2026-09-23；2026-09-24)：超预算、数据缺失、不支持查询、LLM/解析失败四类证据。
-  验收：状态码分别为 RESOURCE_EXHAUSTED / DATA_INTEGRITY_ERROR / UNSUPPORTED_QUERY / 解析失败，且无部分结果。证据：`scripts/demo-failures.sh`（`./scripts/kart.sh demo-failures`）+ `CoordinatorFailureTest` / NL acceptance。
+  验收：状态码分别为 RESOURCE_EXHAUSTED / DATA_INTEGRITY_ERROR / UNSUPPORTED_QUERY / 解析失败，且无部分结果。证据：`./scripts/kart.sh demo-failures` + `CoordinatorFailureTest` / NL acceptance。
 - [x] **T5.8 README 与环境锁定文档** (2026-09-23)：`README.md`（实际验证过的命令）、`docs/environment-lock.md`（版本、依赖冲突解决）、`docs/supported-semantics.md`。
   验收：按 README 在干净 WSL 会话中可复现 doctor → build-snapshot → query-nl。证据：上述文档 + `USER_ACTIONS.md`。
 

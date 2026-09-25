@@ -13,7 +13,6 @@ import kart.exec.MemoryBackend;
 import kart.ir.IrBinder;
 import kart.ir.IrSchemaValidator;
 import kart.llm.LlmClient;
-import kart.llm.MockLlmClient;
 import kart.llm.OpenAiCompatibleClient;
 import kart.llm.PromptBuilder;
 import kart.query.QueryEngine;
@@ -31,13 +30,11 @@ import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 /**
- * Interactive NL REPL. Experiment path defaults to HBase {@code fixture_v1_ready}.
+ * Interactive NL REPL. Experiment path: Live LLM → HBase {@code tdrive_v1_ready}.
+ * Dev-only: {@code --memory} uses in-process fixture (not for handbook/smoke authenticity).
  */
 @Command(name = "chat", description = "Interactive natural-language query shell (REPL)")
 public final class ChatCmd implements Callable<Integer> {
-
-  @Option(names = "--mock", description = "Start in Mock LLM mode")
-  private boolean mock;
 
   @Option(names = "--memory",
       description = "Dev-only: in-process MemoryBackend (skips HBase). Experiment path: omit this.")
@@ -46,8 +43,8 @@ public final class ChatCmd implements Callable<Integer> {
   @Option(names = "--catalog", defaultValue = "catalog", description = "Catalog directory")
   private Path catalogDir;
 
-  @Option(names = "--manifest", defaultValue = "fixture_v1_ready",
-      description = "Manifest id when using HBase")
+  @Option(names = "--manifest", defaultValue = "tdrive_v1_ready",
+      description = "Manifest id when using HBase (experiment default: tdrive_v1_ready)")
   private String manifestId;
 
   @Option(names = "--config-root", description = "Project root")
@@ -56,7 +53,7 @@ public final class ChatCmd implements Callable<Integer> {
   @Option(names = "--runs", defaultValue = "runs", description = "Run artifact directory")
   private Path runsDir;
 
-  @Option(names = "--dataset", defaultValue = "fixture_v1", description = "Default dataset id")
+  @Option(names = "--dataset", defaultValue = "tdrive_v1", description = "Default dataset id for NL prompts")
   private String datasetId;
 
   @Override
@@ -66,8 +63,7 @@ public final class ChatCmd implements Callable<Integer> {
     IrSchemaValidator validator = new IrSchemaValidator(root.resolve("schemas"));
     PromptBuilder prompts = new PromptBuilder(config.regions(), datasetId);
 
-    boolean useMock = mock;
-    LlmClient llm = buildLlm(root, config, prompts, useMock);
+    LlmClient llm = buildLiveLlm();
     if (llm == null) {
       return 2;
     }
@@ -90,11 +86,12 @@ public final class ChatCmd implements Callable<Integer> {
       } else {
         Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
         CatalogStore catalog = new CatalogStore(cat);
-        mid = manifestId == null ? FixtureBuilder.MANIFEST_ID : manifestId;
+        mid = manifestId == null || manifestId.trim().isEmpty() ? "tdrive_v1_ready" : manifestId;
         Manifest manifest = catalog.loadManifest(mid).orElse(null);
         if (manifest == null) {
           System.err.println("manifest not found: " + mid + " in " + cat);
-          System.err.println("Hint: ./scripts/kart.sh up && ./scripts/kart.sh load-fixture");
+          System.err.println("Hint: ensure catalog/" + mid + ".manifest.json exists after");
+          System.err.println("      ./scripts/kart.sh up && ./scripts/kart.sh run build-snapshot --data datasets/tdrive");
           return 2;
         }
         layout = LayoutContext.from(manifest);
@@ -144,8 +141,8 @@ public final class ChatCmd implements Callable<Integer> {
         }
       };
 
-      printBanner(useMock, memory);
-      StatusLog.info("CHAT", "ready mock=" + useMock + " memory=" + memory
+      printBanner(memory);
+      StatusLog.info("CHAT", "ready live llm memory=" + memory
           + " status=" + StatusLog.enabled());
 
       while (true) {
@@ -166,22 +163,6 @@ public final class ChatCmd implements Callable<Integer> {
         }
         if (line.equalsIgnoreCase("/help")) {
           printHelp();
-          continue;
-        }
-        if (line.equalsIgnoreCase("/mock")) {
-          useMock = true;
-          llm = buildLlm(root, config, prompts, true);
-          System.out.println("mode=mock");
-          continue;
-        }
-        if (line.equalsIgnoreCase("/live")) {
-          useMock = false;
-          llm = buildLlm(root, config, prompts, false);
-          if (llm == null) {
-            System.out.println("live LLM unavailable; staying in previous mode");
-          } else {
-            System.out.println("mode=live");
-          }
           continue;
         }
         if (line.toLowerCase().startsWith("/status")) {
@@ -226,32 +207,26 @@ public final class ChatCmd implements Callable<Integer> {
     }
   }
 
-  private static LlmClient buildLlm(Path root, AppConfig config, PromptBuilder prompts,
-                                    boolean useMock) {
+  private static LlmClient buildLiveLlm() {
     try {
-      if (useMock) {
-        MockLlmClient mock = new MockLlmClient(root.resolve("testdata/llm-mock"));
-        mock.bindUtterances(prompts);
-        return mock;
-      }
       return new OpenAiCompatibleClient();
     } catch (Exception e) {
       System.err.println("LLM init failed: " + e.getMessage());
+      System.err.println("Hint: set LLM_API_KEY / LLM_BASE_URL / LLM_MODEL (see docs/how-to-run.md)");
       return null;
     }
   }
 
-  private void printBanner(boolean mock, boolean mem) {
-    System.out.println("mode=" + (mock ? "mock" : "live")
-        + " backend=" + (mem ? "memory-fixture" : "hbase"));
+  private void printBanner(boolean mem) {
+    System.out.println("mode=live backend=" + (mem ? "memory-fixture" : "hbase"));
     System.out.println("Type a natural-language query. Confirm with y when prompted.");
-    System.out.println("Commands: /help /mock /live /status on|off /quit");
-    System.out.println("  Example: Find top-2 similar to R in fixture_box between "
-        + "2008-02-02T08:00:00+08:00 and 2008-02-02T08:10:00+08:00");
+    System.out.println("Commands: /help /status on|off /quit");
+    System.out.println("  Example: Find trajectories of taxi 8857 between "
+        + "2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00");
   }
 
   private void printHelp() {
-    printBanner(mock, memory);
+    printBanner(memory);
   }
 
   private Path resolveRoot() {

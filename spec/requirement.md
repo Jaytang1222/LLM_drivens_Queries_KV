@@ -59,7 +59,7 @@
 | 语言/构建 | Java 8 + Maven，单模块、按 package 分层 |
 | 存储 | 现有 WSL Ubuntu-22.04 中的 HBase 2.2.3（伪分布式单节点，外置 ZooKeeper 3.4.10 @ localhost:2181，rootdir 为本地文件系统）；客户端锁定 `hbase-client 2.2.x` |
 | 应用运行位置 | **在 WSL 内运行** Java 应用，代码放 `F:\Projects\LLM_KV`，通过 `/mnt/f/Projects/LLM_KV` 访问 |
-| LLM 接入 | OpenAI 兼容 Chat Completions 协议；供应商与模型**暂不指定**，配置项 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 全部来自环境变量；`MockLlmClient` 用于回归测试 |
+| LLM 接入 | OpenAI 兼容 Chat Completions 协议；供应商与模型**暂不指定**，配置项 `LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY` 全部来自环境变量；单元测试用 `ScriptedLlmClient`（test-only）；实验路径必须 Live LLM |
 | 索引 | 时间索引 `idx_time`、Z-order 空间索引 `idx_zorder`、Hash 等值索引 `idx_hash`（仅 vehicle_id） |
 | 坐标 | 导入时 WGS84 → UTM 50N (EPSG:32650)，使用 **Proj4J** |
 | 数据 | 直接导入 `datasets/tdrive/` 全部 21 个 part 文件（约 106 MB） |
@@ -146,7 +146,7 @@
 - FR-7.1 内存 KV backend（字节序有序 Map）实现与 HBase 相同的 Scan/Get 语义，供单元测试无 HBase 运行。
 - FR-7.2 FullScan Oracle：对任意 BoundIR 直接遍历全部块计算标准答案。
 - FR-7.3 差分测试：`ExactFilter(IndexedCandidates(P,q)) == Oracle(q)`，覆盖边界点、跨桶、跨单元、多 shard、空结果、k 大于候选等情形。
-- FR-7.4 MockLlmClient 能驱动 `query-nl` 完成端到端回归。
+- FR-7.4 `ScriptedLlmClient`（test-only）驱动 Dialog/DraftIR 回归；实验路径 `query-nl`/`chat` 必须 Live LLM + HBase。
 
 ### FR-8 CLI
 
@@ -184,7 +184,7 @@
 1. `doctor` 通过：能从 WSL 内连接 ZooKeeper 与 HBase 2.2.3，列出表。
 2. `build-snapshot` 对全量 T-Drive 成功发布 READY manifest，`verify-snapshot` 全量 posting 校验通过。
 3. `query-ir` 对第 18 节 fixture 与 T-Drive 固定 smoke（当前 `tdrive_smoke` **24** 条：四类 + Top-K，含 DTW / FRECHET / HAUSDORFF），结果与 FullScan Oracle **完全一致**。
-4. `query-nl` 使用 MockLlmClient 能完成端到端；使用真实 API 时能对至少 5 条示例句生成合法 BoundIR，缺信息时正确发起澄清而非编造。
+4. `query-nl`/`chat` 使用真实 API（Live LLM）对至少 5 条示例句生成合法 BoundIR，缺信息时正确发起澄清而非编造；单元层用 `ScriptedLlmClient` 覆盖澄清/修复路径。
 5. 至少产生两个结构不同的安全候选计划（如 P_T、P_Z、P_TZ），非法动作不进入成本选择。
 6. `explain` 能输出候选、验证报告、CostCard、选中计划与物理请求摘要；IR 与 Plan JSON 中不含任何 RowKey 字节或 HBase 命令。
 7. 失败路径可演示：超预算 / 数据缺失 / 不支持查询分别返回对应状态，不返回部分结果。

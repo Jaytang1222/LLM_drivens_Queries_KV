@@ -84,6 +84,77 @@ public final class Dialog {
     }
   }
 
+  /**
+   * Bench E1 path: single-round NL → BoundIR (no clarification, no confirm, no execute).
+   * Clarification-needed utterances fail with {@code NEED_CLARIFICATION}.
+   */
+  public Outcome parseToBoundNoClarify(String initialUtterance) {
+    Outcome out = new Outcome();
+    StatusLog.info("DIALOG", "bench-parse utterance_len="
+        + (initialUtterance == null ? 0 : initialUtterance.length()));
+    String early = earlyUnsupportedReason(initialUtterance);
+    if (early != null) {
+      out.state = State.Unsupported;
+      out.status = DraftIrParser.STATUS_UNSUPPORTED_QUERY;
+      out.error = early;
+      return out;
+    }
+    out.state = State.Parsing;
+    List<LlmMessage> msgs = prompts.buildMessages(initialUtterance, "");
+    DraftIrParser.ParseResult pr = parser.parseWithRepair(msgs);
+    out.clarifyRounds = 0;
+    if (DraftIrParser.STATUS_UNSUPPORTED_QUERY.equals(pr.status)) {
+      out.state = State.Unsupported;
+      out.status = pr.status;
+      out.error = pr.error;
+      return out;
+    }
+    if (!DraftIrParser.STATUS_OK.equals(pr.status) || pr.draft == null) {
+      out.state = State.Failed;
+      out.status = pr.status == null ? DraftIrParser.STATUS_INVALID_IR : pr.status;
+      out.error = pr.error;
+      return out;
+    }
+    DraftIr draft = pr.draft;
+    clarifier.applyUtteranceGrounding(draft, initialUtterance,
+        Collections.<String, String>emptyMap());
+    clarifier.enrichMissing(draft);
+    List<ClarificationDetector.Question> qs =
+        clarifier.detect(draft, Collections.<String>emptySet());
+    if (!qs.isEmpty()) {
+      out.state = State.Failed;
+      out.status = "NEED_CLARIFICATION";
+      out.error = "clarification required (bench main table disallows clarify)";
+      for (ClarificationDetector.Question q : qs) {
+        out.clarificationQuestions.add(q.prompt);
+      }
+      return out;
+    }
+    IrBinder.BindResult br = binder.bind(draft, System.currentTimeMillis());
+    if (IrBinder.STATUS_UNSUPPORTED_QUERY.equals(br.status)) {
+      out.state = State.Unsupported;
+      out.status = br.status;
+      out.error = br.error;
+      return out;
+    }
+    if (IrBinder.STATUS_NEED_CLARIFICATION.equals(br.status)) {
+      out.state = State.Failed;
+      out.status = "NEED_CLARIFICATION";
+      out.error = br.error;
+      return out;
+    }
+    if (!IrBinder.STATUS_OK.equals(br.status) || br.bound == null) {
+      out.state = State.Failed;
+      out.status = br.status;
+      out.error = br.error;
+      return out;
+    }
+    out.bound = br.bound;
+    out.state = State.Confirm;
+    out.status = IrBinder.STATUS_OK;
+    return out;
+  }
+
   public Outcome run(String initialUtterance, Io io) {
     Outcome out = new Outcome();
     StatusLog.info("DIALOG", "start utterance_len="
@@ -294,8 +365,8 @@ public final class Dialog {
     }
   }
 
-  /** Early utterance rejects before calling the LLM. */
-  static String earlyUnsupportedReason(String utterance) {
+  /** Early utterance rejects before calling the LLM (shared by chat + bench parse arms). */
+  public static String earlyUnsupportedReason(String utterance) {
     if (utterance == null) {
       return null;
     }

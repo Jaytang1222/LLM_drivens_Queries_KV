@@ -11,7 +11,6 @@ import kart.exec.MemoryBackend;
 import kart.ir.IrBinder;
 import kart.ir.IrSchemaValidator;
 import kart.llm.LlmClient;
-import kart.llm.MockLlmClient;
 import kart.llm.OpenAiCompatibleClient;
 import kart.llm.PromptBuilder;
 import kart.query.QueryEngine;
@@ -33,28 +32,29 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+/**
+ * One-shot NL query. Experiment path: Live LLM → HBase {@code tdrive_v1_ready}.
+ * Dev-only: {@code --memory} uses in-process fixture.
+ */
 @Command(name = "query-nl", description = "Natural-language query with multi-turn clarification (P3)")
 public final class QueryNlCmd implements Callable<Integer> {
 
   @Parameters(index = "0", arity = "0..1", description = "Natural language utterance")
   private String utterance;
 
-  @Option(names = "--mock", description = "Use MockLlmClient from testdata/llm-mock")
-  private boolean mock;
-
   @Option(names = "--policy",
       description = "Plan policy after IR bind: rule|best_first|llm|llm_direct (default: llm when client present)")
   private String policy;
 
   @Option(names = "--memory",
-      description = "Dev-only MemoryBackend. Experiment path: omit (uses HBase fixture_v1_ready).")
+      description = "Dev-only MemoryBackend. Experiment path: omit (uses HBase tdrive_v1_ready).")
   private boolean memory;
 
   @Option(names = "--catalog", defaultValue = "catalog", description = "Catalog directory")
   private Path catalogDir;
 
-  @Option(names = "--manifest", defaultValue = "fixture_v1_ready",
-      description = "Manifest when using HBase")
+  @Option(names = "--manifest", defaultValue = "tdrive_v1_ready",
+      description = "Manifest when using HBase (experiment default: tdrive_v1_ready)")
   private String manifestId;
 
   @Option(names = "--config-root", description = "Project root")
@@ -66,15 +66,16 @@ public final class QueryNlCmd implements Callable<Integer> {
   @Option(names = "--answers", description = "Scripted dialog answers file (one line per prompt)")
   private Path answersFile;
 
-  @Option(names = "--dataset", defaultValue = "fixture_v1", description = "Default dataset id")
+  @Option(names = "--dataset", defaultValue = "tdrive_v1", description = "Default dataset id for NL prompts")
   private String datasetId;
 
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
     if (utterance == null || utterance.trim().isEmpty()) {
-      System.err.println("usage: query-nl \"<utterance>\" [--mock] [--memory] [--answers file]");
-      System.err.println("Experiment path: HBase (default). Dev: --memory. Need LLM or --mock.");
+      System.err.println("usage: query-nl \"<utterance>\" [--memory] [--answers file] [--policy mode]");
+      System.err.println("Experiment path: Live LLM + HBase (default). Dev: --memory.");
+      System.err.println("Requires LLM_API_KEY / LLM_BASE_URL / LLM_MODEL (see docs/how-to-run.md).");
       return 2;
     }
 
@@ -82,18 +83,12 @@ public final class QueryNlCmd implements Callable<Integer> {
     IrSchemaValidator validator = new IrSchemaValidator(root.resolve("schemas"));
 
     LlmClient llm;
-    if (mock) {
-      Path mockDir = root.resolve("testdata/llm-mock");
-      llm = new MockLlmClient(mockDir);
-      ((MockLlmClient) llm).bindUtterances(new PromptBuilder(config.regions(), datasetId));
-    } else {
-      try {
-        llm = new OpenAiCompatibleClient();
-      } catch (Exception e) {
-        System.err.println("LLM client init failed: " + e.getMessage());
-        System.err.println("Hint: set LLM_API_KEY / LLM_BASE_URL or use --mock; else query-ir.");
-        return 2;
-      }
+    try {
+      llm = new OpenAiCompatibleClient();
+    } catch (Exception e) {
+      System.err.println("LLM client init failed: " + e.getMessage());
+      System.err.println("Hint: set LLM_API_KEY / LLM_BASE_URL / LLM_MODEL; else use query-ir.");
+      return 2;
     }
 
     PromptBuilder prompts = new PromptBuilder(config.regions(), datasetId);
@@ -115,10 +110,11 @@ public final class QueryNlCmd implements Callable<Integer> {
       } else {
         Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
         CatalogStore catalog = new CatalogStore(cat);
-        mid = manifestId == null ? FixtureBuilder.MANIFEST_ID : manifestId;
+        mid = manifestId == null || manifestId.trim().isEmpty() ? "tdrive_v1_ready" : manifestId;
         Manifest manifest = catalog.loadManifest(mid).orElse(null);
         if (manifest == null) {
-          System.err.println("manifest not found: " + mid + " — run: kart.sh load-fixture");
+          System.err.println("manifest not found: " + mid + " in " + cat);
+          System.err.println("Hint: ./scripts/kart.sh up && ./scripts/kart.sh run build-snapshot --data datasets/tdrive");
           return 2;
         }
         layout = LayoutContext.from(manifest);

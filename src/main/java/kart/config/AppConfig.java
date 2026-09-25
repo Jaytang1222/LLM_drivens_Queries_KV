@@ -165,6 +165,61 @@ public final class AppConfig {
     public static PlannerConfig defaults() {
       return new PlannerConfig();
     }
+
+    /** Deep-ish copy for bench param overlays (does not mutate the loaded config). */
+    public PlannerConfig copy() {
+      PlannerConfig c = new PlannerConfig();
+      c.max_llm_calls = this.max_llm_calls;
+      c.max_candidates = this.max_candidates;
+      c.max_plan_ms = this.max_plan_ms;
+      c.beam_width = this.beam_width;
+      c.stagnation_steps = this.stagnation_steps;
+      c.max_candidate_chunks = this.max_candidate_chunks;
+      c.max_dtw_cells = this.max_dtw_cells;
+      c.max_zorder_ranges = this.max_zorder_ranges;
+      c.fetch_batch_size = this.fetch_batch_size;
+      if (this.cost != null) {
+        c.cost = copyCost(this.cost);
+      }
+      return c;
+    }
+
+    private static CostCoeffs copyCost(CostCoeffs s) {
+      CostCoeffs c = new CostCoeffs();
+      c.calibrated = s.calibrated;
+      c.model_version = s.model_version;
+      c.concurrency_index = s.concurrency_index;
+      c.concurrency_get = s.concurrency_get;
+      c.concurrency_per_rs = s.concurrency_per_rs;
+      c.alpha_rpc = s.alpha_rpc;
+      c.alpha_seek = s.alpha_seek;
+      c.alpha_byte = s.alpha_byte;
+      c.alpha_decode = s.alpha_decode;
+      c.beta_hash = s.beta_hash;
+      c.beta_emit = s.beta_emit;
+      c.beta_spill = s.beta_spill;
+      c.beta_sort_merge = s.beta_sort_merge;
+      c.gamma_rpc = s.gamma_rpc;
+      c.gamma_byte = s.gamma_byte;
+      c.gamma_decode = s.gamma_decode;
+      c.delta_point = s.delta_point;
+      c.delta_geometry = s.delta_geometry;
+      c.rho_linear = s.rho_linear;
+      c.eta_cell = s.eta_cell;
+      c.eta_cell_dtw = s.eta_cell_dtw;
+      c.eta_cell_frechet = s.eta_cell_frechet;
+      c.eta_cell_hausdorff = s.eta_cell_hausdorff;
+      c.theta_heap = s.theta_heap;
+      c.soft_memory_bytes = s.soft_memory_bytes;
+      c.max_exec_ms = s.max_exec_ms;
+      c.c_scan = s.c_scan;
+      c.c_row = s.c_row;
+      c.c_get = s.c_get;
+      c.c_byte = s.c_byte;
+      c.c_point = s.c_point;
+      c.c_dtw = s.c_dtw;
+      return c;
+    }
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

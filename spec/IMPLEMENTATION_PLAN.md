@@ -144,7 +144,7 @@
 - 必须验证客户端能访问 ZooKeeper 和 HBase 公布的 RegionServer 主机名，不能只验证端口映射。
 - 优先 CLI，后提供薄 HTTP 接口。无需先开发复杂界面。
 - LLM 通过模型无关客户端接入；配置模型 ID、端点、Schema、超时和调用上限。密钥只从环境读取。
-- MockLlmClient 用于回归测试；真实实验必须标明模型、版本、调用次数与 token/延迟。
+- 单元测试用 test-only `ScriptedLlmClient`；真实实验必须 Live LLM，并标明模型、版本、调用次数与 token/延迟。
 - 不引入 Phoenix 作为执行依赖，否则研究对象变成 Phoenix SQL 规划。可以作为额外应用层对照，但需单独实现等价语义。
 
 ## 4. 模块及输入输出契约
@@ -509,7 +509,7 @@ FULL_TRAJECTORY DTW 还需 BatchGetTrajectory：某轨迹只在一个块命中�
 
 受限 JSON DAG，nodes 是拓扑序，inputs 引用其他节点。禁止任意语言表达式、自由字符串谓词和任意 Java 方法名。
 
-下面是第 7 节查询的完整规范候选。它是设计样例，不是本次真实模型调用产物；MockLlmClient 和契约测试可直接采用它。
+下面是第 7 节查询的完整规范候选。它是设计样例，不是本次真实模型调用产物；契约测试与 ScriptedLlmClient 可直接采用它。
 
 ~~~json
 {
@@ -1077,7 +1077,7 @@ LLM_KV/
     src/main/java/.../trajectory/
   llm/
     src/main/java/.../gateway/
-    src/main/java/.../mock/
+    src/test/java/.../ScriptedLlmClient (test-only)
   app/
     src/main/java/.../cli/
     src/main/java/.../http/
@@ -1460,7 +1460,7 @@ T-Drive/CD-Taxi 的真实列、坐标系、时间范围以 profile 报告和配�
 - DraftIR 结构化输出。
 - 缺失信息检测、澄清协议。
 - BoundIR binder。
-- MockLlmClient 和有限修复。
+- ScriptedLlmClient（test-only）和有限修复。
 
 验收：模型输出不能改变 snapshot、RowKey 和 HBase 命令；不支持查询被拒绝。
 
@@ -1501,7 +1501,7 @@ T-Drive/CD-Taxi 的真实列、坐标系、时间范围以 profile 报告和配�
 6. 不以轨迹中心点替代 MBR 的保守覆盖。
 7. 每次查询保存 IR、候选计划、验证报告、CostCard、物理计划摘要和 trace。
 8. 任何 RowKey/索引覆盖变更都重新运行差分、边界和错误注入测试。
-9. 真实 LLM API 不可用时，MockLlmClient 必须跑完整测试。
+9. 真实 LLM API 不可用时，用 ScriptedLlmClient 跑 Dialog/DraftIR/policy 接线测试；实验验收必须 Live LLM。
 10. 先实现静态快照，不在 MVP 偷加动态维护。
 11. 不能用完整性未知的索引或不完整 Scanner 结果继续返回正确答案。
 12. 任何未测 HBase 延迟、RPC、吞吐数字必须标为待测，不写成系统事实。
