@@ -12,6 +12,10 @@ Default table populated from **public map coordinates** (approximate AABBs aroun
 | name | Rough meaning | Lon range | Lat range |
 |------|---------------|-----------|-----------|
 | `beijing_core` | Inner-city demo box (pre-existing) | 116.28–116.48 | 39.82–39.98 |
+| `tdrive_smoke_anchor` | Smoke `h_st_1` envelope (chat-verifiable) | 116.565–116.739 | 40.055–40.213 |
+| `tdrive_topk_box` | Smoke `topk_st_1` / `h_s_small` envelope | 116.642–116.662 | 40.126–40.142 |
+| `tdrive_topk_wide` | Smoke `topk_st_2*` envelope (H8–H11 chat) | 116.638–116.666 | 40.123–40.145 |
+| `tdrive_topk_s1` | Smoke `topk_s_1` envelope (spatial-only Top-K) | 116.644–116.661 | 40.128–40.140 |
 | `zhongguancun` | 中关村一带 | 116.28–116.35 | 39.95–40.01 |
 | `wangjing` | 望京一带 | 116.44–116.51 | 39.97–40.03 |
 | `guomao` / `beijing_cbd` | 国贸 / CBD | 116.43–116.48 | 39.89–39.93 |
@@ -19,7 +23,6 @@ Default table populated from **public map coordinates** (approximate AABBs aroun
 | `capital_airport` | 首都机场 PEK | 116.55–116.65 | 40.04–40.10 |
 | `haidian_central` | 海淀中部粗框 | 116.25–116.36 | 39.95–40.05 |
 | `chaoyang_central` | 朝阳中部粗框 | 116.42–116.55 | 39.90–40.02 |
-| `fixture_box` | Synthetic fixture only (meters) | 4–8 | 4–8 |
 
 These are **not** official 行政区划 boundaries. Tighten/widen boxes in `regions.yaml` if your paper needs a specific study area.
 

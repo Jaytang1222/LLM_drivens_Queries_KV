@@ -105,9 +105,12 @@ class QueryNlAcceptanceTest {
       String incomplete = incompleteTopK();
       String complete = completeTopK();
       // parseWithRepair may retry; provide enough identical completes after first incomplete
-      ScriptedLlmClient llm = new ScriptedLlmClient(incomplete, complete, complete, complete);
+      ScriptedLlmClient llm = new ScriptedLlmClient(
+          incomplete, complete, complete, complete, complete, complete, complete);
       List<String> answers = Arrays.asList(
           "2008-02-02T08:00:00+08:00 to 2008-02-02T08:10:00+08:00",
+          "y",
+          "y",
           "y");
       Dialog.Outcome out = runDialog(
           "Find the 2 trajectories most similar to R near fixture_box (date unknown)",
@@ -190,11 +193,13 @@ class QueryNlAcceptanceTest {
 
   private Dialog.Outcome runDialog(String utterance, ScriptedLlmClient llm, MemoryBackend kv,
                                    List<String> answers) throws Exception {
-    PromptBuilder prompts = new PromptBuilder(regions, "fixture_v1");
+    AppConfig.RegionsConfig fixtureRegions = fixtureRegions();
+    PromptBuilder prompts = new PromptBuilder(fixtureRegions, "fixture_v1");
     LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
-    IrBinder binder = new IrBinder(regions, kv, layout.tableMeta, layout.shardCount,
-        FixtureBuilder.MANIFEST_ID, "point_dtw_v1");
-    QueryEngine engine = new QueryEngine(kv, layout);
+    IrBinder binder = new IrBinder(fixtureRegions, kv, layout.tableMeta, layout.shardCount,
+        FixtureBuilder.MANIFEST_ID, "point_similarity_v2");
+    QueryEngine engine = new QueryEngine(kv, layout, kart.exec.ExecLimits.defaults(),
+        null, AppConfig.PlannerConfig.defaults(), llm);
     Dialog dialog = new Dialog(llm, prompts, validator, binder, engine, tmp.resolve("runs"));
     final Deque<String> q = new ArrayDeque<String>(answers);
     return dialog.run(utterance, new Dialog.Io() {
@@ -208,6 +213,20 @@ class QueryNlAcceptanceTest {
         return q.poll();
       }
     });
+  }
+
+  /** Fixture meter-space region (domain 0..100). */
+  private static AppConfig.RegionsConfig fixtureRegions() {
+    AppConfig.RegionsConfig rc = new AppConfig.RegionsConfig();
+    AppConfig.Region box = new AppConfig.Region();
+    box.name = "fixture_box";
+    box.min_lon = 4;
+    box.min_lat = 4;
+    box.max_lon = 8;
+    box.max_lat = 8;
+    box.local_meters = true;
+    rc.regions = Collections.singletonList(box);
+    return rc;
   }
 
   private static String incompleteTopK() {

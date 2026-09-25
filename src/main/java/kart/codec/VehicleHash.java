@@ -19,4 +19,14 @@ public final class VehicleHash {
     // commons-codec returns two longs; pack big-endian
     return Bytes.concat(Bytes.u64(hash[0]), Bytes.u64(hash[1]));
   }
+
+  /** Lowercase hex of {@link #hash128(String)} for stats keys. */
+  public static String hex128(String vehicleId) {
+    byte[] h = hash128(vehicleId);
+    StringBuilder sb = new StringBuilder(h.length * 2);
+    for (byte b : h) {
+      sb.append(String.format("%02x", b & 0xff));
+    }
+    return sb.toString();
+  }
 }

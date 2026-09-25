@@ -1,14 +1,15 @@
 # Environment lock
 
-- Date: 2026-09-22 (P0); updated 2026-09-23 (P5 MVP close)
+- Date: 2026-09-22 (P0); updated 2026-09-23 (P5 MVP close); **2026-09-25**（smoke **24/24**；cost 权威校准包；WSL canonical 路径锁定）
 - JDK: OpenJDK 1.8.0 (WSL Ubuntu-22.04), `JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64`
 - Maven: 3.6.3 (`/mnt/c/maven/apache-maven-3.6.3`)
-- HBase server: 2.2.3 (`/home/jaytang/hbase` in WSL; Windows tree also at `F:\envs\hbase-2.2.3`)
+- HBase server: 2.2.3 install tree (`/home/jaytang/hbase`; Windows `F:\envs\hbase-2.2.3`) — **cluster status may report 2.1.2** (see below)
 - ZooKeeper: localhost:2181 (external)
 - Client: `org.apache.hbase:hbase-client:2.2.3`
-- Build workspace: rsync to `/home/jaytang/projects/llm-kv` (ext4; avoid NTFS + broken Windows `localRepository`)
-- Compat symlink: `/home/jaytang/build/LLM_KV` → `/home/jaytang/projects/llm-kv` (old scripts keep working)
-- Layout note: `/home/jaytang/projects/README.md` — `tman-spatial/` is drvfs to `F:\Projects\TMan-spatial`; `llm-kv/` is a native copy (not a mount)
+- **Canonical WSL workspace:** `/home/jaytang/projects/llm-kv` (`KART_DST`)
+- Windows source: `/mnt/f/Projects/LLM_KV` (`KART_SRC`)
+- Compat symlink only: `/home/jaytang/build/LLM_KV` → `KART_DST`（旧脚本兼容；禁止当作第二份工作树）
+- Experiment manifest: **`tdrive_v1_ready`** — see `docs/experiment-scope.md`
 
 ## Maven local repository (critical on WSL)
 
@@ -22,18 +23,20 @@ Windows `settings.xml` may set `localRepository` to a path like `F:\maven-reposi
 - Guava 11.0.2 / Netty arrive transitively from hbase-client 2.2.3; no conflict observed during compile/package.
 - `doctor` exercises live `Connection` + `Admin.listTableNames()` when HBase/ZK are up.
 
-## HBase server version note (user-verified 2026-09-22)
+## HBase server version note (frozen experiment limitation)
 
 - Client jar: **2.2.3** (pom).
-- `Admin.getClusterStatus().getHBaseVersion()` reported **2.1.2** because the HBase classpath includes `TMan-spatial-...jar` that bundles older HBase classes.
-- Functional `doctor` / listTables OK; recommend aligning server classpath (remove or isolate TMan-spatial) before production stress tests.
+- `Admin.getClusterStatus().getHBaseVersion()` may report **2.1.2** because `HBASE_HOME` classpath can include `TMan-spatial-...jar` that bundles older HBase classes.
+- Functional `doctor` / listTables / smoke / chat OK.
+- **Experiment disclosure:** single-node, mixed classpath; do not claim numbers are comparable to a clean HBase 2.2.3-only cluster until classpath is cleaned.
+- Capture: `./scripts/kart.sh hbase-evidence` → `experiments/results/hbase_version_evidence.txt`
 
 ## LLM env (OI-1 closed 2026-09-23; provider switched 2026-09-23)
 
 - Provider: **DeepSeek** (`https://api.deepseek.com/v1`)
 - Model: `deepseek-chat`
 - `response_format=json_object`: **supported** (curl + `kart probe-llm` / `kart.sh probe`, 2026-09-23)
-- Live acceptance: `./scripts/kart.sh live-accept` → **PASS** on DeepSeek (2026-09-23)
+- Live acceptance: `./scripts/kart.sh chat-easy` / `chat-handbook`（DeepSeek；`LLM_MODEL=deepseek-chat` → 服务端常报 `deepseek-flash`）
 - Java client: `OpenAiCompatibleClient` via `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` / `LLM_JSON_MODE`
 - Secrets in gitignored `.env` only (do not commit)
 - Previous PinAI/`gpt-5.5` relay retired due to instability
@@ -45,22 +48,35 @@ source scripts/load-llm-env.sh   # reads gitignored .env
 ./scripts/kart.sh probe
 ./scripts/kart.sh chat           # live DeepSeek
 # or batch:
-./scripts/kart.sh live-accept
+./scripts/kart.sh chat-easy
 ```
 
-## Cost model (P5)
+## Cost model (P5) — authoritative Java fit
 
-- Coefficients in `config/planner.yaml` under `cost:` with `calibrated: false`.
-- Fast (search) and Final (selector) share `kart.cost.CostModel`; Final uses compiled scan range counts.
+- Version: **`cost_v2_rs_sched`**（§13.4 分项 + `ScheduleEstimate` RS affinity）
+- **Authority:** `kart fit-cost` / `FeedbackCalibrator`（CostModel MAE），**不是** `fit_cost_coeffs.py` 诊断 NNLS。
+- Publish pack: `./scripts/kart.sh fit-cost-pack` → `experiments/results/cost_calib_pack_YYYYMMDD/`（pairs + report + coeffs + `planner.yaml.frozen` + `meta.json`）
+- Live pointers: `experiments/results/cost_calibration_report.json`、`cost_coeffs_calibrated.json`、`cost_calibration_meta.json`
+- Merge into `config/planner.yaml` via `scripts/merge_cost_coeffs_into_planner.py`
+- Freeze coeffs during the experiment window; do not hot-reload mid-query.
+
+## WSL sync gate
+
+```bash
+cd /home/jaytang/projects/llm-kv   # after first sync; or edit on Windows then:
+./scripts/kart.sh sync            # from either tree (uses KART_SRC→KART_DST)
+./scripts/kart.sh sync-check      # stamp + key hashes must OK before experiment runs
+```
 
 ## Verified commands
 
 ```bash
 export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-cd /home/jaytang/projects/llm-kv   # or: cd /mnt/f/Projects/LLM_KV
-./scripts/sync-wsl-workspace.sh    # optional if you edited on Windows
+cd /home/jaytang/projects/llm-kv
+./scripts/kart.sh sync && ./scripts/kart.sh sync-check
 ./scripts/kart.sh test             # unit + property tests + jar
 ./scripts/kart.sh doctor
-./scripts/kart.sh failures
-./scripts/kart.sh smoke            # needs READY snapshot + HBase
+./scripts/kart.sh hbase-evidence
+./scripts/kart.sh smoke            # needs READY snapshot + HBase → **24/24**
+./scripts/kart.sh fit-cost-pack    # needs HBase; archives replayable calib pack
 ```

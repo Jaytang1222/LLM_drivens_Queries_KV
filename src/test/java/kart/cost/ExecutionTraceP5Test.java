@@ -43,10 +43,12 @@ public class ExecutionTraceP5Test {
       assertNotNull(t.run_id);
       assertNotNull(t.operator_metrics);
       assertFalse(t.operator_metrics.isEmpty());
-      // unavailable metrics must be null (not 0)
+      // unavailable LLM metrics must be null (not 0); client_ops observed when Gets/Scans run
       assertEquals(null, t.llm_calls);
       assertEquals(null, t.llm_tokens);
       assertEquals(null, t.rpc_count);
+      assertNotNull(t.client_ops_count);
+      assertTrue(t.client_ops_count.longValue() > 0);
       assertNotNull(t.dtw_cells);
       assertTrue(t.dtw_cells.longValue() > 0);
 

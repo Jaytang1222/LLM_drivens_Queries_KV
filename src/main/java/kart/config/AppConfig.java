@@ -170,6 +170,37 @@ public final class AppConfig {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class CostCoeffs {
     public boolean calibrated = false;
+    public String model_version = "cost_v2_rs_sched";
+    public int concurrency_index = 4;
+    public int concurrency_get = 4;
+    public int concurrency_per_rs = 2;
+    // §13.4 alphas / betas / …
+    public double alpha_rpc = 1.0;
+    public double alpha_seek = 0.5;
+    public double alpha_byte = 0.000001;
+    public double alpha_decode = 0.0001;
+    public double beta_hash = 0.00001;
+    public double beta_emit = 0.00001;
+    public double beta_spill = 0.00000001;
+    /** Extra set-cost multiplier for SORT_MERGE vs HASH_SET (log factor applied in model). */
+    public double beta_sort_merge = 0.00002;
+    public double gamma_rpc = 0.05;
+    public double gamma_byte = 0.000001;
+    public double gamma_decode = 0.0001;
+    public double delta_point = 0.0001;
+    public double delta_geometry = 0.00005;
+    public double rho_linear = 0.00005;
+    public double eta_cell = 0.00001;
+    /** Metric-specific cell costs (fallback to eta_cell when unset / 0). */
+    public double eta_cell_dtw = 0.0;
+    public double eta_cell_frechet = 0.0;
+    public double eta_cell_hausdorff = 0.0;
+    public double theta_heap = 0.001;
+    /** Soft heap budget for spill estimate / executor retained-bytes cap (bytes). */
+    public long soft_memory_bytes = 512L * 1024L * 1024L;
+    /** Wall-clock execution timeout (ms); 0 = use ExecLimits default. */
+    public long max_exec_ms = 120_000L;
+    // Legacy linear MVP coeffs (still accepted in YAML; mapped if §13.4 unset).
     public double c_scan = 1.0;
     public double c_row = 0.01;
     public double c_get = 0.05;
@@ -190,5 +221,10 @@ public final class AppConfig {
     public double min_lat;
     public double max_lon;
     public double max_lat;
+    /**
+     * When true, lon/lat fields are already local meters (fixture domains), not WGS84.
+     * Production regions leave this false and are projected EPSG:4326→UTM.
+     */
+    public boolean local_meters;
   }
 }

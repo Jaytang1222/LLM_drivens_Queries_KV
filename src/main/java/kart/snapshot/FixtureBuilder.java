@@ -119,7 +119,7 @@ public final class FixtureBuilder {
     Manifest m = new Manifest();
     m.manifest_id = MANIFEST_ID;
     m.status = Manifest.Status.READY;
-    m.semantics_version = "point_dtw_v1";
+    m.semantics_version = "point_similarity_v2";
     m.stats_version = "stats_v1";
     m.tid_map_location = TABLE_META;
     m.dataset = new Manifest.Dataset();

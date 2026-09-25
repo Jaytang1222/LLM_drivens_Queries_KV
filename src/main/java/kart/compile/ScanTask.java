@@ -17,17 +17,28 @@ public final class ScanTask {
   public int shard;
   /** Human/machine-readable coverage descriptor, e.g. "bucket:42" or "z:[8,15]". */
   public String coverageRef;
+  /**
+   * True if the compiler truncated the intended cover (must fail PhysicalSafetyCheck).
+   * Widening ranges to stay under caps is not truncation; dropping cells is.
+   */
+  public boolean truncated;
 
   public ScanTask() {}
 
   public ScanTask(String table, byte[] start, byte[] stop,
                   String sourceNodeId, int shard, String coverageRef) {
+    this(table, start, stop, sourceNodeId, shard, coverageRef, false);
+  }
+
+  public ScanTask(String table, byte[] start, byte[] stop,
+                  String sourceNodeId, int shard, String coverageRef, boolean truncated) {
     this.table = table;
     this.startHex = toHex(start);
     this.stopHex = toHex(stop);
     this.sourceNodeId = sourceNodeId;
     this.shard = shard;
     this.coverageRef = coverageRef;
+    this.truncated = truncated;
   }
 
   public byte[] startBytes() {

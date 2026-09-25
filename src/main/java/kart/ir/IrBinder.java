@@ -5,7 +5,6 @@ import kart.codec.Bytes;
 import kart.exec.KvBackend;
 import kart.geo.Projection;
 import kart.geo.Rect;
-import kart.snapshot.FixtureBuilder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +25,8 @@ public final class IrBinder {
   public static final String STATUS_OK = "OK";
   public static final String STATUS_UNSUPPORTED_QUERY = "UNSUPPORTED_QUERY";
   public static final String STATUS_BIND_ERROR = "BIND_ERROR";
+  /** Unknown region / incomplete facts that should return to clarification (design §6.2 OI-10). */
+  public static final String STATUS_NEED_CLARIFICATION = "NEED_CLARIFICATION";
 
   private final AppConfig.RegionsConfig regions;
   private final KvBackend kv;
@@ -42,16 +43,25 @@ public final class IrBinder {
     this.tableMeta = tableMeta;
     this.shardCount = shardCount;
     this.manifestId = manifestId;
-    this.semanticsVersion = semanticsVersion == null ? "point_dtw_v1" : semanticsVersion;
+    this.semanticsVersion = semanticsVersion == null ? "point_similarity_v2" : semanticsVersion;
   }
 
   public static final class BindResult {
     public String status = STATUS_OK;
     public String error;
     public BoundIr bound;
+    /** When status is NEED_CLARIFICATION, which logical field to ask about. */
+    public String clarifyField;
   }
 
   public BindResult bind(DraftIr draft) {
+    return bind(draft, System.currentTimeMillis());
+  }
+
+  /**
+   * @param nowMs fixed wall-clock for relative time (Asia/Shanghai); required when draft uses relative times
+   */
+  public BindResult bind(DraftIr draft, long nowMs) {
     BindResult out = new BindResult();
     try {
       if (draft == null) {
@@ -103,12 +113,17 @@ public final class IrBinder {
       b.result.k = draft.result.k;
       b.result.tie_breaker = "TID_ASC";
 
-      boolean fixtureMeters = "fixture_v1".equals(b.source.dataset_id);
-
       if (draft.temporal != null) {
-        b.temporal = new BoundIr.Temporal();
-        b.temporal.start_ms = parseShanghai(draft.temporal.start);
-        b.temporal.end_ms = parseShanghai(draft.temporal.end);
+        try {
+          b.temporal = new BoundIr.Temporal();
+          b.temporal.start_ms = parseTemporalInstant(draft.temporal.start, nowMs, true);
+          b.temporal.end_ms = parseTemporalInstant(draft.temporal.end, nowMs, false);
+        } catch (NeedNowException e) {
+          out.status = STATUS_NEED_CLARIFICATION;
+          out.error = e.getMessage();
+          out.clarifyField = "temporal";
+          return out;
+        }
         if (b.temporal.start_ms >= b.temporal.end_ms) {
           out.status = STATUS_BIND_ERROR;
           out.error = "temporal start must be < end";
@@ -117,10 +132,19 @@ public final class IrBinder {
       }
 
       if (draft.spatial != null) {
-        Rect rect = resolveSpatial(draft.spatial, fixtureMeters);
+        if (draft.spatial.region_name != null && !draft.spatial.region_name.trim().isEmpty()
+            && findRegion(draft.spatial.region_name.trim()) == null) {
+          out.status = STATUS_NEED_CLARIFICATION;
+          out.error = "unknown region_name: " + draft.spatial.region_name.trim()
+              + "; provide a registered region or lon/lat rectangle";
+          out.clarifyField = "spatial";
+          return out;
+        }
+        Rect rect = resolveSpatial(draft.spatial);
         if (rect == null) {
-          out.status = STATUS_BIND_ERROR;
-          out.error = "unknown region_name or incomplete spatial geometry";
+          out.status = STATUS_NEED_CLARIFICATION;
+          out.error = "incomplete spatial geometry; provide region_name or rectangle";
+          out.clarifyField = "spatial";
           return out;
         }
         b.spatial = new BoundIr.Spatial();
@@ -130,6 +154,9 @@ public final class IrBinder {
         b.spatial.max_y = rect.maxY;
         b.spatial.relation = "INTERSECTS";
         b.spatial.boundary = "INCLUDED";
+        if (draft.spatial.region_name != null && !draft.spatial.region_name.trim().isEmpty()) {
+          b.spatial.region_name = draft.spatial.region_name.trim();
+        }
       }
 
       if (draft.predicates != null) {
@@ -152,9 +179,16 @@ public final class IrBinder {
           out.error = "TOP_K requires similarity";
           return out;
         }
-        if (draft.similarity.metric != null && !"DTW".equals(draft.similarity.metric)) {
+        String metric = draft.similarity.metric == null ? null : draft.similarity.metric.trim();
+        if (metric == null || metric.isEmpty()) {
+          out.status = STATUS_BIND_ERROR;
+          out.error = "similarity.metric required (DTW|FRECHET|HAUSDORFF); not defaulted";
+          return out;
+        }
+        if (!kart.exec.TrajectorySimilarity.isSupported(metric)) {
           out.status = STATUS_UNSUPPORTED_QUERY;
-          out.error = "only metric=DTW supported";
+          out.error = "unsupported metric=" + metric
+              + "; supported: DTW, FRECHET, HAUSDORFF";
           return out;
         }
         if (isBlank(draft.similarity.reference_trajectory_id)) {
@@ -169,13 +203,14 @@ public final class IrBinder {
           return out;
         }
         b.similarity = new BoundIr.Similarity();
-        b.similarity.metric = "DTW";
+        b.similarity.metric = metric;
         b.similarity.reference_tid = tid;
         b.similarity.scope = "FULL_TRAJECTORY";
         b.similarity.exclude_reference = draft.similarity.exclude_reference == null
             || draft.similarity.exclude_reference;
         b.similarity.local_distance = "EUCLIDEAN";
         b.similarity.normalization = "NONE";
+        b.similarity.reference_chunk_count = lookupChunkCount(tid);
         if (b.result.k == null || b.result.k < 1) {
           out.status = STATUS_BIND_ERROR;
           out.error = "TOP_K requires k >= 1";
@@ -203,7 +238,7 @@ public final class IrBinder {
       }
 
       b.snapshot = new BoundIr.Snapshot();
-      b.snapshot.manifest_id = manifestId != null ? manifestId : FixtureBuilder.MANIFEST_ID;
+      b.snapshot.manifest_id = manifestId != null ? manifestId : "tdrive_v1_ready";
       b.snapshot.semantics_version = semanticsVersion;
 
       out.bound = b;
@@ -220,13 +255,13 @@ public final class IrBinder {
     }
   }
 
-  private Rect resolveSpatial(DraftIr.Spatial spatial, boolean fixtureMeters) {
+  private Rect resolveSpatial(DraftIr.Spatial spatial) {
     if (spatial.region_name != null && !spatial.region_name.trim().isEmpty()) {
       AppConfig.Region reg = findRegion(spatial.region_name.trim());
       if (reg == null) {
         return null;
       }
-      if (fixtureMeters || "fixture_box".equalsIgnoreCase(reg.name)) {
+      if (reg.local_meters) {
         return new Rect(reg.min_lon, reg.min_lat, reg.max_lon, reg.max_lat);
       }
       return projection.metersEnvelope(reg.min_lon, reg.min_lat, reg.max_lon, reg.max_lat);
@@ -238,9 +273,6 @@ public final class IrBinder {
       double b = spatial.geometry.min_lat;
       double c = spatial.geometry.max_lon;
       double d = spatial.geometry.max_lat;
-      if (fixtureMeters) {
-        return new Rect(a, b, c, d);
-      }
       return projection.metersEnvelope(a, b, c, d);
     }
     return null;
@@ -260,23 +292,27 @@ public final class IrBinder {
 
   private Long lookupTid(String extId) throws IOException {
     if (kv == null) {
-      // fixture fallback without KV: A=1,B=2,C=3,R=4
-      if ("A".equals(extId)) {
-        return 1L;
-      }
-      if ("B".equals(extId)) {
-        return 2L;
-      }
-      if ("C".equals(extId)) {
-        return 3L;
-      }
-      if ("R".equals(extId)) {
-        return 4L;
-      }
       return null;
     }
     Map<String, Long> map = loadExtToTid();
     return map.get(extId);
+  }
+
+  /** Catalog meta {@code d:cc} chunk count for cost-model ref_len. */
+  private Integer lookupChunkCount(long tid) throws IOException {
+    if (kv == null || tableMeta == null) {
+      return null;
+    }
+    int shard = kart.codec.RowKeyCodec.shardOf(tid, shardCount) & 0xFF;
+    Map<String, byte[]> cols = kv.get(tableMeta, kart.codec.RowKeyCodec.encodeMeta(shard, tid));
+    if (cols == null || cols.isEmpty()) {
+      return null;
+    }
+    byte[] cc = cols.get("d:cc");
+    if (cc == null || cc.length < 4) {
+      return null;
+    }
+    return Integer.valueOf(java.nio.ByteBuffer.wrap(cc).getInt());
   }
 
   private Map<String, Long> loadExtToTid() throws IOException {
@@ -332,6 +368,65 @@ public final class IrBinder {
       return fmt.parse(core).getTime();
     }
     throw last == null ? new ParseException(s, 0) : last;
+  }
+
+  /**
+   * Absolute Shanghai ISO, or relative: {@code now}, {@code last_&lt;n&gt;d}, {@code last_&lt;n&gt;h},
+   * {@code -&lt;n&gt;d}, {@code -&lt;n&gt;h}. Relative forms require a fixed {@code nowMs}.
+   */
+  public static long parseTemporalInstant(String raw, long nowMs, boolean isStart)
+      throws ParseException, NeedNowException {
+    if (raw == null || raw.trim().isEmpty()) {
+      throw new ParseException("null time", 0);
+    }
+    String s = raw.trim();
+    if (isRelativeToken(s)) {
+      if (nowMs <= 0L) {
+        throw new NeedNowException(
+            "relative temporal '" + s + "' requires fixed now/timezone context");
+      }
+      return resolveRelative(s, nowMs, isStart);
+    }
+    return parseShanghai(s);
+  }
+
+  static boolean isRelativeToken(String s) {
+    String t = s.trim().toLowerCase();
+    return "now".equals(t)
+        || t.matches("last_\\d+[dh]")
+        || t.matches("-\\d+[dh]")
+        || t.matches("p\\d+d")
+        || t.matches("pt\\d+h");
+  }
+
+  static long resolveRelative(String raw, long nowMs, boolean isStart) throws ParseException {
+    String t = raw.trim().toLowerCase();
+    if ("now".equals(t)) {
+      return nowMs;
+    }
+    java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(?:last_|-)?(\\d+)([dh])$")
+        .matcher(t);
+    if (m.matches()) {
+      long n = Long.parseLong(m.group(1));
+      long unit = "d".equals(m.group(2)) ? 86_400_000L : 3_600_000L;
+      // last_Nd as start → now - n*unit; as end alone would be unusual — treat as offset before now
+      return nowMs - n * unit;
+    }
+    if (t.matches("p\\d+d")) {
+      long n = Long.parseLong(t.substring(1, t.length() - 1));
+      return nowMs - n * 86_400_000L;
+    }
+    if (t.matches("pt\\d+h")) {
+      long n = Long.parseLong(t.substring(2, t.length() - 1));
+      return nowMs - n * 3_600_000L;
+    }
+    throw new ParseException("unsupported relative time: " + raw, 0);
+  }
+
+  public static final class NeedNowException extends Exception {
+    public NeedNowException(String message) {
+      super(message);
+    }
   }
 
   private static boolean containsForbiddenKeys(DraftIr draft) {

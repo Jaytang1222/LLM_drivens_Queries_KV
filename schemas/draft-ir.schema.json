@@ -75,7 +75,7 @@
       "additionalProperties": false,
       "required": ["metric", "reference_trajectory_id"],
       "properties": {
-        "metric": { "type": "string", "enum": ["DTW"] },
+        "metric": { "type": "string", "minLength": 1 },
         "reference_trajectory_id": { "type": "string" },
         "exclude_reference": { "type": "boolean" }
       }

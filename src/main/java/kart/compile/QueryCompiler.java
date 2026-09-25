@@ -49,14 +49,44 @@ public final class QueryCompiler {
           if (ir.temporal == null) {
             throw new IllegalArgumentException("plan has TIME_RANGE_SCAN but IR has no temporal");
           }
-          phys.scanTasks.addAll(time.scanTasks(ir.temporal.start_ms, ir.temporal.end_ms, n.id));
+          long startMs = ir.temporal.start_ms;
+          long endMs = ir.temporal.end_ms;
+          if (n.params != null) {
+            Object s = n.params.get("start_ms");
+            Object e = n.params.get("end_ms");
+            if (s instanceof Number) {
+              startMs = ((Number) s).longValue();
+            }
+            if (e instanceof Number) {
+              endMs = ((Number) e).longValue();
+            }
+          }
+          phys.scanTasks.addAll(time.scanTasks(startMs, endMs, n.id));
           break;
         }
         case ZORDER_RANGE_SCAN: {
           if (ir.spatial == null) {
             throw new IllegalArgumentException("plan has ZORDER_RANGE_SCAN but IR has no spatial");
           }
-          Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
+          double minX = ir.spatial.min_x;
+          double minY = ir.spatial.min_y;
+          double maxX = ir.spatial.max_x;
+          double maxY = ir.spatial.max_y;
+          if (n.params != null) {
+            if (n.params.get("min_x") instanceof Number) {
+              minX = ((Number) n.params.get("min_x")).doubleValue();
+            }
+            if (n.params.get("min_y") instanceof Number) {
+              minY = ((Number) n.params.get("min_y")).doubleValue();
+            }
+            if (n.params.get("max_x") instanceof Number) {
+              maxX = ((Number) n.params.get("max_x")).doubleValue();
+            }
+            if (n.params.get("max_y") instanceof Number) {
+              maxY = ((Number) n.params.get("max_y")).doubleValue();
+            }
+          }
+          Rect rect = new Rect(minX, minY, maxX, maxY);
           phys.scanTasks.addAll(zorder.scanTasks(rect, n.id));
           break;
         }

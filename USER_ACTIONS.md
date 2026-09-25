@@ -1,56 +1,32 @@
-# USER_ACTIONS — operator-only steps for MVP
+# USER_ACTIONS — operator-only steps
 
-Automation covers MemoryBackend tests, Mock LLM, cost selection, explain, failure demos,
-READY snapshot + T-Drive smoke, and **live LLM acceptance** (see below).
+Automation covers unit tests, smoke vs Oracle, and live LLM acceptance.  
+No Mock / Memory / fixture（实验路径：Live LLM → HBase）。
 
-## 1. Real LLM API
+## 1. LLM 密钥
 
-**Status (2026-09-23):** **DeepSeek** via gitignored `.env`
-(`LLM_BASE_URL=https://api.deepseek.com/v1`, `LLM_MODEL=deepseek-chat`).
-OI-1 JSON mode OK; `./scripts/kart.sh live-accept` **PASS**.
+`.env`（gitignore）：`LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`。勿提交、勿贴进文档。
 
 ```bash
 ./scripts/kart.sh probe
-./scripts/kart.sh live-accept
 ./scripts/kart.sh chat
-# example utterance, then confirm with: y
 ```
 
-- Do **not** commit `.env` or paste keys into chat/docs.
-- Do **not** treat Mock/`query-nl --mock` as live OI-1.
+## 2. 区域（可选）
 
-## 2. Regions (OI-10)
+`config/regions.yaml` — 见 `docs/regions.md`。
 
-**Status (2026-09-23):** default table filled from public map centers → approximate AABBs
-(`config/regions.yaml`, `docs/regions.md`). No geocoding API.
+## 3. HBase
 
-Optional: edit boxes if your experiment needs stricter study areas.
-Do not repurpose `fixture_box` for T-Drive (it is meter-space for the synthetic fixture).
+`./scripts/kart.sh up` → `doctor` OK；快照 `tdrive_v1_ready`（缺则 `build-snapshot`）。
 
-## 3. Cost calibration (post-MVP)
+## 4. 入口
 
-- Coefficients remain `calibrated: false` until you fit on a train split of traces.
-- Do not feed test-set optimal plans back into the same evaluation (see `spec/IMPLEMENTATION_PLAN.md` §13.6).
-
-## 4. HBase classpath hygiene (optional)
-
-- `doctor` OK on mixed **2.1.2** server classpath (TMan-spatial jar). Isolate/remove it before production stress if versions must match client **2.2.3**.
-
-## 运行入口（2026-09-23）
-
-**全部在 WSL 中运行。** 手册：`docs/how-to-run.md`。
+手册：`docs/how-to-run.md` · 用例：`docs/easy_query_example.md`
 
 ```bash
-cd /mnt/f/Projects/LLM_KV
+cd /home/jaytang/projects/llm-kv
 ./scripts/kart.sh up
-./scripts/kart.sh check      # 多情形自动验收
-./scripts/kart.sh chat       # 交互；确认时输入 y
+./scripts/kart.sh check
 ./scripts/kart.sh down
 ```
-
-`[STATUS]` 默认开启；关闭：`export KART_STATUS=false` 或 chat 内 `/status off`。
-
-- `catalog/tdrive_v1_ready.manifest.json` status **READY** + stats present.
-- Strict re-gate (2026-09-23): `mvn test` 100/0; full verify-snapshot **missing=0 extra=0**; T-Drive smoke **22/22**.
-- Live LLM (2026-09-23): DeepSeek `deepseek-chat`, JSON mode OK, `kart.sh live-accept` **PASS**.
-- `./scripts/kart.sh doctor` connects ZK/HBase when HBase is up.

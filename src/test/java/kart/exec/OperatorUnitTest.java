@@ -34,16 +34,52 @@ class OperatorUnitTest {
   }
 
   @Test
-  void dtwSharedWithOracleSemantics() {
-    Dtw.Point[] r = new Dtw.Point[]{
-        new Dtw.Point(1, 1), new Dtw.Point(2, 2), new Dtw.Point(3, 3)
-    };
+  void frechetDiscreteHandCalc() {
+    // Identical trajectories → 0
     Dtw.Point[] a = new Dtw.Point[]{
-        new Dtw.Point(1, 1), new Dtw.Point(5, 5), new Dtw.Point(9, 9)
+        new Dtw.Point(0, 0), new Dtw.Point(1, 0), new Dtw.Point(2, 0)
     };
-    Dtw.Result da = Dtw.distance(a, r);
-    assertTrue(da.distance > 0);
-    assertEquals(9L, da.cells); // 3x3
+    assertEquals(0.0, Frechet.distance(a, a).distance, 1e-12);
+    assertEquals(9L, Frechet.distance(a, a).cells);
+
+    // L-shape: bottleneck coupling includes (2,0)-(0,2)=√8
+    Dtw.Point[] b = new Dtw.Point[]{
+        new Dtw.Point(0, 0), new Dtw.Point(0, 1), new Dtw.Point(0, 2)
+    };
+    Dtw.Result r = Frechet.distance(a, b);
+    assertEquals(Math.sqrt(8.0), r.distance, 1e-12);
+    assertEquals(9L, r.cells);
+  }
+
+  @Test
+  void hausdorffSymmetricHandCalc() {
+    Dtw.Point[] a = new Dtw.Point[]{
+        new Dtw.Point(0, 0), new Dtw.Point(2, 0)
+    };
+    Dtw.Point[] b = new Dtw.Point[]{
+        new Dtw.Point(0, 0), new Dtw.Point(1, 0)
+    };
+    // h(A,B): (0,0)→0, (2,0)→1 → 1; h(B,A): (0,0)→0, (1,0)→1 → 1; H=1
+    Dtw.Result r = Hausdorff.distance(a, b);
+    assertEquals(1.0, r.distance, 1e-12);
+    assertEquals(8L, r.cells); // 2*2*2
+  }
+
+  @Test
+  void trajectorySimilarityDispatchesAndRejectsUnknown() {
+    Dtw.Point[] p = new Dtw.Point[]{new Dtw.Point(0, 0), new Dtw.Point(1, 1)};
+    assertEquals(Dtw.distance(p, p).distance,
+        TrajectorySimilarity.distance("DTW", p, p).distance, 1e-12);
+    assertEquals(Frechet.distance(p, p).distance,
+        TrajectorySimilarity.distance("FRECHET", p, p).distance, 1e-12);
+    assertEquals(Hausdorff.distance(p, p).distance,
+        TrajectorySimilarity.distance("HAUSDORFF", p, p).distance, 1e-12);
+    try {
+      TrajectorySimilarity.distance("EDIT", p, p);
+      throw new AssertionError("expected IllegalArgumentException");
+    } catch (IllegalArgumentException ok) {
+      assertTrue(ok.getMessage().contains("unsupported"));
+    }
   }
 
   @Test

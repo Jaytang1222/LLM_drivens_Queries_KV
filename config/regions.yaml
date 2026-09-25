@@ -11,14 +11,41 @@
 # - Tiananmen area: commonly cited ≈ (39.9044, 116.3914)
 # - Capital Airport (PEK): Wikipedia / latlong.net ≈ (40.07250, 116.59750)
 # - beijing_core: existing MVP envelope (inner-city demo box)
+# - tdrive_smoke_anchor: WGS84 envelope of smoke h_st_1 UTM box (chat-verifiable vs oracle)
+# - tdrive_topk_box: WGS84 envelope of smoke topk_st_1 / h_s_small UTM box
 #
-# fixture_box: meter coordinates for fixture_v1 only (IrBinder bypasses UTM). Do not use on T-Drive.
 regions:
   - name: beijing_core
     min_lon: 116.28
     min_lat: 39.82
     max_lon: 116.48
     max_lat: 39.98
+
+  - name: tdrive_smoke_anchor
+    min_lon: 116.565
+    min_lat: 40.055
+    max_lon: 116.739
+    max_lat: 40.213
+
+  - name: tdrive_topk_box
+    min_lon: 116.642
+    min_lat: 40.126
+    max_lon: 116.662
+    max_lat: 40.142
+
+  # WGS84 envelope of smoke topk_st_2 UTM box (wider Top-K chat cases H8–H11)
+  - name: tdrive_topk_wide
+    min_lon: 116.638167
+    min_lat: 40.123236
+    max_lon: 116.666448
+    max_lat: 40.144943
+
+  # WGS84 envelope of smoke topk_s_1 UTM box (spatial-only Top-K)
+  - name: tdrive_topk_s1
+    min_lon: 116.644061
+    min_lat: 40.127758
+    max_lon: 116.660558
+    max_lat: 40.140421
 
   - name: zhongguancun
     min_lon: 116.28
@@ -67,9 +94,3 @@ regions:
     min_lat: 39.90
     max_lon: 116.55
     max_lat: 40.02
-
-  - name: fixture_box
-    min_lon: 4
-    min_lat: 4
-    max_lon: 8
-    max_lat: 8

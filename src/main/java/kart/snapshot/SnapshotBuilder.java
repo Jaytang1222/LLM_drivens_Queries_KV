@@ -148,11 +148,12 @@ public final class SnapshotBuilder {
       manifest.build_report = new Manifest.BuildReport();
       manifest.build_report.trajectories = withTid.size();
       manifest.build_report.points = pointCount;
-      manifest.build_report.rejected.parse = result.trajectories == 0 ? 0 : 0; // filled below
+      // result.trajectories temporarily held parseReject count from loadAll
+      long parseRejects = result.trajectories;
+      manifest.build_report.rejected.parse = parseRejects;
       manifest.build_report.rejected.out_of_domain = cleaned.stats.outOfDomainTrajectories;
       manifest.build_report.rejected.empty = cleaned.stats.emptyAfterClean;
       manifest.build_report.dedup_removed = cleaned.stats.dedupRemoved;
-      // recount parse rejects from load
       manifest.transitionToReady();
       catalog.saveManifest(manifest);
 
@@ -191,14 +192,14 @@ public final class SnapshotBuilder {
     if (raws.isEmpty()) {
       result.failureReason = "no trajectories parsed from " + dir;
     }
-    result.trajectories = parseReject; // temporary stash — overwritten later; store parse in failure path
+    result.trajectories = parseReject; // stash parse rejects until overwrite with traj count
     return raws;
   }
 
   private static Manifest newManifest(Options opt, Rect domain, long epoch) {
     Manifest m = new Manifest();
     m.manifest_id = opt.manifestId;
-    m.semantics_version = "point_dtw_v1";
+    m.semantics_version = "point_similarity_v2";
     m.stats_version = "stats_v1";
     m.tid_map_location = "traj_meta_v1";
     m.dataset = new Manifest.Dataset();

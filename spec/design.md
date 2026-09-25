@@ -1,9 +1,9 @@
 # KART 设计文档（Design）
 
-- 版本：v0.1，2026-09-21
+- 版本：v0.1，2026-09-21；状态栏更新 2026-09-25
 - 上游：`spec/requirement.md`（需求）、`spec/IMPLEMENTATION_PLAN.md`（完整方案，本文只写 MVP 落地所需的部分，并记录与其不同之处）
 - 下游：`spec/task.md`
-- 约定：本文所有参数为**开发默认值**，全部可配置；标注"待验证"的项在 P0 `doctor` 阶段落实。
+- 约定：本文所有参数为**开发默认值**，全部可配置；运行环境与依赖冲突处理见 `docs/environment-lock.md`（OI-8 **已关闭**）。
 
 ---
 
@@ -15,15 +15,15 @@
 | ZooKeeper | 3.4.10，`localhost:2181` | 外置，`dataDir=/home/jaytang/zookeeper/data` |
 | JDK | OpenJDK 8（`/usr/lib/jvm/java-8-openjdk-amd64`） | 项目 `maven.compiler.source/target=1.8` |
 | WSL | Ubuntu-22.04 (WSL2) | Java 应用在此运行；代码路径 `/mnt/f/Projects/LLM_KV` |
-| Maven | 3.6+（WSL 内安装，待验证） | 建议 `~/.m2` 放在 WSL 本地盘而非 `/mnt/f`，避免 IO 慢 |
+| Maven | 3.6+（WSL 内；见 `docs/environment-lock.md`） | 建议 `~/.m2` 放在 WSL 本地盘而非 `/mnt/f`，避免 IO 慢 |
 
 与 IMPLEMENTATION_PLAN.md 的差异：文档建议 JDK 11 + HBase 2.5，实际锁定 **Java 8 + HBase 2.2.3**。影响：不可使用 `java.net.http`、`var`、`record`、`switch` 表达式；依赖库需选择 Java 8 兼容版本。
 
-### 1.1 Maven 依赖（建议，版本在 P0 验证）
+### 1.1 Maven 依赖（已落地；版本见 `docs/environment-lock.md`）
 
 | 用途 | 依赖 | 说明 |
 |---|---|---|
-| HBase 客户端 | `org.apache.hbase:hbase-client:2.2.3` | 与服务端同版本；注意排除/对齐 Guava、Netty 冲突（OI-8） |
+| HBase 客户端 | `org.apache.hbase:hbase-client:2.2.3` | 与服务端同版本；Guava/Netty 冲突处理见 OI-8（**已关闭**，`docs/environment-lock.md`） |
 | JSON | `com.fasterxml.jackson.core:jackson-databind` 2.x | Java 8 兼容 |
 | JSON Schema | `com.networknt:json-schema-validator` | 选择支持 Java 8 的版本 |
 | CLI | `info.picocli:picocli` 4.x | 子命令、参数解析 |
@@ -38,7 +38,7 @@
 
 - `scripts/kart.sh`（WSL）：统一入口；底层 `java -jar target/kart.jar <subcommand>`，读取 `config/environment.yaml` 与环境变量。
 - `hbase-site.xml` 客户端侧只需 `hbase.zookeeper.quorum=localhost`、`clientPort=2181`，放在 `config/hbase/`，通过 classpath 或 `Configuration.addResource` 加载。
-- 环境变量：`LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY`（OI-1：供应商未定，均为占位）。
+- 环境变量：`LLM_BASE_URL`、`LLM_MODEL`、`LLM_API_KEY`（OI-1 **已关闭**：DeepSeek；见 `docs/environment-lock.md`）。
 
 ---
 
@@ -231,7 +231,7 @@ READY 后禁止写入；每次查询开始时读取一次 manifest 并固定。
 
 - 无任何谓词（temporal/spatial/predicates 全空）且非 Top-K → 拒绝（避免全库返回）；Top-K 且无谓词 → 拒绝（"不默认全库相似检索"）。
 - `TOP_K` 必须有 similarity；`TRAJECTORY_IDS` 必须无 similarity。
-- 仅支持 `metric=DTW`；其他 → UNSUPPORTED_QUERY。
+- 支持 `metric ∈ {DTW, FRECHET, HAUSDORFF}`；其他 → UNSUPPORTED_QUERY（不静默替换）。
 - 参考轨迹 ID 在 `traj_meta` 中不存在 → 明确错误，不猜。
 - 经纬度矩形与数据域求交为空 → 合法，返回空结果。
 - IR 任何层级出现 `startRow/stopRow/table/region/rowkey` 等键 → 拒绝。
@@ -341,15 +341,17 @@ local_dag: 逻辑 DAG 引用
 ### 8.1 状态与动作
 
 ```
-SearchState { access_subgraph, used_indexes, obligations(未覆盖谓词), fast_cost, signature }
-LegalAction  { action_id, kind: START(index) | INTERSECT(index) | REPLACE(index) | FINISH, description }
+SearchState { access_subgraph, used_indexes, obligations(未覆盖谓词), merge_impl, partition_kind, fast_cost, signature }
+LegalAction  { action_id, kind: START | INTERSECT | REPLACE | CHOOSE_MERGE | PARTITION_UNION | FINISH, ... }
 ```
 
-规则层根据 IR 生成合法动作：
+规则层根据 IR 生成合法动作（对齐 IMPLEMENTATION_PLAN §11.3）：
 
-- 有 temporal → 可 START/INTERSECT `idx_time`
-- 有 spatial → 可 START/INTERSECT `idx_zorder`
-- 有 vehicle_id EQ → 可 START/INTERSECT `idx_hash`
+- 有 temporal → 可 START/INTERSECT/REPLACE `idx_time`
+- 有 spatial → 可 START/INTERSECT/REPLACE `idx_zorder`
+- 有 vehicle_id EQ → 可 START/INTERSECT/REPLACE `idx_hash`
+- `used_indexes.size() ≥ 2` → `CHOOSE_MERGE`（`HASH_SET` | `SORT_MERGE`），仅在输入前提满足时
+- `PARTITION_UNION`：仅系统可证明分区（`TIME_BIPART` / `Z_QUAD`）；LLM 不可发明几何
 - 任何状态可 FINISH（构造器补后缀；若 access_subgraph 为空则等价 P_FULL）
 - 不允许改变 IR 任何字段
 
@@ -357,17 +359,25 @@ LegalAction  { action_id, kind: START(index) | INTERSECT(index) | REPLACE(index)
 
 ```java
 interface ProposalPolicy {
-    ActionSelection propose(SearchState state, List<LegalAction> legal, CostCard fastCost, SearchBudget budget);
+    List<ActionProposal> propose(List<SearchState> frontier,
+        Map<String, List<LegalAction>> legalByStateId,
+        Map<String, CostCard> cardsById, SearchBudget budget);
 }
-class LlmProposalPolicy  // 把 state 摘要、legal actions、CostCard 发给 LLM，只接受返回的 action_id
-class RulePolicy         // 固定顺序：全部单索引 → 全部两路交集 → 三路交集 → FINISH
+class LlmProposalPolicy  // frontier + legal + CostCard → proposals[]
+class RulePolicy         // 固定顺序：START → CHOOSE_MERGE → INTERSECT → PARTITION_UNION → REPLACE → FINISH
 ```
 
-LLM 输出 Schema：`schemas/action-selection.schema.json`：`{"action_id": "...", "reason": "..."}`；`action_id` 不在 legal 列表 → 计非法、记录、改用 RulePolicy 的下一个动作。
+LLM 输出 Schema：`schemas/action-selection.schema.json`（§11.4）：
+
+```json
+{"response_version":"1.0","proposals":[{"state_id":"...","action_id":"...","reason_code":"..."}]}
+```
+
+`action_id` 不在该 `state_id` 的 legal 列表 → 计非法、记录、改用 RulePolicy 的下一个动作。
 
 ### 8.3 算法与预算
 
-- Beam width 3；每步对每个 frontier 状态调用策略一次。
+- Beam width 3；每步对整个 frontier 调用策略一次（返回 `proposals[]`）。
 - 预算默认：`max_llm_calls=6`、`max_candidates=8`、`max_plan_ms=5000`、停滞 2 步无更优 Fast Cost 则停。
 - 输出：候选逻辑计划集合（含 P_FULL）+ 搜索日志（每步 legal、选择、是否合法、fast cost）。
 
@@ -384,42 +394,51 @@ LLM 输出 Schema：`schemas/action-selection.schema.json`：`{"action_id": "...
    - 空间：编译出的 Morton 区间并集 ⊇ 查询矩形量化单元集合（对单元逐一验证包含）；
    - Hash：每 shard 一条前缀 Scan，前缀 = tag‖hash128；
    - INTERSECT 各分支各自覆盖其谓词（交集的覆盖由分支覆盖推出）。
-4. **PhysicalSafetyCheck**：start < stop（字节序）；start/stop 首字节 = shard；表名属于 manifest；区间数 ≤ 上限且无截断标记。
+4. **PhysicalSafetyCheck**：
+   - `scanTasks.size() ≤ MAX_SCAN_TASKS`；任一 `ScanTask.truncated=true` → 失败（编译器丢单元才标 truncated；为控上限而 widening 不算）；
+   - start < stop（无符号字节序）；`start[0] == shard`；
+   - **stop-shard**：`stop[0]==shard`，或 stop 恰为 `PrefixSuccessor([shard])`（shard 前缀的排他上界）；
+   - 表名属于 manifest。
 5. 通过 → `SafePlanHandle`（包内可见构造器，携带 validation_report_hash）。
 
 差分测试补充验证器的实现正确性（见第 13 节）。
 
 ---
 
-## 10. 代价模型（MVP 简化版）
+## 10. 代价模型（对齐 IMPLEMENTATION_PLAN §13.4）
+
+`model_version = cost_v2_rs_sched`。目标：在 SafePlan 集合中最小化预测墙钟延迟。
 
 ```
-cost = c_scan  * Σ_branch (ranges × shard_count)
-     + c_row   * Σ_branch est_index_rows
-     + c_get   * est_candidate_chunks
-     + c_byte  * est_candidate_chunks × avg_chunk_bytes
-     + c_point * est_candidate_chunks × avg_points_per_chunk
-     + c_dtw   * est_eligible_trajs × avg_traj_len × ref_len       (仅 TOP_K)
+L_hat_exec = L_hat_index + L_hat_set + L_hat_fetch
+           + L_hat_exact + L_hat_reconstruct + L_hat_sim + L_hat_topk
+
+W_ar = α_rpc + α_seek + α_byte·B̂ + α_decode·N̂
+L_hat_index / L_hat_fetch = ScheduleEstimate({W}, concurrency_*, region_mapping)
 ```
 
-- `est_index_rows`：从 stats 的每桶/每单元 posting 计数精确求和（时间、空间对齐桶/单元时为精确值）。
-- `est_candidate_chunks`：单索引 = 去重后 posting 估计（用一致抽样样本 chunk 集合估去重率）；交集 = 在同一抽样样本上求交后按抽样率放大，样本交为 0 时用 `max(1, 0.5/抽样率)` 平滑。
-- `est_eligible_trajs`：候选块数 × 抽样估计的精确过滤通过率 × 块→轨迹折算。
-- 系数 `c_*` 初值手工设定并标记 `calibrated=false`；Fast 与 Final 共用公式，Final 额外用编译后精确区间数。
-- CostCard 输出：`estimated_ms, features, main_cost_drivers, uncertainty{method:SAMPLE, sample_size, label}`。
+- **ScheduleEstimate**：确定性 list scheduling；全局并发 + **同 RegionServer 共享并发**（`concurrency_per_rs`）；不可把并行分支串行相加当墙钟。缺 region map 时降级并标 `uncertainty=HIGH`。
+- `L_hat_set`：`β_hash·N̂_index + β_emit·N̂_cand + β_spill·B̂_spill`
+- `L_hat_exact`：`δ_point·P̂_tested`（几何项预留）
+- `L_hat_reconstruct`：`ρ_linear·eligible·avg_traj_len`（按序读块，无排序项）
+- `L_hat_sim`：`η_cell·est_dtw_cells`；`L_hat_topk`：`θ_heap·eligible·log(k)`
+- 基数来自 stats / 一致 chunk 抽样；系数在 `config/planner.yaml` `cost:`（仓库默认已 `calibrated: true`，可由 `fit-cost` / FeedbackCalibrator 重拟合）。Fast 与 Final 共用公式与系数；Final 用编译后精确区间数。
+- CostCard：`estimated_ms`、分项 `L_hat_*`、`features`、`main_cost_drivers`、`uncertainty{method:SAMPLE,...}`、`model_version`。
 - 选择：SafePlan 中 `estimated_ms` 最小；相同则偏好区间数少者，再按 plan_id。
 
 ---
 
 ## 11. 执行器
 
-- `Coordinator`：按 DAG 拓扑序执行；索引分支并行（线程池 4）；集合运算在内存；超过 `max_candidate_chunks=200_000` → RESOURCE_EXHAUSTED。
+- `Coordinator`：按 DAG 拓扑序执行；索引分支并行（线程池 4）；集合运算在内存；超过 `max_candidate_chunks=200_000` → RESOURCE_EXHAUSTED；`soft_memory_bytes` 按 **保留载荷字节**（Scan posting 行字节 + FETCH/BATCH_GET `d:p` 长度，集合/轨迹用解码点或记忆的 payload）累计，超限 → RESOURCE_EXHAUSTED（**不做 spill-to-disk**，见差异表）；`max_exec_ms` 在节点边界、Scan 行回调（每 64 行）、相似度逐轨迹循环内检查。
 - `HBaseBackend implements KvBackend`：`scan(table, start, stop, columns)`、`get(table, List<rowkey>)`；每个 ResultScanner try-with-resources；`Connection` 进程单例。
 - `MemoryBackend implements KvBackend`：`TreeMap<byte[], Map<col, byte[]>>` 带无符号字节比较器，语义与 HBase 一致，用于单测与 Oracle。
 - ExactSTFilter：点 p 满足 `start_ms ≤ t < end_ms` 且 `min_x ≤ x ≤ max_x` 且 `min_y ≤ y ≤ max_y` 且属性谓词（轨迹级 vehicle_id 相等）。
 - 轨迹重建：meta Get 取 chunk_count → 生成全部 raw_key → 分批 Get；缺块 → DATA_INTEGRITY_ERROR。
 - DTW：`D(i,j) = dist(p_i, r_j) + min(D(i-1,j), D(i,j-1), D(i-1,j-1))`，滚动两行；`dtw_cells` 累加超 `max_dtw_cells=5e8` → RESOURCE_EXHAUSTED。
-- Trace：每节点 rows、bytes、elapsed_ms、emitted_ranges；HBase 客户端拿不到 RPC 数时记 null。
+- Trace：每节点 `rows`、`bytes`、`elapsed_ms`、`emitted_ranges`、`client_ops`（Scan 按 `caching` 估页数 + Get 批次数）；真 HBase `rpc_count` 客户端不可得时记 **null**（不得用 open 次数冒充）。
+- 无 SafePlan：`QueryResult.status=NO_SAFE_PLAN`（与执行失败 `FAILED` 区分）。
+- 规划策略：`LlmProposalPolicy`（NL）；`RulePolicy`（§8.2 固定顺序）；`BestFirstPolicy`（§19.1 无 LLM 代价有序基线）。
 
 ---
 
@@ -478,7 +497,13 @@ scripts/                      run.sh, build.sh (WSL)
 | 索引 | 时间、Z-order、Quadtree、Hash | 去掉 Quadtree |
 | 逻辑轨迹切分 | vehicle + 日期 + gap session | 直接用数据已有 segment |
 | halo | NEXT_POINT 预留 | MVP 无 halo |
-| 基线实验 | 第 19 节六组对比 | MVP 不做，只保留 RulePolicy 作为回退 |
+| 基线实验 | 第 19 节六组对比 | 引擎侧已提供 Rule / `BestFirstPolicy` / `llm_direct`（`--policy`）；完整六组对比与 `bench-*.sh` 归实验层（`comparative_experiment.md`），非 MVP 阻塞项 |
 | HTTP 接口 | 可选 | 不做 |
-| 代价模型 | 第 13.4 节完整分项 + 调度估计 | 第 10 节线性简化版，系数未校准 |
+| 代价模型 | 第 13.4 节完整分项 + ScheduleEstimate | 已对齐：`cost_v2_rs_sched`（RS affinity）；系数可校准 |
+| 合法动作 / LLM 契约 | CHOOSE_MERGE、PARTITION_UNION；`proposals[]` | 已对齐（系统可证明分区；frontier 批量提案；RulePolicy 字面顺序 PARTITION→REPLACE→FINISH） |
+| Best-first 基线 | §19.1 #4 规则/Best-first 无 LLM | `BestFirstPolicy`；CLI `--policy=best_first`（query-ir / explain / query-nl） |
+| LLM 直接完整计划 | §19.1 #5 | `LlmDirectPlanPlanner` + `--policy=llm_direct`：完整 `PlanEnvelope` 或族内 `plan_id`；同 PlanValidator；非法则 Rule 回退 |
+| soft_memory / spill | 超限 RESOURCE_EXHAUSTED；spill 后续 | 同：保留字节入账；**无** spill-to-disk |
+| 对比实验 E1–E3 | §19 / comparative_experiment | **规范已锁**；`bench-*.sh` 与第三方臂为实验层任务；引擎已提供 `--policy` / `--plan-only` / `t_plan_ms`·`t_exec_ms`·`plan_regret_ms` |
+| NFR-3 runs 产物 | 候选计划 + 验证报告 | `candidates/<id>/plan.json`(+physical)；`validation_reports.json` 含 SAFE 与 REJECT |
 | 交互 | CLI + 可选 HTTP | CLI 多轮对话状态机 |

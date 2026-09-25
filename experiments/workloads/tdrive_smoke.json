@@ -736,5 +736,87 @@
       "manifest_id" : "tdrive_v1_ready",
       "semantics_version" : "point_dtw_v1"
     }
+  }, {
+    "ir_version" : "1.0",
+    "query_id" : "topk_st_frechet_1",
+    "source" : {
+      "dataset_id" : "tdrive_v1",
+      "entity" : "trajectory"
+    },
+    "temporal" : {
+      "start_ms" : 1202043000000,
+      "end_ms" : 1202044800000
+    },
+    "spatial" : {
+      "min_x" : 469579.38867069356,
+      "min_y" : 4441898.001095969,
+      "max_x" : 471179.38867069356,
+      "max_y" : 4443498.001095969,
+      "relation" : "INTERSECTS",
+      "boundary" : "INCLUDED"
+    },
+    "predicates" : [ ],
+    "semantics" : {
+      "mode" : "OBSERVED_POINT",
+      "coupling" : "SAME_POINT"
+    },
+    "similarity" : {
+      "metric" : "FRECHET",
+      "reference_tid" : 41360,
+      "scope" : "FULL_TRAJECTORY",
+      "exclude_reference" : true,
+      "local_distance" : "EUCLIDEAN",
+      "normalization" : "NONE"
+    },
+    "result" : {
+      "mode" : "TOP_K",
+      "k" : 3,
+      "tie_breaker" : "TID_ASC"
+    },
+    "snapshot" : {
+      "manifest_id" : "tdrive_v1_ready",
+      "semantics_version" : "point_dtw_v1"
+    }
+  }, {
+    "ir_version" : "1.0",
+    "query_id" : "topk_st_hausdorff_1",
+    "source" : {
+      "dataset_id" : "tdrive_v1",
+      "entity" : "trajectory"
+    },
+    "temporal" : {
+      "start_ms" : 1202043000000,
+      "end_ms" : 1202044800000
+    },
+    "spatial" : {
+      "min_x" : 469579.38867069356,
+      "min_y" : 4441898.001095969,
+      "max_x" : 471179.38867069356,
+      "max_y" : 4443498.001095969,
+      "relation" : "INTERSECTS",
+      "boundary" : "INCLUDED"
+    },
+    "predicates" : [ ],
+    "semantics" : {
+      "mode" : "OBSERVED_POINT",
+      "coupling" : "SAME_POINT"
+    },
+    "similarity" : {
+      "metric" : "HAUSDORFF",
+      "reference_tid" : 41360,
+      "scope" : "FULL_TRAJECTORY",
+      "exclude_reference" : true,
+      "local_distance" : "EUCLIDEAN",
+      "normalization" : "NONE"
+    },
+    "result" : {
+      "mode" : "TOP_K",
+      "k" : 3,
+      "tie_breaker" : "TID_ASC"
+    },
+    "snapshot" : {
+      "manifest_id" : "tdrive_v1_ready",
+      "semantics_version" : "point_dtw_v1"
+    }
   } ]
 }

@@ -59,8 +59,10 @@ public final class SearchBudget {
 
   public void recordLlmCall() {
     llmCalls++;
-    if (llmCalls >= maxLlmCalls) {
-      // Do not stop search — only LLM calls; RulePolicy continues.
+    // FR-3.5 / design §8.3: any budget reaching its limit stops search.
+    // max_llm_calls=0 means "no LLM" (RulePolicy only) and must not stop immediately.
+    if (maxLlmCalls > 0 && llmCalls >= maxLlmCalls) {
+      stop("LLM_BUDGET");
     }
   }
 

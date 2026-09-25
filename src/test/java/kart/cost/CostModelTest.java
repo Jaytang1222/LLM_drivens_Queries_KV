@@ -12,6 +12,7 @@ import kart.plan.PlanEnvelope;
 import kart.query.QueryIrFixtureTest;
 import kart.snapshot.FixtureBuilder;
 import kart.validation.SafePlanHandle;
+import kart.validation.ValidationReport;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -156,22 +157,63 @@ public class CostModelTest {
     for (long z = 0; z < 4096; z++) {
       s.zorder_cell_posting_counts.put(Long.toString(z), zPerCell);
     }
-    // samples empty → intersect uses geometric mean of branch postings
+    // samples empty → intersect uses min(branch) upper bound (§13.3, no independence)
     return s;
   }
 
-  /** Test-only handle factory via same-package helper in validation is package-private;
-   *  use a minimal subclass approach: compile+validate for real handles when needed.
-   *  Here we use reflection-free stub via public PlanSelector that accepts handles —
-   *  create through PlanValidator. */
+  @Test
+  void calibratedSkipsLegacyMappingAndUsesEtaCellForDtw() {
+    AppConfig.CostCoeffs c = new AppConfig.CostCoeffs();
+    c.calibrated = true;
+    c.alpha_seek = 0.0;
+    c.c_scan = 1.0;
+    c.eta_cell = 0.002;
+    c.eta_cell_dtw = 0.00001;
+    CostModel model = new CostModel(c);
+    assertEquals(0.0, model.coeffs().alpha_seek, 1e-12);
+    assertEquals(0.002, model.etaForMetric("DTW"), 1e-12);
+  }
+
+  @Test
+  void uncalibratedLegacyMapsAlphaSeekFromCScan() {
+    AppConfig.CostCoeffs c = new AppConfig.CostCoeffs();
+    c.calibrated = false;
+    c.alpha_seek = 0.0;
+    c.c_scan = 1.0;
+    CostModel model = new CostModel(c);
+    assertEquals(1.0, model.coeffs().alpha_seek, 1e-12);
+  }
+
+  @Test
+  void reconstructIncludesMetaGetAndUncachedBytes() {
+    AppConfig.CostCoeffs c = new AppConfig.CostCoeffs();
+    c.calibrated = true;
+    c.gamma_rpc = 2.0;
+    c.gamma_byte = 0.0;
+    c.rho_linear = 0.0;
+    CostModel model = new CostModel(c);
+    CostFeatures f = new CostFeatures();
+    f.scanRanges = 1;
+    f.needsReconstruct = true;
+    f.estEligibleTrajs = 10;
+    f.estMetaGets = 10;
+    f.estUncachedReconBytes = 0;
+    f.avgTrajLen = 1;
+    CostCard card = model.estimateFinal(f);
+    assertEquals(20.0, card.l_hat_reconstruct, 1e-6);
+  }
+
+  /** Test-only handle factory via reflection. */
   private static final class SafePlanHandleForTest {
     static SafePlanHandle create(PlanEnvelope env, PhysicalPlan phys) {
       try {
+        ValidationReport report = new ValidationReport();
+        report.pass("Test", "synthetic");
         java.lang.reflect.Constructor<SafePlanHandle> c =
             SafePlanHandle.class.getDeclaredConstructor(
-                PlanEnvelope.class, PhysicalPlan.class, String.class);
+                PlanEnvelope.class, PhysicalPlan.class, ValidationReport.class);
         c.setAccessible(true);
-        return c.newInstance(env, phys, "test");
+        return c.newInstance(env, phys, report);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }

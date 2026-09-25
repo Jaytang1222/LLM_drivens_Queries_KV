@@ -2,11 +2,9 @@ package kart.cli;
 
 import kart.catalog.CatalogStore;
 import kart.catalog.Manifest;
-import kart.data.Chunker;
 import kart.data.Trajectory;
 import kart.exec.HBaseBackend;
 import kart.exec.KvBackend;
-import kart.exec.MemoryBackend;
 import kart.geo.Rect;
 import kart.snapshot.IndexBuilders;
 import kart.snapshot.PostingVerifier;
@@ -21,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-@Command(name = "verify-snapshot", description = "Re-verify posting completeness for a snapshot")
+@Command(name = "verify-snapshot", description = "Re-verify posting completeness for a HBase snapshot")
 public final class VerifySnapshotCmd implements Callable<Integer> {
 
   @Parameters(index = "0", description = "manifest_id")
@@ -32,9 +30,6 @@ public final class VerifySnapshotCmd implements Callable<Integer> {
 
   @Option(names = "--catalog", defaultValue = "catalog")
   private Path catalogDir;
-
-  @Option(names = "--memory", description = "Rebuild expected from data into MemoryBackend and verify there")
-  private boolean memory;
 
   @Option(names = "--config-root")
   private Path configRoot;
@@ -77,21 +72,9 @@ public final class VerifySnapshotCmd implements Callable<Integer> {
         + " elapsed_s=" + ((System.currentTimeMillis() - loadT0) / 1000));
     System.out.flush();
 
-    KvBackend kv;
-    HBaseBackend hbase = null;
-    if (memory) {
-      // rebuild into memory then verify (self-check)
-      MemoryBackend mem = new MemoryBackend();
-      IndexBuilders builders = new IndexBuilders(layout);
-      Chunker chunker = new Chunker(m.layout.chunk_max_points);
-      for (Trajectory t : trajs) {
-        builders.writeTrajectory(mem, t, chunker.chunk(t));
-      }
-      kv = mem;
-    } else {
-      hbase = new HBaseBackend(HBaseBackend.open(root.resolve("config/hbase/hbase-site.xml")));
-      kv = hbase;
-    }
+    HBaseBackend hbase = new HBaseBackend(
+        HBaseBackend.open(root.resolve("config/hbase/hbase-site.xml")));
+    KvBackend kv = hbase;
 
     try {
       PostingVerifier.Report report = new PostingVerifier(layout).verify(kv, trajs);
@@ -110,11 +93,7 @@ public final class VerifySnapshotCmd implements Callable<Integer> {
       }
       return 1;
     } finally {
-      if (hbase != null) {
-        hbase.closeConnection();
-      } else {
-        kv.close();
-      }
+      hbase.closeConnection();
     }
   }
 

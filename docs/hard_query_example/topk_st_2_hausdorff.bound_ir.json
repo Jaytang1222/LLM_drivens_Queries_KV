@@ -1,0 +1,42 @@
+{
+  "ir_version": "1.0",
+  "query_id": "topk_st_2_hausdorff",
+  "source": {
+    "dataset_id": "tdrive_v1",
+    "entity": "trajectory"
+  },
+  "temporal": {
+    "start_ms": 1202043000000,
+    "end_ms": 1202045400000
+  },
+  "spatial": {
+    "min_x": 469179.38867069356,
+    "min_y": 4441498.001095969,
+    "max_x": 471579.38867069356,
+    "max_y": 4443898.001095969,
+    "relation": "INTERSECTS",
+    "boundary": "INCLUDED"
+  },
+  "predicates": [],
+  "semantics": {
+    "mode": "OBSERVED_POINT",
+    "coupling": "SAME_POINT"
+  },
+  "similarity": {
+    "metric": "HAUSDORFF",
+    "reference_tid": 41360,
+    "scope": "FULL_TRAJECTORY",
+    "exclude_reference": true,
+    "local_distance": "EUCLIDEAN",
+    "normalization": "NONE"
+  },
+  "result": {
+    "mode": "TOP_K",
+    "k": 5,
+    "tie_breaker": "TID_ASC"
+  },
+  "snapshot": {
+    "manifest_id": "tdrive_v1_ready",
+    "semantics_version": "point_dtw_v1"
+  }
+}

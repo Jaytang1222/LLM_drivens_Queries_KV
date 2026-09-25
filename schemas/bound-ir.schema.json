@@ -36,7 +36,8 @@
         "max_x": { "type": "number" },
         "max_y": { "type": "number" },
         "relation": { "type": "string", "enum": ["INTERSECTS"] },
-        "boundary": { "type": "string", "enum": ["INCLUDED"] }
+        "boundary": { "type": "string", "enum": ["INCLUDED"] },
+        "region_name": { "type": "string" }
       }
     },
     "predicates": {
@@ -66,12 +67,13 @@
       "additionalProperties": false,
       "required": ["metric", "reference_tid", "scope", "exclude_reference", "local_distance", "normalization"],
       "properties": {
-        "metric": { "type": "string", "enum": ["DTW"] },
+        "metric": { "type": "string", "enum": ["DTW", "FRECHET", "HAUSDORFF"] },
         "reference_tid": { "type": "integer" },
         "scope": { "type": "string", "enum": ["FULL_TRAJECTORY"] },
         "exclude_reference": { "type": "boolean" },
         "local_distance": { "type": "string", "enum": ["EUCLIDEAN"] },
-        "normalization": { "type": "string", "enum": ["NONE"] }
+        "normalization": { "type": "string", "enum": ["NONE"] },
+        "reference_chunk_count": { "type": "integer", "minimum": 0 }
       }
     },
     "result": {

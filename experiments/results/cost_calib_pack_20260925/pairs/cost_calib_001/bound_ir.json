@@ -1,0 +1,36 @@
+{
+  "ir_version" : "1.0",
+  "query_id" : "cost_calib_001",
+  "source" : {
+    "dataset_id" : "tdrive",
+    "entity" : "trajectory"
+  },
+  "temporal" : {
+    "start_ms" : 1230768000000,
+    "end_ms" : 1230854400000
+  },
+  "spatial" : {
+    "min_x" : 439000.0,
+    "min_y" : 4415000.0,
+    "max_x" : 450000.0,
+    "max_y" : 4425000.0,
+    "relation" : "INTERSECTS",
+    "boundary" : "INCLUDED",
+    "region_name" : null
+  },
+  "predicates" : [ ],
+  "semantics" : {
+    "mode" : "OBSERVED_POINT",
+    "coupling" : "SAME_POINT"
+  },
+  "similarity" : null,
+  "result" : {
+    "mode" : "TRAJECTORY_IDS",
+    "k" : null,
+    "tie_breaker" : "TID_ASC"
+  },
+  "snapshot" : {
+    "manifest_id" : "tdrive_v1_ready",
+    "semantics_version" : "point_similarity_v2"
+  }
+}

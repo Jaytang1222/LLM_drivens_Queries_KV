@@ -1,20 +1,27 @@
 package kart.validation;
 
 import kart.codec.Bytes;
+import kart.codec.PrefixSuccessor;
 import kart.codec.RowKeyCodec;
 import kart.codec.TimeBucket;
 import kart.codec.VehicleHash;
 import kart.codec.ZOrder;
 import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
+import kart.compile.QueryCompiler;
 import kart.compile.ScanTask;
 import kart.geo.Rect;
 import kart.ir.BoundIr;
+import kart.ir.IrSchemaValidator;
 import kart.plan.DataType;
 import kart.plan.Op;
 import kart.plan.PlanEnvelope;
 import kart.plan.PlanNode;
+import com.networknt.schema.ValidationMessage;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,9 +34,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Validates a candidate plan (design.md §9): StructureCheck, SemanticCheck,
- * CoverageCheck, PhysicalSafetyCheck. Any externally supplied "safe" flags are
- * ignored — the only proof of safety is the returned SafePlanHandle.
+ * Validates a candidate plan (design.md §9): StructureCheck (incl. plan.schema.json),
+ * SemanticCheck, CoverageCheck (+ CoverageCertificate), PhysicalSafetyCheck.
+ * External {@code safe=true} is ignored — only SafePlanHandle proves safety.
  */
 public final class PlanValidator {
 
@@ -37,9 +44,31 @@ public final class PlanValidator {
   public static final int MAX_SCAN_TASKS = 100_000;
 
   private final LayoutContext layout;
+  private final IrSchemaValidator schemas;
 
   public PlanValidator(LayoutContext layout) {
+    this(layout, loadSchemasQuietly());
+  }
+
+  public PlanValidator(LayoutContext layout, IrSchemaValidator schemas) {
     this.layout = layout;
+    this.schemas = schemas;
+  }
+
+  private static IrSchemaValidator loadSchemasQuietly() {
+    try {
+      Path root = Paths.get(System.getProperty("kart.root", ".")).toAbsolutePath().normalize();
+      Path dir = root.resolve("schemas");
+      if (!Files.isDirectory(dir)) {
+        dir = Paths.get("schemas").toAbsolutePath().normalize();
+      }
+      if (Files.isDirectory(dir)) {
+        return new IrSchemaValidator(dir);
+      }
+    } catch (Exception ignored) {
+      // structureCheck will fail closed if schema unavailable when required
+    }
+    return null;
   }
 
   /**
@@ -61,13 +90,29 @@ public final class PlanValidator {
     if (!ok) {
       return Optional.empty();
     }
-    return Optional.of(new SafePlanHandle(env, phys, report.hashHex()));
+    return Optional.of(new SafePlanHandle(env, phys, report));
   }
 
   // ---------------------------------------------------------------- structure
 
   boolean structureCheck(PlanEnvelope env, ValidationReport report) {
     final String C = "StructureCheck";
+    // FR-4.1: Plan JSON must conform to plan.schema.json
+    if (schemas == null) {
+      report.fail(C, "plan.schema.json validator unavailable");
+      return false;
+    }
+    try {
+      String json = env.toJson();
+      Set<ValidationMessage> errs = schemas.validatePlan(json);
+      if (errs != null && !errs.isEmpty()) {
+        report.fail(C, "plan.schema.json: " + errs.iterator().next().getMessage());
+        return false;
+      }
+    } catch (Exception e) {
+      report.fail(C, "plan.schema.json validate failed: " + e.getMessage());
+      return false;
+    }
     if (env.plan_id == null || env.query_id == null || env.manifest_id == null
         || env.root == null || env.nodes == null || env.nodes.isEmpty()) {
       report.fail(C, "missing required envelope fields");
@@ -252,6 +297,15 @@ public final class PlanValidator {
     // INTERSECT inputs must all be CHUNK_REF_SET (also enforced in structure; explicit per spec)
     for (PlanNode n : env.nodes) {
       if (n.op == Op.INTERSECT) {
+        if (n.params != null && Boolean.TRUE.equals(n.params.get("provisional_merge"))) {
+          report.fail(C, "INTERSECT node " + n.id
+              + " has provisional_merge; CHOOSE_MERGE required before SafePlan");
+          return false;
+        }
+        if (n.params == null || !(n.params.get("merge") instanceof String)) {
+          report.fail(C, "INTERSECT node " + n.id + " missing explicit merge implementation");
+          return false;
+        }
         for (String in : n.inputs) {
           if (byId.get(in).op.outputType() != DataType.CHUNK_REF_SET) {
             report.fail(C, "INTERSECT input " + in + " is not a ChunkRefSet");
@@ -268,32 +322,80 @@ public final class PlanValidator {
 
   boolean coverageCheck(PlanEnvelope env, BoundIr ir, PhysicalPlan phys, ValidationReport report) {
     final String C = "CoverageCheck";
+    String queryHash = phys != null && phys.queryHash != null ? phys.queryHash : env.query_id;
+    String manifestId = phys != null && phys.manifestId != null ? phys.manifestId : env.manifest_id;
+    String layoutHash = phys != null && phys.layoutHash != null
+        ? phys.layoutHash
+        : (layout != null ? sha256Hex(layout.canonicalString()) : "none");
+    String compilerVersion = phys != null && phys.compilerVersion != null
+        ? phys.compilerVersion
+        : QueryCompiler.COMPILER_VERSION;
+
     for (PlanNode n : env.nodes) {
       if (n.op == null || !n.op.isAccess()) {
         continue;
       }
       List<ScanTask> tasks = phys.tasksForNode(n.id);
+      CoverageCertificate cert = new CoverageCertificate();
+      cert.query_hash = queryHash;
+      cert.manifest_id = manifestId;
+      cert.layout_hash = layoutHash;
+      cert.compiler_version = compilerVersion;
+      cert.index_id = indexIdFor(n.op);
+      cert.predicate_binding = predicateBinding(n);
+      for (ScanTask t : tasks) {
+        cert.emitted_physical_ranges.add(t.table + " shard=" + t.shard
+            + " [" + t.startHex + "," + t.stopHex + ")");
+        if (!cert.required_shards.contains(Integer.valueOf(t.shard))) {
+          // shards filled from required set below
+        }
+      }
+
       if (tasks.isEmpty() && n.op != Op.FULL_SCAN_CHUNKS) {
-        // Empty is legitimate only if the predicate domain is empty (e.g. empty time range)
         if (n.op == Op.TIME_RANGE_SCAN && ir.temporal != null
             && ir.temporal.end_ms <= ir.temporal.start_ms) {
+          report.addCertificate(cert);
           continue;
         }
+        cert.unresolved_obligations.add("no_scan_tasks");
+        report.addCertificate(cert);
         report.fail(C, "access node " + n.id + " (" + n.op + ") has no scan tasks");
         return false;
       }
       switch (n.op) {
         case TIME_RANGE_SCAN: {
           if (ir.temporal == null) {
+            cert.unresolved_obligations.add("missing_temporal");
+            report.addCertificate(cert);
             report.fail(C, "TIME_RANGE_SCAN without IR temporal");
             return false;
           }
+          long winStart = ir.temporal.start_ms;
+          long winEnd = ir.temporal.end_ms;
+          if (n.params != null) {
+            if (n.params.get("start_ms") instanceof Number) {
+              winStart = ((Number) n.params.get("start_ms")).longValue();
+            }
+            if (n.params.get("end_ms") instanceof Number) {
+              winEnd = ((Number) n.params.get("end_ms")).longValue();
+            }
+          }
+          if (winStart < ir.temporal.start_ms || winEnd > ir.temporal.end_ms) {
+            cert.unresolved_obligations.add("partition_outside_temporal");
+            report.addCertificate(cert);
+            report.fail(C, "TIME partition window outside IR temporal for node " + n.id);
+            return false;
+          }
           long[] buckets = TimeBucket.bucketsCovering(
-              ir.temporal.start_ms, ir.temporal.end_ms, layout.epochMs, layout.bucketMs);
+              winStart, winEnd, layout.epochMs, layout.bucketMs);
           for (int shard = 0; shard < layout.shardCount; shard++) {
+            cert.required_shards.add(Integer.valueOf(shard));
             for (long b : buckets) {
+              cert.required_bucket_or_cell_cover.add("time:shard=" + shard + ":bucket=" + b);
               byte[] probe = RowKeyCodec.encodeTime(shard, b, 0, 0);
               if (!coveredBy(probe, tasks, layout.tableTime)) {
+                cert.unresolved_obligations.add("time:shard=" + shard + ":bucket=" + b);
+                report.addCertificate(cert);
                 report.fail(C, "time bucket " + b + " shard " + shard + " not covered by node " + n.id);
                 return false;
               }
@@ -303,19 +405,52 @@ public final class PlanValidator {
         }
         case ZORDER_RANGE_SCAN: {
           if (ir.spatial == null) {
+            cert.unresolved_obligations.add("missing_spatial");
+            report.addCertificate(cert);
             report.fail(C, "ZORDER_RANGE_SCAN without IR spatial");
+            return false;
+          }
+          double minX = ir.spatial.min_x;
+          double minY = ir.spatial.min_y;
+          double maxX = ir.spatial.max_x;
+          double maxY = ir.spatial.max_y;
+          if (n.params != null) {
+            if (n.params.get("min_x") instanceof Number) {
+              minX = ((Number) n.params.get("min_x")).doubleValue();
+            }
+            if (n.params.get("min_y") instanceof Number) {
+              minY = ((Number) n.params.get("min_y")).doubleValue();
+            }
+            if (n.params.get("max_x") instanceof Number) {
+              maxX = ((Number) n.params.get("max_x")).doubleValue();
+            }
+            if (n.params.get("max_y") instanceof Number) {
+              maxY = ((Number) n.params.get("max_y")).doubleValue();
+            }
+          }
+          if (minX < ir.spatial.min_x || minY < ir.spatial.min_y
+              || maxX > ir.spatial.max_x || maxY > ir.spatial.max_y) {
+            cert.unresolved_obligations.add("partition_outside_spatial");
+            report.addCertificate(cert);
+            report.fail(C, "Z partition rect outside IR spatial for node " + n.id);
             return false;
           }
           Rect d = layout.domain;
           ZOrder.CellRect cells = ZOrder.metersToCells(
-              ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y,
+              minX, minY, maxX, maxY,
               d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
           for (int cx = cells.cxMin; cx <= cells.cxMax; cx++) {
             for (int cy = cells.cyMin; cy <= cells.cyMax; cy++) {
               long z = ZOrder.interleave(cx, cy, layout.zorderLevel);
               for (int shard = 0; shard < layout.shardCount; shard++) {
+                if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                  cert.required_shards.add(Integer.valueOf(shard));
+                }
+                cert.required_bucket_or_cell_cover.add("z:shard=" + shard + ":cell=" + z);
                 byte[] probe = RowKeyCodec.encodeZorder(shard, z, 0, 0);
                 if (!coveredBy(probe, tasks, layout.tableZorder)) {
+                  cert.unresolved_obligations.add("z:shard=" + shard + ":cell=" + z);
+                  report.addCertificate(cert);
                   report.fail(C, "z-cell " + z + " shard " + shard + " not covered by node " + n.id);
                   return false;
                 }
@@ -329,11 +464,15 @@ public final class PlanValidator {
           try {
             p = kart.compile.QueryCompiler.resolvePredicate(ir, n);
           } catch (IllegalArgumentException e) {
+            cert.unresolved_obligations.add(e.getMessage());
+            report.addCertificate(cert);
             report.fail(C, e.getMessage());
             return false;
           }
           byte[] hash = VehicleHash.hash128(p.value);
           for (int shard = 0; shard < layout.shardCount; shard++) {
+            cert.required_shards.add(Integer.valueOf(shard));
+            cert.required_bucket_or_cell_cover.add("hash:shard=" + shard);
             byte[] expectedPrefix = Arrays.copyOf(
                 RowKeyCodec.encodeHash(shard, RowKeyCodec.HASH_FIELD_VEHICLE, hash, 0, 0), 18);
             boolean found = false;
@@ -345,6 +484,8 @@ public final class PlanValidator {
               }
             }
             if (!found) {
+              cert.unresolved_obligations.add("hash:shard=" + shard);
+              report.addCertificate(cert);
               report.fail(C, "hash prefix scan missing for shard " + shard + " node " + n.id);
               return false;
             }
@@ -353,8 +494,12 @@ public final class PlanValidator {
         }
         case FULL_SCAN_CHUNKS: {
           for (int shard = 0; shard < layout.shardCount; shard++) {
+            cert.required_shards.add(Integer.valueOf(shard));
+            cert.required_bucket_or_cell_cover.add("full:shard=" + shard);
             byte[] probe = Bytes.u8(shard);
             if (!coveredBy(probe, tasks, layout.tableRaw)) {
+              cert.unresolved_obligations.add("full:shard=" + shard);
+              report.addCertificate(cert);
               report.fail(C, "full scan missing shard " + shard + " node " + n.id);
               return false;
             }
@@ -364,9 +509,42 @@ public final class PlanValidator {
         default:
           break;
       }
+      if (!cert.complete()) {
+        report.addCertificate(cert);
+        report.fail(C, "unresolved coverage obligations for node " + n.id);
+        return false;
+      }
+      report.addCertificate(cert);
     }
-    report.pass(C, "all access nodes cover their predicates");
+    report.pass(C, "all access nodes covered; certificates=" + report.certificates().size());
     return true;
+  }
+
+  private static String indexIdFor(Op op) {
+    if (op == Op.TIME_RANGE_SCAN) {
+      return "idx_time";
+    }
+    if (op == Op.ZORDER_RANGE_SCAN) {
+      return "idx_zorder";
+    }
+    if (op == Op.EQUALITY_LOOKUP) {
+      return "idx_hash";
+    }
+    if (op == Op.FULL_SCAN_CHUNKS) {
+      return "traj_raw";
+    }
+    return String.valueOf(op);
+  }
+
+  private static String predicateBinding(PlanNode n) {
+    if (n.params == null) {
+      return n.id;
+    }
+    Object ref = n.params.get("predicate_ref");
+    if (ref == null) {
+      ref = n.params.get("predicate_refs");
+    }
+    return ref == null ? n.id : String.valueOf(ref);
   }
 
   private static boolean coveredBy(byte[] probe, List<ScanTask> tasks, String table) {
@@ -392,6 +570,10 @@ public final class PlanValidator {
       return false;
     }
     for (ScanTask t : phys.scanTasks) {
+      if (t.truncated) {
+        report.fail(C, "scan task truncated=true (node " + t.sourceNodeId + ")");
+        return false;
+      }
       byte[] start = t.startBytes();
       byte[] stop = t.stopBytes();
       if (start == null || stop == null || start.length == 0 || stop.length == 0) {
@@ -408,6 +590,12 @@ public final class PlanValidator {
             + " != shard " + t.shard + " (node " + t.sourceNodeId + ")");
         return false;
       }
+      if (!stopWithinShard(stop, t.shard)) {
+        report.fail(C, "scan stop not in shard " + t.shard
+            + " (or exclusive shard upper bound) for node " + t.sourceNodeId
+            + " stop=" + t.stopHex);
+        return false;
+      }
       if (!layout.knownTable(t.table)) {
         report.fail(C, "unknown table in scan task: " + t.table);
         return false;
@@ -415,6 +603,52 @@ public final class PlanValidator {
     }
     report.pass(C, phys.scanTasks.size() + " scan tasks safe");
     return true;
+  }
+
+  /**
+   * Stop is in-shard ({@code stop[0]==shard}) or the exclusive end of the shard prefix
+   * ({@code PrefixSuccessor([shard])} == typically {@code [shard+1]}).
+   */
+  static boolean stopWithinShard(byte[] stop, int shard) {
+    if (stop == null || stop.length == 0) {
+      return false;
+    }
+    int stop0 = stop[0] & 0xFF;
+    if (stop0 == shard) {
+      return true;
+    }
+    java.util.Optional<byte[]> succ =
+        PrefixSuccessor.of(new byte[] {(byte) shard});
+    if (!succ.isPresent()) {
+      return false;
+    }
+    byte[] bound = succ.get();
+    if (stop.length != bound.length) {
+      return false;
+    }
+    for (int i = 0; i < bound.length; i++) {
+      if (stop[i] != bound[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static String sha256Hex(String s) {
+    try {
+      java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] dig = md.digest(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      char[] hex = "0123456789abcdef".toCharArray();
+      char[] out = new char[dig.length * 2];
+      for (int i = 0; i < dig.length; i++) {
+        int v = dig[i] & 0xFF;
+        out[i * 2] = hex[v >>> 4];
+        out[i * 2 + 1] = hex[v & 0x0F];
+      }
+      return new String(out);
+    } catch (java.security.NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   // ------------------------------------------------------------------ helpers

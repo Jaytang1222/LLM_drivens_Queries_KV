@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
-@Command(name = "build-snapshot", description = "Build snapshot: parse, index, verify, publish READY")
+@Command(name = "build-snapshot", description = "Build T-Drive snapshot on HBase: parse, index, verify, READY")
 public final class BuildSnapshotCmd implements Callable<Integer> {
 
   @Option(names = "--data", defaultValue = "datasets/tdrive")
@@ -20,9 +20,6 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
 
   @Option(names = "--catalog", defaultValue = "catalog")
   private Path catalogDir;
-
-  @Option(names = "--memory", description = "Use MemoryBackend (no HBase)")
-  private boolean memory;
 
   @Option(names = "--xmin")
   private Double xmin;
@@ -46,15 +43,13 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
     opt.manifestId = manifestId;
     opt.dataDir = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
     opt.catalogDir = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
-    opt.useMemory = memory;
     opt.hbaseSiteXml = root.resolve("config/hbase/hbase-site.xml");
     opt.epochMs = epochMs;
     if (xmin != null && xmax != null && ymin != null && ymax != null) {
       opt.domain = new Rect(xmin, ymin, xmax, ymax);
     }
 
-    System.out.println("Building snapshot " + manifestId + " from " + opt.dataDir
-        + (memory ? " [MemoryBackend]" : " [HBase]"));
+    System.out.println("Building snapshot " + manifestId + " from " + opt.dataDir + " [HBase]");
     SnapshotBuilder.BuildResult r = new SnapshotBuilder().build(opt);
     if (r.failureReason != null) {
       System.err.println("FAILED: " + r.failureReason);

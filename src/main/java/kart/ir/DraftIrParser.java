@@ -30,6 +30,7 @@ public final class DraftIrParser {
   private final IrSchemaValidator validator;
   private final LlmClient llm;
   private final LlmOptions options;
+  private kart.llm.LlmUsageAccumulator usage;
 
   public DraftIrParser(IrSchemaValidator validator, LlmClient llm) {
     this(validator, llm, LlmOptions.defaults());
@@ -39,6 +40,10 @@ public final class DraftIrParser {
     this.validator = validator;
     this.llm = llm;
     this.options = options == null ? LlmOptions.defaults() : options;
+  }
+
+  public void setUsageAccumulator(kart.llm.LlmUsageAccumulator usage) {
+    this.usage = usage;
   }
 
   public static final class ParseResult {
@@ -57,6 +62,9 @@ public final class DraftIrParser {
       out.attempts = attempt + 1;
       try {
         LlmResponse resp = llm.chat(msgs, null, options);
+        if (usage != null) {
+          usage.record(resp);
+        }
         String json = extractJson(resp.content);
         out.rawJson = json;
         if (json == null) {

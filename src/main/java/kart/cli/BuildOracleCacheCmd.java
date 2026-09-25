@@ -53,9 +53,16 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
   @Option(names = "--config-root")
   private Path configRoot;
 
+  @Option(names = "--append-topk-metrics",
+      description = "Append FRECHET/HAUSDORFF Top-K clones of topk_st_1 into existing smoke+oracle (preserve other answers)")
+  private boolean appendTopkMetrics;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
+    if (appendTopkMetrics) {
+      return appendTopkMetrics(root);
+    }
     Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
     CatalogStore store = new CatalogStore(cat);
     Manifest m = store.loadManifest(manifestId).orElse(null);
@@ -241,6 +248,11 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     out.add(topk("topk_st_3", temporal(tSmallStart, tSmallEnd + 2 * bucketMs),
         spatial(a.x, a.y, largeHalfX * 0.15, largeHalfY * 0.15, domain), a.tid, 3, m));
     out.add(topk("topk_s_1", null, spatial(a.x, a.y, 700, 700, domain), a.tid, 3, m));
+    // Non-DTW metrics (FR-6.3 / supported-semantics): same window as topk_st_1
+    out.add(topk("topk_st_frechet_1", temporal(tMedStart, tMedStart + 3 * bucketMs),
+        spatial(a.x, a.y, 800, 800, domain), a.tid, 3, m, null, "FRECHET"));
+    out.add(topk("topk_st_hausdorff_1", temporal(tMedStart, tMedStart + 3 * bucketMs),
+        spatial(a.x, a.y, 800, 800, domain), a.tid, 3, m, null, "HAUSDORFF"));
 
     return out;
   }
@@ -302,11 +314,17 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
 
   private static BoundIr topk(String id, BoundIr.Temporal t, BoundIr.Spatial s,
                               long refTid, int k, Manifest m) {
-    return topk(id, t, s, refTid, k, m, null);
+    return topk(id, t, s, refTid, k, m, null, "DTW");
   }
 
   private static BoundIr topk(String id, BoundIr.Temporal t, BoundIr.Spatial s,
                               long refTid, int k, Manifest m, List<BoundIr.Predicate> preds) {
+    return topk(id, t, s, refTid, k, m, preds, "DTW");
+  }
+
+  private static BoundIr topk(String id, BoundIr.Temporal t, BoundIr.Spatial s,
+                              long refTid, int k, Manifest m, List<BoundIr.Predicate> preds,
+                              String metric) {
     BoundIr ir = base(id, m);
     ir.temporal = t;
     ir.spatial = s;
@@ -314,7 +332,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       ir.predicates = preds;
     }
     ir.similarity = new BoundIr.Similarity();
-    ir.similarity.metric = "DTW";
+    ir.similarity.metric = metric != null ? metric : "DTW";
     ir.similarity.reference_tid = refTid;
     ir.similarity.scope = "FULL_TRAJECTORY";
     ir.similarity.exclude_reference = true;
@@ -364,6 +382,123 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       m.put("y", y);
       return m;
     }
+  }
+
+  /**
+   * Append FRECHET / HAUSDORFF clones of existing {@code topk_st_1} without regenerating
+   * the rest of the frozen smoke set.
+   */
+  private int appendTopkMetrics(Path root) throws Exception {
+    Path wOut = workloadOut.isAbsolute() ? workloadOut : root.resolve(workloadOut);
+    Path oOut = oracleOut.isAbsolute() ? oracleOut : root.resolve(oracleOut);
+    if (!Files.isRegularFile(wOut) || !Files.isRegularFile(oOut)) {
+      System.err.println("existing smoke workload/oracle required: " + wOut + " / " + oOut);
+      return 2;
+    }
+    Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
+    CatalogStore store = new CatalogStore(cat);
+    Manifest m = store.loadManifest(manifestId).orElse(null);
+    if (m == null) {
+      System.err.println("manifest not found: " + manifestId);
+      return 1;
+    }
+    Rect domain = new Rect(m.layout.domain.xmin, m.layout.domain.ymin,
+        m.layout.domain.xmax, m.layout.domain.ymax);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> workload = MAPPER.readValue(Files.readAllBytes(wOut), Map.class);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> queries = (List<Map<String, Object>>) workload.get("queries");
+    Map<String, Map<String, Object>> byId = new LinkedHashMap<String, Map<String, Object>>();
+    Map<String, Object> topkSt1 = null;
+    for (Map<String, Object> q : queries) {
+      String id = String.valueOf(q.get("query_id"));
+      byId.put(id, q);
+      if ("topk_st_1".equals(id)) {
+        topkSt1 = q;
+      }
+    }
+    if (topkSt1 == null) {
+      System.err.println("topk_st_1 not found in workload; cannot clone");
+      return 2;
+    }
+
+    String[][] specs = new String[][] {
+        {"topk_st_frechet_1", "FRECHET"},
+        {"topk_st_hausdorff_1", "HAUSDORFF"}
+    };
+    List<BoundIr> toEval = new ArrayList<BoundIr>();
+    for (String[] spec : specs) {
+      if (byId.containsKey(spec[0])) {
+        System.out.println("ORACLE_CACHE_APPEND skip existing id=" + spec[0]);
+        continue;
+      }
+      @SuppressWarnings("unchecked")
+      Map<String, Object> clone = MAPPER.convertValue(topkSt1, Map.class);
+      clone.put("query_id", spec[0]);
+      @SuppressWarnings("unchecked")
+      Map<String, Object> sim = (Map<String, Object>) clone.get("similarity");
+      if (sim == null) {
+        System.err.println("topk_st_1 missing similarity");
+        return 2;
+      }
+      sim.put("metric", spec[1]);
+      queries.add(clone);
+      toEval.add(MAPPER.convertValue(clone, BoundIr.class));
+      System.out.println("ORACLE_CACHE_APPEND add id=" + spec[0] + " metric=" + spec[1]);
+    }
+    if (toEval.isEmpty()) {
+      System.out.println("ORACLE_CACHE_APPEND nothing to add");
+      return 0;
+    }
+
+    Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
+    System.out.println("ORACLE_CACHE_PHASE=load_cleaned data=" + data);
+    List<Trajectory> trajs = TDriveLoader.loadCleaned(data, domain);
+    FullScanOracle oracle = new FullScanOracle(trajs);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> cache = MAPPER.readValue(Files.readAllBytes(oOut), Map.class);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> answers = (List<Map<String, Object>>) cache.get("answers");
+    if (answers == null) {
+      answers = new ArrayList<Map<String, Object>>();
+      cache.put("answers", answers);
+    }
+    int nonEmpty = cache.get("non_empty") instanceof Number
+        ? ((Number) cache.get("non_empty")).intValue() : 0;
+    for (BoundIr ir : toEval) {
+      FullScanOracle.Answer ans = oracle.evaluate(ir);
+      Map<String, Object> row = new LinkedHashMap<String, Object>();
+      row.put("query_id", ir.query_id);
+      row.put("trajectory_ids", ans.trajectoryIds);
+      if (ans.topK != null) {
+        List<Map<String, Object>> scored = new ArrayList<Map<String, Object>>();
+        for (FullScanOracle.ScoredId s : ans.topK) {
+          Map<String, Object> sc = new LinkedHashMap<String, Object>();
+          sc.put("tid", Long.valueOf(s.tid));
+          sc.put("trajectory_id", s.trajectoryId);
+          sc.put("distance", Double.valueOf(s.distance));
+          scored.add(sc);
+        }
+        row.put("top_k", scored);
+      }
+      answers.add(row);
+      if (ans.trajectoryIds != null && !ans.trajectoryIds.isEmpty()) {
+        nonEmpty++;
+      }
+      System.out.println("ORACLE_CACHE_QUERY id=" + ir.query_id
+          + " count=" + (ans.trajectoryIds == null ? 0 : ans.trajectoryIds.size()));
+    }
+    cache.put("non_empty", Integer.valueOf(nonEmpty));
+    cache.put("total", Integer.valueOf(answers.size()));
+    workload.put("queries", queries);
+
+    Files.write(wOut, MAPPER.writeValueAsString(workload).getBytes(StandardCharsets.UTF_8));
+    Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    System.out.println("ORACLE_CACHE_APPEND_OK workload=" + wOut + " oracle=" + oOut
+        + " total=" + answers.size());
+    return 0;
   }
 
   private Path resolveRoot() {

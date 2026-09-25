@@ -1,0 +1,330 @@
+{
+  "manifest_id": "tdrive_v1_ready",
+  "oracle_source": "experiments/workloads/tdrive_smoke.oracle.json (+ FullScanOracle for FRECHET/HAUSDORFF)",
+  "evidence_method": "query-ir engine trajectoryIds/topK == FullScanOracle (smoke cache or EvalOracleIr)",
+  "cases": [
+    {
+      "query_id": "h_eq_1",
+      "status": "OK",
+      "match": true,
+      "engine_n": 24,
+      "oracle_n": 24,
+      "sha256_engine": "0797c454c51973278a9460f33f84bf868db075393a08814439faa48bb9bc528a",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/h_eq_1",
+      "ids": [
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_13",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8857-8857_16",
+        "8857-8857_17",
+        "8857-8857_18",
+        "8857-8857_19",
+        "8857-8857_20",
+        "8857-8857_21",
+        "8857-8857_22",
+        "8857-8857_23",
+        "8857-8857_24",
+        "8857-8857_25",
+        "8857-8857_26",
+        "8857-8857_27",
+        "8857-8857_28",
+        "8857-8857_29",
+        "8857-8857_4",
+        "8857-8857_6",
+        "8857-8857_7",
+        "8857-8857_8",
+        "8857-8857_9"
+      ]
+    },
+    {
+      "query_id": "h_t_large",
+      "status": "OK",
+      "match": true,
+      "engine_n": 7,
+      "oracle_n": 7,
+      "sha256_engine": "6aa8f6a5c0a211d891b602f38ac2038b6cee6112506298a322fa7b53ae8446a7",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/h_t_large",
+      "ids": [
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_4",
+        "8857-8857_6",
+        "8857-8857_7",
+        "8857-8857_8",
+        "8857-8857_9"
+      ]
+    },
+    {
+      "query_id": "h_s_small",
+      "status": "OK",
+      "match": true,
+      "engine_n": 13,
+      "oracle_n": 13,
+      "sha256_engine": "a7e6ee3a07ea91eb4c6c07310f15844a634ff24e30a2c53e8dfa367b714ef432",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/h_s_small",
+      "ids": [
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8857-8857_18",
+        "8857-8857_19",
+        "8857-8857_20",
+        "8857-8857_21",
+        "8857-8857_22",
+        "8857-8857_23",
+        "8857-8857_24",
+        "8857-8857_28",
+        "8857-8857_9"
+      ]
+    },
+    {
+      "query_id": "st_ls_1",
+      "status": "OK",
+      "match": true,
+      "engine_n": 16,
+      "oracle_n": 16,
+      "sha256_engine": "f48ca4d8d12ab2b0257e73022b73ee1bb9171c954e4a56de5e324230ce001baf",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/st_ls_1",
+      "ids": [
+        "1052-1052_1",
+        "1697-1697_10",
+        "2376-2376_3",
+        "27-27_1201976230",
+        "2951-2951_15",
+        "2955-2955_11",
+        "3336-3336_11",
+        "5793-5793_5",
+        "5793-5793_6",
+        "5793-5793_7",
+        "5793-5793_8",
+        "5817-5817_2",
+        "715-715_11",
+        "7396-7396_13",
+        "8857-8857_11",
+        "8857-8857_9"
+      ]
+    },
+    {
+      "query_id": "s_small_2",
+      "status": "OK",
+      "match": true,
+      "engine_n": 33,
+      "oracle_n": 33,
+      "sha256_engine": "4cb2cfd2ccb2e3a7b730f28366bd8e707341378b275a82078b5d997d50425106",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/s_small_2",
+      "ids": [
+        "1697-1697_10",
+        "2405-2405_45",
+        "27-27_1202149999",
+        "3336-3336_31",
+        "5340-5340_17",
+        "5790-5790_70",
+        "5793-5793_10",
+        "5793-5793_17",
+        "5793-5793_20",
+        "5793-5793_21",
+        "5793-5793_22",
+        "5793-5793_28",
+        "5793-5793_34",
+        "5793-5793_35",
+        "5793-5793_5",
+        "5793-5793_6",
+        "5793-5793_7",
+        "5793-5793_8",
+        "6088-6088_28",
+        "7192-7192_70",
+        "7396-7396_13",
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8857-8857_18",
+        "8857-8857_19",
+        "8857-8857_20",
+        "8857-8857_21",
+        "8857-8857_22",
+        "8857-8857_23",
+        "8857-8857_24",
+        "8857-8857_9"
+      ]
+    },
+    {
+      "query_id": "s_small_1",
+      "status": "OK",
+      "match": true,
+      "engine_n": 92,
+      "oracle_n": 92,
+      "sha256_engine": "b9bf9b2460f1a64b4c255e84a3c25339d29dec21209e13f054b5c4025917c3f2",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/s_small_1",
+      "first5": [
+        "1052-1052_1",
+        "1052-1052_23",
+        "16-16_54",
+        "1697-1697_10",
+        "2376-2376_17"
+      ],
+      "last5": [
+        "8894-8894_23",
+        "9397-9397_32",
+        "9547-9547_31",
+        "9584-9584_11",
+        "9630-9630_49"
+      ]
+    },
+    {
+      "query_id": "st_sl_1",
+      "status": "OK",
+      "match": true,
+      "engine_n": 703,
+      "oracle_n": 703,
+      "sha256_engine": "60424dddc0da65d8fc767f86e3746ad80d5a35fd4e3ed921bb8c3a69e6906cb3",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/st_sl_1",
+      "first5": [
+        "100-100_10",
+        "10018-10018_6",
+        "10024-10024_10",
+        "10035-10035_9",
+        "10036-10036_4"
+      ],
+      "last5": [
+        "9959-9959_17",
+        "9962-9962_16",
+        "9975-9975_11",
+        "9989-9989_14",
+        "9998-9998_7"
+      ]
+    },
+    {
+      "query_id": "topk_st_2",
+      "status": "OK",
+      "match": true,
+      "engine_n": 5,
+      "oracle_n": 5,
+      "sha256_engine": "e5dc1536f3da7874bc7f90bfa9295a92091ce23d8315678f1f7a8d93e4f0afb8",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/topk_st_2",
+      "ids": [
+        "4706-4706_8",
+        "5781-5781_10",
+        "2406-2406_9",
+        "4920-4920_24",
+        "529-529_7"
+      ],
+      "topk": [
+        {
+          "tid": 20101,
+          "trajectory_id": "4706-4706_8",
+          "distance": 166517.86678858357
+        },
+        {
+          "tid": 25522,
+          "trajectory_id": "5781-5781_10",
+          "distance": 171258.50547690192
+        },
+        {
+          "tid": 8378,
+          "trajectory_id": "2406-2406_9",
+          "distance": 280594.80484162876
+        },
+        {
+          "tid": 21302,
+          "trajectory_id": "4920-4920_24",
+          "distance": 438242.773916195
+        },
+        {
+          "tid": 23063,
+          "trajectory_id": "529-529_7",
+          "distance": 1472078.156539731
+        }
+      ]
+    },
+    {
+      "query_id": "topk_st_2_frechet",
+      "status": "OK",
+      "match": true,
+      "engine_n": 5,
+      "oracle_n": 5,
+      "sha256_engine": "e16df43070057de9abf074de4226edbf5af38fbf0aa1d49a170243516c44eb63",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/topk_st_2_frechet",
+      "ids": [
+        "4706-4706_8",
+        "2406-2406_9",
+        "5781-5781_10",
+        "476-476_8",
+        "4920-4920_24"
+      ],
+      "topk": [
+        {
+          "tid": 20101,
+          "trajectory_id": "4706-4706_8",
+          "distance": 13612.527543022466
+        },
+        {
+          "tid": 8378,
+          "trajectory_id": "2406-2406_9",
+          "distance": 19751.03241559814
+        },
+        {
+          "tid": 25522,
+          "trajectory_id": "5781-5781_10",
+          "distance": 23758.6615708998
+        },
+        {
+          "tid": 20259,
+          "trajectory_id": "476-476_8",
+          "distance": 26587.244991048305
+        },
+        {
+          "tid": 21302,
+          "trajectory_id": "4920-4920_24",
+          "distance": 27796.760860296963
+        }
+      ]
+    },
+    {
+      "query_id": "topk_st_2_hausdorff",
+      "status": "OK",
+      "match": true,
+      "engine_n": 5,
+      "oracle_n": 5,
+      "sha256_engine": "e16df43070057de9abf074de4226edbf5af38fbf0aa1d49a170243516c44eb63",
+      "rundir": "/home/jaytang/projects/llm-kv/runs/topk_st_2_hausdorff",
+      "ids": [
+        "4706-4706_8",
+        "2406-2406_9",
+        "5781-5781_10",
+        "476-476_8",
+        "4920-4920_24"
+      ],
+      "topk": [
+        {
+          "tid": 20101,
+          "trajectory_id": "4706-4706_8",
+          "distance": 5473.063589499834
+        },
+        {
+          "tid": 8378,
+          "trajectory_id": "2406-2406_9",
+          "distance": 19751.03241559814
+        },
+        {
+          "tid": 25522,
+          "trajectory_id": "5781-5781_10",
+          "distance": 23758.6615708998
+        },
+        {
+          "tid": 20259,
+          "trajectory_id": "476-476_8",
+          "distance": 24371.705896765325
+        },
+        {
+          "tid": 21302,
+          "trajectory_id": "4920-4920_24",
+          "distance": 27796.760860296963
+        }
+      ]
+    }
+  ]
+}

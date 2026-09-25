@@ -4,27 +4,26 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 /**
- * KART CLI root. Subcommands match requirement FR-8.
+ * KART CLI root — Live LLM → HBase experiment path.
  */
 @Command(
     name = "kart",
     mixinStandardHelpOptions = true,
     version = "kart 0.1.0-SNAPSHOT",
-    description = "LLM-driven trajectory query over HBase (MVP)",
+    description = "LLM-driven trajectory query over HBase (experiment)",
     subcommands = {
         DoctorCmd.class,
         ProfileDataCmd.class,
-        BuildFixtureCmd.class,
-        LoadFixtureHbaseCmd.class,
         BuildSnapshotCmd.class,
         VerifySnapshotCmd.class,
         BuildStatsCmd.class,
+        BuildFixtureCmd.class,
         BuildOracleCacheCmd.class,
         QueryIrCmd.class,
         QueryNlCmd.class,
         ExplainCmd.class,
+        FitCostCmd.class,
         SmokeTdriveCmd.class,
-        DemoFailuresCmd.class,
         ProbeLlmCmd.class,
         ChatCmd.class
     }

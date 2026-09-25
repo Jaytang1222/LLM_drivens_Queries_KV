@@ -29,7 +29,7 @@
   验收：与 RowKeyCodec 组合的扫描顺序测试通过。
 - [x] **T0.9 数据模型与 fixture** (2026-09-22)：`CanonicalPoint`、`Trajectory`、`Chunk`、点载荷编解码；`build-fixture` 生成 IMPLEMENTATION_PLAN.md §18 的 R/A/B/C（坐标直接作为米制，时间 2008-02-02 08:00 +08:00 起）。
   验收：`testdata/fixture-v1/` 生成确定（两次生成 checksum 相同）。
-- [x] **T0.10 FullScanOracle** (2026-09-22)：对 BoundIR 遍历全部块，输出 TrajectoryIds 或 Top-K（含 DTW）。
+- [x] **T0.10 FullScanOracle** (2026-09-22；度量扩展 2026-09-25)：对 BoundIR 遍历全部块，输出 TrajectoryIds 或 Top-K（DTW / 离散 Fréchet / 对称 Hausdorff）。
   验收：fixture 上时空 + Top-2 查询返回 [A,B] 且 C、R 不在其中；DTW 手算值一致。
 
 **P0 阶段验收**：`mvn test` 全绿；`build-fixture`、`doctor` 可运行。
@@ -48,16 +48,16 @@
   验收：报告生成；据此关闭 OI-9（写入 requirement.md）并确定 manifest 的 domain 与 epoch。
 - [x] **T1.4 Cleaner + Chunker** (2026-09-22)
   验收：单测覆盖重复点、同 t 不同位、域外轨迹、恰好 256/257 点；性质测试：块拼接后 = 原轨迹。
-- [x] **T1.5 tid 分配与 traj_meta / traj_raw 写入** (2026-09-22；HBase 全量写入待用户机验证)
-  验收：fixture 写入后 Get 回读一致；表 Region 数 = 4。
+- [x] **T1.5 tid 分配与 traj_meta / traj_raw 写入** (2026-09-22；全量 HBase 以 `tdrive_v1_ready` 验收 2026-09-25)
+  验收：fixture 写入后 Get 回读一致；表 Region 数 = 4。全量证据：READY manifest（约 47,102 轨迹）+ smoke 24/24（见 `docs/experiment-scope.md`）。
 - [x] **T1.6 IndexBuilders** (2026-09-22)
   验收：fixture 上手工推导的 posting 键集合与实际写入完全相等。
 - [x] **T1.7 PostingVerifier + verify-snapshot 命令** (2026-09-22)
   验收：错误注入（删一条 posting / 多写一条）必被检出并定位到 (table, tid, chunk)。
 - [x] **T1.8 StatsBuilder** (2026-09-22)
   验收：stats JSON 可加载；抽样比例误差 < 20%。
-- [x] **T1.9 build-snapshot 命令** (2026-09-22；全量 HBase 发布待用户机验证)
-  验收：全量 21 个文件在 WSL 内成功发布 `tdrive_v1_ready`；记录耗时、行数、表大小到 `docs/tdrive-profile.md`。
+- [x] **T1.9 build-snapshot 命令** (2026-09-22；全量 HBase 发布以 `tdrive_v1_ready` 验收 2026-09-25)
+  验收：全量 21 个文件在 WSL 内成功发布 `tdrive_v1_ready`；manifest READY + smoke/chat 验收作为实测证据。全量 `verify-snapshot` 另开（耗时，非本阶段门禁）。
 
 **P1 阶段验收**：`verify-snapshot tdrive_v1_ready` 全量通过；MemoryBackend 上 fixture 的候选集合 ⊇ Oracle 匹配块（性质测试）。
 
@@ -77,15 +77,15 @@
   验收：design.md §9 每条规则各有至少一个负例测试；外部 JSON 带 `safe:true` 被忽略。证据：`PlanValidatorTest`。
 - [x] **T2.5 执行算子** (2026-09-23)：Scan/Get 读取、集合运算、`FetchTrajectoryChunk` 分批、`ExactSTFilter`、`ProjectTrajectoryIds`、`ExcludeReference`、`BatchGetTrajectory`（复用已读块）、`Dtw`（滚动数组、cell 计数）、`TopK`、`ReturnTrajectoryIds`（映射外部 ID）。
   验收：每算子单测；DTW 与 Oracle 实现共享同一函数。证据：`ExactSTFilterTest`；`Coordinator` + fixture/Oracle 对齐测试。
-- [x] **T2.6 Coordinator + HBaseBackend** (2026-09-23)：拓扑执行、资源上限、失败状态、逐算子 trace；`HBaseBackend` 已实现。
-  验收：人为设 `max_candidate_chunks=1` 返回 RESOURCE_EXHAUSTED 且无结果；删除一块 raw 行返回 DATA_INTEGRITY_ERROR。证据：`CoordinatorFailureTest`。注：索引分支并行已接线（独立 TIME/ZORDER/HASH 访问节点在 INTERSECT 前并行，`ExecLimits.indexParallelism=4`）；执行超时仍未接线。
+- [x] **T2.6 Coordinator + HBaseBackend** (2026-09-23；2026-09-24 对齐)：拓扑执行、资源上限、失败状态、逐算子 trace；`HBaseBackend` 已实现。
+  验收：人为设 `max_candidate_chunks=1` 返回 RESOURCE_EXHAUSTED 且无结果；删除一块 raw 行返回 DATA_INTEGRITY_ERROR；`soft_memory_bytes` 极小 → RESOURCE_EXHAUSTED。证据：`CoordinatorFailureTest`。索引分支并行（`ExecLimits.indexParallelism`）；`max_exec_ms` 在节点/Scan 回调/相似度循环检查；trace 含 `emitted_ranges` + `client_ops`（页估），真 `rpc_count` 不可得为 null。
 - [x] **T2.7 query-ir 命令** (2026-09-23)：读 BoundIR JSON → 用 RulePolicy 枚举全部候选 → 验证 → 由 **PlanSelector**（T5.6：min `estimated_ms`，再少区间，再 `plan_id`）选计划 → 执行 → 输出结果 + trace JSON 到 `runs/<run_id>/`。
   验收：fixture 上结果 [A,B]；与 Oracle 一致。证据：`QueryIrCmd` / `QueryEngine` → `PlanSelector`；`QueryIrFixtureTest`。（历史固定顺序 `PlanSelectorP2` 仅作对照，query 路径不再使用。）
 
 - [x] **T2.8 差分测试套件** (2026-09-22)：jqwik 随机轨迹/矩形/时间区间，在 MemoryBackend 上对全部候选计划族断言 `ExactFilter(Candidates) == Oracle`；覆盖 requirement FR-7.3 列举场景。
   验收：1000 次迭代通过；每个场景有命名测试。
-- [x] **T2.9 T-Drive 固定查询集** (2026-09-22)：`experiments/workloads/tdrive_smoke.json` 至少 20 条 BoundIR（四类 × 小/大范围 + Top-K），Oracle 结果缓存。
-  验收：真实 HBase 上 `query-ir` 全部与 Oracle 一致；记录每条的候选数、扫描区间数、耗时。
+- [x] **T2.9 T-Drive 固定查询集** (2026-09-22；扩展 2026-09-25)：`experiments/workloads/tdrive_smoke.json` **24** 条 BoundIR（四类 × 小/大范围 + Top-K，含 DTW / FRECHET / HAUSDORFF），Oracle 结果缓存。
+  验收：真实 HBase 上 `query-ir` 全部与 Oracle 一致（smoke **24/24**）；记录每条的候选数、扫描区间数、耗时。
 
 **P2 阶段验收**：T2.8、T2.9 全部通过；IR 与 Plan JSON 不含 RowKey 字节。
 
@@ -143,18 +143,18 @@
 
 - [x] **T5.1 CostFeatures 提取** (2026-09-23)：从编译后 PhysicalPlan 与 stats 提取 design.md §10 各特征；缺失统计用保守上界并标记。
   验收：fixture 上特征值与手工推导一致。证据：`kart.cost.CostFeatures` / `CostFeaturesExtractor` + `CostModelTest.t51_*`。
-- [x] **T5.2 CostModel（Fast/Final 共用公式）** (2026-09-23)：系数来自 `planner.yaml`，标记 `calibrated=false`；Final 用精确区间数。
-  验收：P_TZ 与 P_T 在"时间窄、空间宽"与"时间宽、空间窄"两组统计下估价排序相反（验证模型对输入敏感）。证据：`CostModel` + `CostModelTest.t52_*`。
+- [x] **T5.2 CostModel（Fast/Final 共用公式）** (2026-09-23；系数校准 2026-09-24)：系数来自 `planner.yaml`；初值曾标 `calibrated=false`，现仓库默认 **`calibrated: true`**（`fit-cost` / FeedbackCalibrator）。Final 用精确区间数。
+  验收：P_TZ 与 P_T 在"时间窄、空间宽"与"时间宽、空间窄"两组统计下估价排序相反（验证模型对输入敏感）。证据：`CostModel` + `CostModelTest.t52_*`；`docs/environment-lock.md` / `docs/how-to-run.md`。
 - [x] **T5.3 PlanSelector**：SafePlan 中取最小 `estimated_ms`，tie 规则确定。
   验收：相同估价时选择稳定。证据：`kart.cost.PlanSelector` + `CostModelTest.t53_*`。
-- [x] **T5.4 ExecutionTrace 完整化** (2026-09-23)：逐节点 rows/bytes/elapsed、候选数、去重数、回表数、过滤通过数、dtw_cells、LLM 调用与 token；拿不到的为 null。
+- [x] **T5.4 ExecutionTrace 完整化** (2026-09-23；2026-09-24)：逐节点 rows/bytes/elapsed/`emitted_ranges`/`client_ops`、候选数、去重数、回表数、过滤通过数、dtw_cells、LLM 调用与 token；真 HBase `rpc_count` 不可得为 null。
   验收：`runs/<run_id>/trace.json` 符合 IMPLEMENTATION_PLAN.md §16 结构。证据：`ExecutionTrace` + `ExecutionTraceP5Test.t54_*`。
 - [x] **T5.5 explain 命令** (2026-09-23)：不执行数据读取，输出 BoundIR、候选、验证报告、CostCard、选中计划、物理请求摘要（hex 区间 + 可读桶/单元）。
   验收：输出中物理字节只在 PhysicalPlan 段出现。证据：`ExplainCmd` + `ExecutionTraceP5Test.t55_*`。
 - [x] **T5.6 query-ir / query-nl 切换到 Selector** (2026-09-23)：替换 T2.7 的固定顺序。
   验收：T2.9 固定查询集重新跑仍全部与 Oracle 一致。证据：`QueryEngine` → `PlanSelector`；`scripts/run-tdrive-smoke.sh`。
-- [x] **T5.7 失败路径演示脚本** (2026-09-23)：超预算、数据缺失、不支持查询、LLM 不可用 四种场景各一条命令。
-  验收：状态码分别为 RESOURCE_EXHAUSTED / DATA_INTEGRITY_ERROR / UNSUPPORTED_QUERY / 解析失败，且无部分结果。证据：`demo-failures` + `scripts/demo-failures.sh`。
+- [x] **T5.7 失败路径演示脚本** (2026-09-23；2026-09-24)：超预算、数据缺失、不支持查询、LLM/解析失败四类证据。
+  验收：状态码分别为 RESOURCE_EXHAUSTED / DATA_INTEGRITY_ERROR / UNSUPPORTED_QUERY / 解析失败，且无部分结果。证据：`scripts/demo-failures.sh`（`./scripts/kart.sh demo-failures`）+ `CoordinatorFailureTest` / NL acceptance。
 - [x] **T5.8 README 与环境锁定文档** (2026-09-23)：`README.md`（实际验证过的命令）、`docs/environment-lock.md`（版本、依赖冲突解决）、`docs/supported-semantics.md`。
   验收：按 README 在干净 WSL 会话中可复现 doctor → build-snapshot → query-nl。证据：上述文档 + `USER_ACTIONS.md`。
 

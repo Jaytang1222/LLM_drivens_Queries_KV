@@ -29,6 +29,13 @@ config/environment.yaml
 .env
 .env.*
 
+# WSL sync stamp (filename = sync id; not for git)
+KART_SYNC_*
+!scripts/**
+
 # Python / editor junk
 __pycache__/
 *.pyc
+
+# jqwik property-test seed/cache (regenerated on mvn test)
+.jqwik-database

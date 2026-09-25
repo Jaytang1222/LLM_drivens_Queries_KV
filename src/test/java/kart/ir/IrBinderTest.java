@@ -46,7 +46,7 @@ class IrBinderTest {
     d.result.k = 2;
     d.temporal = temporal();
     d.similarity = new DraftIr.Similarity();
-    d.similarity.metric = "FRECHET";
+    d.similarity.metric = "EDIT_DISTANCE";
     d.similarity.reference_trajectory_id = "R";
     IrBinder.BindResult br = binder().bind(d);
     assertEquals(IrBinder.STATUS_UNSUPPORTED_QUERY, br.status);
@@ -126,6 +126,7 @@ class IrBinderTest {
     box.min_lat = 4;
     box.max_lon = 8;
     box.max_lat = 8;
+    box.local_meters = true;
     AppConfig.Region bj = new AppConfig.Region();
     bj.name = "beijing_core";
     bj.min_lon = 116.28;

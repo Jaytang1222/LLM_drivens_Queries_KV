@@ -15,6 +15,7 @@ import kart.llm.MockLlmClient;
 import kart.llm.OpenAiCompatibleClient;
 import kart.llm.PromptBuilder;
 import kart.query.QueryEngine;
+import kart.search.PlannerMode;
 import kart.snapshot.FixtureBuilder;
 import kart.snapshot.SnapshotBuilder;
 import picocli.CommandLine.Command;
@@ -40,6 +41,10 @@ public final class QueryNlCmd implements Callable<Integer> {
 
   @Option(names = "--mock", description = "Use MockLlmClient from testdata/llm-mock")
   private boolean mock;
+
+  @Option(names = "--policy",
+      description = "Plan policy after IR bind: rule|best_first|llm|llm_direct (default: llm when client present)")
+  private String policy;
 
   @Option(names = "--memory",
       description = "Dev-only MemoryBackend. Experiment path: omit (uses HBase fixture_v1_ready).")
@@ -126,13 +131,23 @@ public final class QueryNlCmd implements Callable<Integer> {
 
       IrBinder binder = new IrBinder(
           config.regions(), kv, layout.tableMeta, layout.shardCount,
-          mid, "point_dtw_v1");
+          mid, "point_similarity_v2");
       kart.exec.ExecLimits limits = kart.exec.ExecLimits.defaults();
       limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE,
           config.planner().max_candidate_chunks);
       limits.maxDtwCells = config.planner().max_dtw_cells;
       limits.fetchBatch = config.planner().fetch_batch_size;
-      QueryEngine engine = new QueryEngine(kv, layout, limits, stats, config.planner().cost);
+      kart.exec.ExecLimits fromCost = kart.exec.ExecLimits.fromCostCoeffs(config.planner().cost);
+      limits.softMemoryBytes = fromCost.softMemoryBytes;
+      limits.maxExecMs = fromCost.maxExecMs;
+      limits.indexParallelism = fromCost.indexParallelism;
+      limits.scanParallelism = fromCost.scanParallelism;
+      limits.scanParallelismPerRs = fromCost.scanParallelismPerRs;
+      limits.fetchParallelism = fromCost.fetchParallelism;
+      QueryEngine engine = new QueryEngine(kv, layout, limits, stats, config.planner(), llm);
+      if (policy != null && !policy.trim().isEmpty()) {
+        engine.setPlannerMode(PlannerMode.parse(policy));
+      }
       Path runsRoot = runsDir.isAbsolute() ? runsDir : root.resolve(runsDir);
 
       Dialog dialog = new Dialog(llm, prompts, validator, binder, engine, runsRoot);

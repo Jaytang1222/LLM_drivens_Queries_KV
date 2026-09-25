@@ -118,7 +118,7 @@ public final class SmokeTdriveCmd implements Callable<Integer> {
         cfg.planner().max_candidate_chunks);
     limits.maxDtwCells = cfg.planner().max_dtw_cells;
     limits.fetchBatch = cfg.planner().fetch_batch_size;
-    QueryEngine engine = new QueryEngine(kv, layout, limits, stats, cfg.planner().cost);
+    QueryEngine engine = new QueryEngine(kv, layout, limits, stats, cfg.planner(), null);
 
     int passed = 0;
     int failed = 0;

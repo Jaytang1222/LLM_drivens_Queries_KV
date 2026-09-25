@@ -22,11 +22,21 @@ public final class ExecutionTrace {
     public long rows;
     public long bytes;
     public long elapsedMs;
-    /** Not separately estimated in MVP executor. */
+    /** Planner estimate when available; otherwise null. */
     public Long estimated_rows;
     public Long estimated_bytes;
-    /** HBase client RPC count — unavailable → null. */
+    /**
+     * True HBase RPC count when available from client/server metrics; otherwise null
+     * (do not invent — §13.6 / design.md §11).
+     */
     public Long rpc_count;
+    /**
+     * Client-visible Scan/Get work units: opens + estimated Scan pages from
+     * {@code caching} (aligned with cost-model {@code rpcPerRange} semantics).
+     */
+    public Long client_ops;
+    /** Number of ScanTask / range opens emitted by this node (design.md §11). */
+    public Long emitted_ranges;
   }
 
   public String run_id;
@@ -50,7 +60,29 @@ public final class ExecutionTrace {
   public Long dtw_cells;
   public Long llm_calls;
   public Long llm_tokens;
+  /** True HBase RPC metrics only; null when unavailable. */
   public Long rpc_count;
+  /** Client Scan/Get open count. */
+  public Long client_ops_count;
+
+  /** Phase wall-clock ms (filled when observable). */
+  public Long phase_index_ms;
+  public Long phase_set_ms;
+  public Long phase_fetch_ms;
+  public Long phase_exact_ms;
+  public Long phase_reconstruct_ms;
+  public Long phase_sim_ms;
+  public Long phase_topk_ms;
+
+  /** Planning wall ms (search → select); E2/E3 {@code t_plan_ms}. */
+  public Long t_plan_ms;
+  /** Execute wall ms (Coordinator only); null for plan-only runs. */
+  public Long t_exec_ms;
+  /** selected.estimated_ms − min(safe); §19.1 plan regret. */
+  public Double plan_regret_ms;
+  public Double best_safe_estimated_ms;
+  /** Wire name: rule | best_first | llm | llm_direct. */
+  public String planner_mode;
 
   /** @deprecated use {@link #dtw_cells}; kept for older readers */
   public long dtwCells;
@@ -66,6 +98,8 @@ public final class ExecutionTrace {
       t.estimated_rows = null;
       t.estimated_bytes = null;
       t.rpc_count = null;
+      t.client_ops = null;
+      t.emitted_ranges = null;
       nodes.put(id, t);
     }
     return t;
@@ -76,6 +110,7 @@ public final class ExecutionTrace {
     t.rows += rows;
     t.bytes += bytes;
     t.elapsedMs += elapsedMs;
+    // estimated_* must come from planner CostFeatures when available; do not mirror actuals.
     totalRows += rows;
     totalBytes += bytes;
   }
@@ -93,6 +128,8 @@ public final class ExecutionTrace {
       m.put("estimated_rows", t.estimated_rows);
       m.put("estimated_bytes", t.estimated_bytes);
       m.put("rpc_count", t.rpc_count);
+      m.put("client_ops", t.client_ops);
+      m.put("emitted_ranges", t.emitted_ranges);
       operator_metrics.add(m);
     }
     // sync deprecated aliases

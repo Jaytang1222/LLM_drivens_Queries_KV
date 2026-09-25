@@ -1,0 +1,42 @@
+{
+  "trainSize" : 16,
+  "valSize" : 5,
+  "testSize" : 7,
+  "trainMae" : 441.4948959322861,
+  "valMae" : 893.9709415323771,
+  "testMae" : 2950.9457845239954,
+  "calibrated" : true,
+  "modelVersion" : "cost_v2_rs_sched",
+  "weights" : {
+    "rpc_est" : 0.0,
+    "seek_ranges" : 0.0,
+    "index_bytes" : 0.0,
+    "decode_rows" : 0.0,
+    "set_bytes" : 0.0,
+    "fetch_gets" : 0.0,
+    "exact_points" : 0.0,
+    "recon_chunks" : 0.0,
+    "dtw_cells" : 0.0
+  },
+  "namedCoeffs" : {
+    "alpha_rpc" : 8.0,
+    "alpha_seek" : 0.5625,
+    "alpha_byte" : 1.2750000000000008E-5,
+    "alpha_decode" : 6.000000000000004E-4,
+    "beta_hash" : 7.75E-5,
+    "beta_emit" : 1.3109474999999915,
+    "beta_spill" : 1.0E-8,
+    "gamma_rpc" : 12.62500000000001,
+    "gamma_byte" : 0.001047000000000003,
+    "gamma_decode" : 1.6406999999999958,
+    "delta_point" : 0.05342499999999976,
+    "rho_linear" : 0.0,
+    "eta_cell" : 0.001160000000000005,
+    "theta_heap" : 0.15425000000000003,
+    "eta_cell_dtw" : 0.0
+  },
+  "filterPassRate" : null,
+  "filterPassSamples" : null,
+  "filterPassHits" : null,
+  "note" : "§16 offline feedback: CostModel+ScheduleEstimate MAE fit; freeze coeffs during experiments."
+}

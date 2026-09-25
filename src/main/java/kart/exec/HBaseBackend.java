@@ -159,6 +159,12 @@ public final class HBaseBackend implements KvBackend {
   @Override
   public void scanConsume(String tableName, byte[] start, byte[] stop, List<String> columns,
                           RowConsumer consumer) throws IOException {
+    scanConsume(tableName, start, stop, columns, 1000, consumer);
+  }
+
+  @Override
+  public void scanConsume(String tableName, byte[] start, byte[] stop, List<String> columns,
+                          int caching, RowConsumer consumer) throws IOException {
     try (Table t = connection.getTable(TableName.valueOf(tableName))) {
       Scan scan = new Scan();
       if (start != null) {
@@ -167,18 +173,21 @@ public final class HBaseBackend implements KvBackend {
       if (stop != null) {
         scan.withStopRow(stop, false);
       }
+      int cache = caching > 0 ? caching : 1000;
       boolean keysOnly = columns != null && columns.isEmpty();
       if (keysOnly) {
         scan.setCacheBlocks(false);
-        scan.setCaching(2000);
-        // still need a family to scan; add family d without qualifiers → all cols, but we ignore values
+        scan.setCaching(Math.max(cache, 2000));
         scan.addFamily(Bytes.toBytes("d"));
-      } else if (columns != null) {
-        for (String col : columns) {
-          int colon = col.indexOf(':');
-          byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
-          byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
-          scan.addColumn(family, qual);
+      } else {
+        scan.setCaching(cache);
+        if (columns != null) {
+          for (String col : columns) {
+            int colon = col.indexOf(':');
+            byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
+            byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
+            scan.addColumn(family, qual);
+          }
         }
       }
       try (ResultScanner rs = t.getScanner(scan)) {

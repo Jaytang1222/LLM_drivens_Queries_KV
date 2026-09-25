@@ -1,0 +1,124 @@
+=== KART HBase version evidence ===
+utc=2026-09-25T05:45:27Z
+git_commit=f5dd7ad8f240b12208c303eccddec427809d3e9a
+KART_ROOT=/home/jaytang/projects/llm-kv
+KART_DST=/home/jaytang/projects/llm-kv
+HBASE_HOME=/home/jaytang/hbase
+experiment_manifest=tdrive_v1_ready
+
+--- doctor ---
+=== KART doctor ===
+project root: /home/jaytang/projects/llm-kv
+JDK: 1.8.0_482 (/usr/lib/jvm/java-8-openjdk-amd64/jre)
+OK: hbase-site.xml at /home/jaytang/projects/llm-kv/config/hbase/hbase-site.xml
+WARN: env LLM_BASE_URL not set (LLM features unavailable)
+WARN: env LLM_MODEL not set (LLM features unavailable)
+WARN: env LLM_API_KEY not set (LLM features unavailable)
+hbase.zookeeper.quorum=localhost clientPort=2181
+hbase-client jar version (Approximate): 2.2.3 (pom)
+OK: connected to HBase; tables=93
+  - cd-test
+  - cd-test_meta
+  - fixture_idx_hash_v1
+  - fixture_idx_time_v1
+  - fixture_idx_zorder_v1
+  - fixture_traj_meta_v1
+  - fixture_traj_raw_v1
+  - idx_hash_v1
+  - idx_time_v1
+  - idx_zorder_v1
+  - leti_ablation_full
+  - leti_ablation_full_meta
+  - tdrive-bmtree-test
+  - tdrive-bmtree-test_meta
+  - tdrive-lmsfc-test
+  - tdrive-lmsfc-test_meta
+  - tdrive-rl-test
+  - tdrive-rl-test_meta
+  - tdrive-test
+  - tdrive-test_meta
+  - tdrive_ablation_leti_ab_meta
+  - tdrive_ablation_leti_lbmt_meta
+  - tdrive_ablation_leti_lmsfc_meta
+  - tdrive_ablation_leti_meta
+  - tdrive_bmt
+  - tdrive_bmt_meta
+  - tdrive_bmt_minTraj_1_meta
+  - tdrive_bmt_minTraj_2_meta
+  - tdrive_bmt_minTraj_3_meta
+  - tdrive_bmt_minTraj_4_meta
+  - tdrive_bmt_minTraj_5_meta
+  - tdrive_bmt_resolution_10_meta
+  - tdrive_bmt_resolution_6_meta
+  - tdrive_bmt_resolution_7_meta
+  - tdrive_bmt_resolution_8_meta
+  - tdrive_bmt_resolution_9_meta
+  - tdrive_leti_alpha_beta_2x2_meta
+  - tdrive_leti_alpha_beta_3x3_meta
+  - tdrive_leti_alpha_beta_4x4_meta
+  - tdrive_leti_alpha_beta_5x5_meta
+  - tdrive_leti_gaussian
+  - tdrive_leti_gaussian_meta
+  - tdrive_leti_meta
+  - tdrive_leti_skewed
+  - tdrive_leti_skewed_meta
+  - tdrive_leti_uniform
+  - tdrive_leti_uniform_meta
+  - tdrive_lmsfc
+  - tdrive_lmsfc_meta
+  - tdrive_lmsfc_minTraj_1_meta
+  - tdrive_lmsfc_minTraj_2_meta
+  - tdrive_lmsfc_minTraj_3_meta
+  - tdrive_lmsfc_minTraj_4_meta
+  - tdrive_lmsfc_minTraj_5_meta
+  - tdrive_lmsfc_resolution_10_meta
+  - tdrive_lmsfc_resolution_6_meta
+  - tdrive_lmsfc_resolution_7_meta
+  - tdrive_lmsfc_resolution_8_meta
+  - tdrive_lmsfc_resolution_9_meta
+  - tdrive_tshape
+  - tdrive_tshape_alpha_beta_2x2_meta
+  - tdrive_tshape_alpha_beta_3x3_meta
+  - tdrive_tshape_alpha_beta_4x4_meta
+  - tdrive_tshape_alpha_beta_5x5_meta
+  - tdrive_tshape_meta
+  - tdrive_tshape_minTraj_1_meta
+  - tdrive_tshape_minTraj_2_meta
+  - tdrive_tshape_minTraj_3_meta
+  - tdrive_tshape_minTraj_4_meta
+  - tdrive_tshape_minTraj_5_meta
+  - tdrive_tshape_resolution_10_meta
+  - tdrive_tshape_resolution_6_meta
+  - tdrive_tshape_resolution_7_meta
+  - tdrive_tshape_resolution_8_meta
+  - tdrive_tshape_resolution_9_meta
+  - tdrive_xzstar
+  - tdrive_xzstar_alpha_beta_2x2_meta
+  - tdrive_xzstar_alpha_beta_3x3_meta
+  - tdrive_xzstar_alpha_beta_4x4_meta
+  - tdrive_xzstar_alpha_beta_5x5_meta
+  - tdrive_xzstar_meta
+  - tdrive_xzstar_minTraj_1_meta
+  - tdrive_xzstar_minTraj_2_meta
+  - tdrive_xzstar_minTraj_3_meta
+  - tdrive_xzstar_minTraj_4_meta
+  - tdrive_xzstar_minTraj_5_meta
+  - tdrive_xzstar_resolution_10_meta
+  - tdrive_xzstar_resolution_6_meta
+  - tdrive_xzstar_resolution_7_meta
+  - tdrive_xzstar_resolution_8_meta
+  - tdrive_xzstar_resolution_9_meta
+  - traj_meta_v1
+  - traj_raw_v1
+HBase cluster status: 2.1.2
+=== doctor: OK ===
+
+--- HBASE_CLASSPATH hint (TMan-spatial may pin cluster status to 2.1.2) ---
+TMan-spatial-1.0-SNAPSHOT-jar-with-dependencies.jar
+hbase-client-2.2.3.jar
+hbase-common-2.2.3-tests.jar
+hbase-common-2.2.3.jar
+
+--- experiment-scoped tables (prefix from manifest naming) ---
+Only tables belonging to manifest=tdrive_v1_ready are in experiment scope.
+Other tables on the cluster must be ignored for latency/correctness claims.

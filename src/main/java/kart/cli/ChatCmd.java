@@ -108,13 +108,20 @@ public final class ChatCmd implements Callable<Integer> {
 
       IrBinder binder = new IrBinder(
           config.regions(), kv, layout.tableMeta, layout.shardCount,
-          mid, "point_dtw_v1");
+          mid, "point_similarity_v2");
       ExecLimits limits = ExecLimits.defaults();
       limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE,
           config.planner().max_candidate_chunks);
       limits.maxDtwCells = config.planner().max_dtw_cells;
       limits.fetchBatch = config.planner().fetch_batch_size;
-      QueryEngine engine = new QueryEngine(kv, layout, limits, stats, config.planner().cost);
+      ExecLimits fromCost = ExecLimits.fromCostCoeffs(config.planner().cost);
+      limits.softMemoryBytes = fromCost.softMemoryBytes;
+      limits.maxExecMs = fromCost.maxExecMs;
+      limits.indexParallelism = fromCost.indexParallelism;
+      limits.scanParallelism = fromCost.scanParallelism;
+      limits.scanParallelismPerRs = fromCost.scanParallelismPerRs;
+      limits.fetchParallelism = fromCost.fetchParallelism;
+      QueryEngine engine = new QueryEngine(kv, layout, limits, stats, config.planner(), llm);
       Path runsRoot = runsDir.isAbsolute() ? runsDir : root.resolve(runsDir);
 
       BufferedReader stdin = new BufferedReader(

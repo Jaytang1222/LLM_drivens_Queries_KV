@@ -4,8 +4,8 @@ import kart.data.CanonicalPoint;
 import kart.data.Chunk;
 import kart.data.Trajectory;
 import kart.exec.Dtw;
+import kart.exec.TrajectorySimilarity;
 import kart.ir.BoundIr;
-import kart.snapshot.FixtureBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,8 +59,9 @@ public final class FullScanOracle {
     this.trajectories = trajectories;
   }
 
+  /** Oracle over IMPLEMENTATION_PLAN §18 fixture trajectories (R/A/B/C). */
   public static FullScanOracle forFixture() {
-    return new FullScanOracle(FixtureBuilder.trajectories());
+    return new FullScanOracle(kart.snapshot.FixtureBuilder.trajectories());
   }
 
   public Answer evaluate(BoundIr ir) {
@@ -85,9 +86,17 @@ public final class FullScanOracle {
       }
       List<ScoredId> scored = new ArrayList<ScoredId>();
       Dtw.Point[] refPts = toDtw(ref);
+      if (ir.similarity.metric == null || ir.similarity.metric.isEmpty()) {
+        throw new IllegalArgumentException(
+            "similarity.metric required (DTW|FRECHET|HAUSDORFF); not defaulted");
+      }
+      String metric = ir.similarity.metric;
+      if (!TrajectorySimilarity.isSupported(metric)) {
+        throw new IllegalArgumentException("unsupported similarity metric=" + metric);
+      }
       for (Long tid : matched) {
         Trajectory t = findByTid(tid);
-        Dtw.Result d = Dtw.distance(toDtw(t), refPts);
+        Dtw.Result d = TrajectorySimilarity.distance(metric, toDtw(t), refPts);
         scored.add(new ScoredId(t.tid, t.trajectoryId, d.distance));
       }
       Collections.sort(scored, new Comparator<ScoredId>() {

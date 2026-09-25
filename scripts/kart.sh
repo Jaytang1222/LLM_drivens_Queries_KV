@@ -13,16 +13,13 @@ case "$cmd" in
   up|start)
     bash "$ROOT/scripts/start-stack.sh"
     ;;
-  load-fixture|fixture-hbase)
-    kart_java load-fixture-hbase "$@"
-    ;;
   down|stop)
     bash "$ROOT/scripts/stop-stack.sh"
     ;;
   chat|repl)
     kart_load_llm_env
     export KART_STATUS="${KART_STATUS:-true}"
-    # Experiment path: HBase fixture (default). Pass --memory only for offline unit demos.
+    # Live LLM → HBase tdrive_v1_ready (default)
     kart_java chat "$@"
     ;;
   check|demo-verify)
@@ -38,21 +35,34 @@ case "$cmd" in
   smoke)
     bash "$ROOT/scripts/run-tdrive-smoke.sh" "$@"
     ;;
+  sync)
+    bash "$ROOT/scripts/sync-wsl-workspace.sh" "$@"
+    ;;
+  sync-check)
+    bash "$ROOT/scripts/check-wsl-sync.sh" "$@"
+    ;;
+  fit-cost-pack)
+    bash "$ROOT/scripts/publish-cost-calib-pack.sh" "$@"
+    ;;
+  hbase-evidence)
+    bash "$ROOT/scripts/capture-hbase-evidence.sh" "$@"
+    ;;
+  demo-failures)
+    bash "$ROOT/scripts/demo-failures.sh" "$@"
+    ;;
   test)
     bash "$ROOT/scripts/wsl-test.sh" "$@"
-    ;;
-  demo|failures)
-    bash "$ROOT/scripts/demo-failures.sh" "$@"
     ;;
   rebuild)
     bash "$ROOT/scripts/rebuild-jar.sh" "$@"
     ;;
-  verify|strict)
-    bash "$ROOT/scripts/strict-verify-all.sh" "$@"
-    ;;
-  live-accept)
+  chat-easy)
     kart_load_llm_env
-    bash "$ROOT/scripts/live-nl-acceptance.sh" "$@"
+    bash "$ROOT/scripts/chat-easy-acceptance.sh" "$@"
+    ;;
+  chat-handbook)
+    kart_load_llm_env
+    bash "$ROOT/scripts/chat-handbook-acceptance.sh" "$@"
     ;;
   run)
     kart_load_llm_env
@@ -62,14 +72,16 @@ case "$cmd" in
     cat <<'EOF'
 KART — run all of this in WSL (not PowerShell).
 
-Experiment path (all queries via HBase + live LLM):
-  ./scripts/kart.sh up            # ZK + HBase + load-fixture
+Experiment path (Live LLM → HBase T-Drive):
+  ./scripts/kart.sh up            # ZK + HBase
+  ./scripts/kart.sh run build-snapshot --data datasets/tdrive   # if catalog missing
   ./scripts/kart.sh chat          # Live LLM → HBase (need .env)
-  ./scripts/kart.sh smoke         # T-Drive vs Oracle
+  ./scripts/kart.sh smoke         # T-Drive vs Oracle 24/24
   ./scripts/kart.sh down
 
-Regression (optional): chat --mock | check | load-fixture | doctor
-Keep fixture/testdata/Mock/unit tests — see docs/scaffolding.md
+Also: doctor | probe | check | demo-failures | chat-easy | chat-handbook | rebuild | test | run <cli-args>
+      sync | sync-check | fit-cost-pack | hbase-evidence
+See docs/how-to-run.md, docs/experiment-scope.md, docs/easy_query_example.md.
 EOF
     ;;
   *)

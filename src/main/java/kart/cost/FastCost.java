@@ -18,18 +18,26 @@ public final class FastCost {
   private final CostFeaturesExtractor extractor;
 
   public FastCost(StatsSnapshot stats) {
-    this(null, stats, null);
+    this(null, stats, null, null);
   }
 
   public FastCost(LayoutContext layout, StatsSnapshot stats) {
-    this(layout, stats, null);
+    this(layout, stats, null, null);
   }
 
   public FastCost(LayoutContext layout, StatsSnapshot stats, AppConfig.CostCoeffs coeffs) {
+    this(layout, stats, coeffs, null);
+  }
+
+  public FastCost(LayoutContext layout, StatsSnapshot stats, AppConfig.CostCoeffs coeffs,
+                  RegionMapping regionMapping) {
     this.layout = layout;
     this.stats = stats;
-    this.model = new CostModel(coeffs != null ? coeffs : new AppConfig.CostCoeffs());
-    this.extractor = new CostFeaturesExtractor(layout, stats);
+    AppConfig.CostCoeffs c = coeffs != null ? coeffs : new AppConfig.CostCoeffs();
+    RegionMapping rm = regionMapping != null ? regionMapping : new RegionMapping.ShardFallback();
+    this.model = new CostModel(c, rm);
+    long soft = c.soft_memory_bytes > 0 ? c.soft_memory_bytes : (512L * 1024L * 1024L);
+    this.extractor = new CostFeaturesExtractor(layout, stats, rm, soft);
   }
 
   public CostModel model() {

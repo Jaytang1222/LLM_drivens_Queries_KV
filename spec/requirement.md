@@ -1,9 +1,9 @@
 # KART 需求文档（Requirement）
 
-- 版本：v0.1，2026-09-21
-- 状态：已与开发者确认关键决策，待实现
+- 版本：v0.1，2026-09-21；状态栏更新 2026-09-25
+- 状态：**MVP 已实现并通过验收**（见 `spec/task.md` P0–P5、`docs/environment-lock.md`）；对比实验 E1–E3 见 `spec/comparative_experiment.md`（规范已锁，bench 脚本另开）
 - 上游依据：`spec/IMPLEMENTATION_PLAN.md`（完整技术方案）、`spec/副本1.pdf`（导师讨论版 PPT）
-- 配套文档：`spec/design.md`（设计）、`spec/task.md`（任务清单）
+- 配套文档：`spec/design.md`（设计）、`spec/task.md`（任务清单）、`docs/supported-semantics.md`
 - 本文目标：用最少篇幅锁定 MVP 要做什么、不做什么、怎样算做完。细节以 IMPLEMENTATION_PLAN.md 为准，本文与其冲突时以本文（更新的决策）为准。
 
 ---
@@ -16,10 +16,10 @@
 2. LLM 把查询理解为**类型化中间表示（Typed IR）**，信息不足时通过多轮对话澄清；
 3. 系统在合法算子空间中搜索多个候选访问计划，由 **LLM 或规则策略**指导；
 4. **确定性验证器**保证候选计划的覆盖与语义正确，只在安全计划中按代价估计选择；
-5. 编译为 HBase Scan/Get 执行，精确过滤后返回轨迹结果或 DTW Top-K；
+5. 编译为 HBase Scan/Get 执行，精确过滤后返回轨迹结果或 Top-K（DTW / 离散 Fréchet / Hausdorff）；
 6. 结果与 **FullScan Oracle** 完全一致。
 
-MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终实验系统。
+定位是对齐 PDF 的端到端链路（含 LLM 引导路径搜索与多相似度度量），不是完整论文实验系统。
 
 ## 2. 范围
 
@@ -31,26 +31,26 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 | 空间范围 | 在闭矩形 G 内有采样点的轨迹 | "经过区域 G 的轨迹" |
 | 时空相交 | **同一个采样点**同时满足时间与空间条件 | "2 月 3 日 8–10 点经过 G 的轨迹" |
 | 属性等值 | vehicle_id 等值过滤（可与上面组合） | "出租车 3644 在 2 月 3 日的轨迹" |
-| 相似 Top-K | 先按上述条件筛候选，再对完整轨迹算 DTW，返回前 K | "……中与轨迹 R 最相似的 2 条" |
+| 相似 Top-K | 先按上述条件筛候选，再对完整轨迹算 DTW / 离散 Fréchet / 对称 Hausdorff，返回前 K | "……中与轨迹 R 最相似的 2 条" |
 
 语义固定为：
 
 - `OBSERVED_POINT`：以采样点存在性判定，不做线段插值；
 - 时间半开区间 `[start, end)`，内部 UTC 毫秒，自然语言默认时区 **Asia/Shanghai**；
 - 空间为**闭边界轴对齐矩形**，用户用 WGS84 经纬度描述，系统转换为 UTM 50N 米制坐标；
-- DTW 按 `FULL_TRAJECTORY` 计算，欧氏局部距离，无归一化，结果按 `(distance, tid)` 升序；
+- 相似度量按 `FULL_TRAJECTORY` 计算，欧氏局部距离，无归一化，结果按 `(distance, tid)` 升序；`metric ∈ {DTW, FRECHET, HAUSDORFF}`；
 - 参考轨迹默认从结果中排除。
 
-### 2.2 明确不做（MVP）
+### 2.2 明确不做
 
 - 插值线段相交（LINEAR_SEGMENT）、圆/多边形、三维轨迹
 - COUNT / GROUP BY / 聚合、停留（dwell）条件、复杂 Join
-- Fréchet / Hausdorff 相似度（请求时返回 UNSUPPORTED，不静默替换为 DTW）
-- Quadtree 索引（PPT 中列出，MVP 只做时间 + Z-order + Hash）
+- 连续 Fréchet（仅离散 Fréchet）；未知 metric 返回 UNSUPPORTED，不静默替换
+- Quadtree 索引（PPT 中列出，当前只做时间 + Z-order + Hash）
 - 动态数据更新、索引自维护、Redis 缓存、Phoenix、在线地理编码
 - HTTP 服务（先 CLI，HTTP 后置）
-- 基线对比实验（MVP 只要求与 Oracle 一致；规则规划器作为无 LLM 回退保留，但不做性能对比报告）
-- 全局最优计划的任何声明；MVP 用预算与停滞条件结束搜索
+- 基线对比实验（只要求与 Oracle 一致；规则规划器作为无 LLM 回退保留）
+- 全局最优计划的任何声明；用预算与停滞条件结束搜索
 
 ## 3. 已确认的技术决策
 
@@ -104,7 +104,7 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 - FR-2.2 Schema 校验失败时带错误让 LLM 修复，最多 2 次。
 - FR-2.3 缺少用户事实（日期、区域、参考轨迹、K、相似度度量）时，输出 NEED_CLARIFICATION 及最少问题列表；CLI 在终端提问，用户回答后合并上下文重新解析；用户已给的信息不重复问。
 - FR-2.4 确定性 Binder：时区 → epoch_ms、经纬度矩形 → UTM 米制矩形、外部 trajectory_id → tid、数据集 → manifest；产生 BoundIR。
-- FR-2.5 不支持的请求（COUNT、dwell、Fréchet 等）返回 UNSUPPORTED_QUERY 并列出支持范围。
+- FR-2.5 不支持的请求（COUNT、dwell、未知 metric 等）返回 UNSUPPORTED_QUERY 并列出支持范围。
 - FR-2.6 生成可读语义摘要（含"采样点语义"说明）供用户确认；确认状态只是交互元数据。
 - FR-2.7 LLM 超时/不可用：有结构化 IR 走确定性规划；只有 NL 则返回解析失败。
 
@@ -115,6 +115,7 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 - FR-3.3 构造器自动补齐必需后缀：Deduplicate → FetchTrajectoryChunk → ExactSTFilter → ProjectTrajectoryIds → [ExcludeReference → BatchGetTrajectory → Similarity → TopK]。
 - FR-3.4 保留无 LLM 的规则策略（同一动作空间）作为回退与测试路径。
 - FR-3.5 预算：最大 LLM 调用数、最大候选数、最大规划时间；到达即停止；始终保留 FullScan 兜底计划。
+- FR-3.6 **执行主路径**（`QueryEngine`）使用 BeamSearch；NL/chat 默认 `LlmProposalPolicy`，`query-ir`/smoke 默认 `RulePolicy`。
 
 ### FR-4 验证（Validator）
 
@@ -136,8 +137,8 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 
 - FR-6.1 编译器根据 BoundIR、逻辑计划、manifest 生成 PhysicalPlan：每个 Scan 的表、start/stop 字节、列、caching；每个 Get 的 raw_key。
 - FR-6.2 半开区间与 `prefixSuccessor` 语义正确，全 FF 前缀特殊处理。
-- FR-6.3 执行器完成 Scan/Get/BatchGet、候选集合运算、块解码、ExactSTFilter、轨迹重建（按 seq 去重）、DTW、Top-K。
-- FR-6.4 失败语义：超时/内存超限/数据缺失返回显式状态（RESOURCE_EXHAUSTED / EXECUTION_FAILED / DATA_INTEGRITY_ERROR），**不返回部分正确答案**。
+- FR-6.3 执行器完成 Scan/Get/BatchGet、候选集合运算、块解码、ExactSTFilter、轨迹重建（按 seq 去重）、相似度（DTW/FRECHET/HAUSDORFF）、Top-K。
+- FR-6.4 失败语义：超时/内存超限/数据缺失返回显式状态（`RESOURCE_EXHAUSTED` / `FAILED` / `DATA_INTEGRITY_ERROR`；另有 `NO_SAFE_PLAN`），**不返回部分正确答案**。说明：历史文档名 `EXECUTION_FAILED` 与运行时 `FAILED` 同义。
 - FR-6.5 全扫描兜底走相同精确后缀。
 
 ### FR-7 Oracle 与回归
@@ -171,9 +172,9 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 | OI-4 | 数据规模 | 已关闭：全量 21 个文件 |
 | OI-5 | 默认参数 | 已关闭：256 / 10 min / L=8 / S=4，可配置 |
 | OI-6 | 时区 | 已关闭：Asia/Shanghai |
-| OI-7 | 基线对比 | 已关闭：MVP 不做 |
-| OI-8 | HBase 2.2.3 与 Java 8 下 `hbase-client` 传递依赖冲突（Guava/Netty） | **开放**：P0 `doctor` 阶段验证 |
-| OI-9 | T-Drive 空间域外/异常坐标的比例 | **已关闭（2026-09-22）**：见 `docs/tdrive-profile.md`；粗北京框外点 0%；**域外点拒绝整条轨迹**（domain = profile min/max ±1 km），不做 clamp |
+| OI-7 | 基线对比 | **已关闭（MVP）**：引擎侧 Rule / BestFirst / llm_direct 已接线；完整 E1–E3 四脚本与第三方臂见 `comparative_experiment.md`（实验层另开） |
+| OI-8 | HBase 2.2.3 与 Java 8 下 `hbase-client` 传递依赖冲突（Guava/Netty） | **已关闭（2026-09-22）**：排除 `slf4j-log4j12`、compile/doctor OK；见 `docs/environment-lock.md` OI-8。服务端 classpath 可能仍报 2.1.2（TMan-spatial 捆绑），功能可用 |
+| OI-9 | T-Drive 空间域外/异常坐标的比例 | **已关闭（2026-09-22）**：粗北京框外点 0%；**域外点拒绝整条轨迹**（domain = profile min/max ±1 km），不做 clamp |
 | OI-10 | 区域名称（如"中关村"）到矩形的映射 | **已关闭（2026-09-23）**：`config/regions.yaml` 预置公开坐标近似框（zhongguancun / wangjing / guomao 等）；见 `docs/regions.md`。非行政区划；可按实验再改 |
 
 ## 8. 验收标准（MVP Done）
@@ -182,7 +183,7 @@ MVP 的定位是"尽快跑通一条端到端可行链路"，不是论文最终�
 
 1. `doctor` 通过：能从 WSL 内连接 ZooKeeper 与 HBase 2.2.3，列出表。
 2. `build-snapshot` 对全量 T-Drive 成功发布 READY manifest，`verify-snapshot` 全量 posting 校验通过。
-3. `query-ir` 对第 18 节 fixture 与 T-Drive 上一组固定查询（四类 + Top-K，至少 20 条），结果与 FullScan Oracle **完全一致**。
+3. `query-ir` 对第 18 节 fixture 与 T-Drive 固定 smoke（当前 `tdrive_smoke` **24** 条：四类 + Top-K，含 DTW / FRECHET / HAUSDORFF），结果与 FullScan Oracle **完全一致**。
 4. `query-nl` 使用 MockLlmClient 能完成端到端；使用真实 API 时能对至少 5 条示例句生成合法 BoundIR，缺信息时正确发起澄清而非编造。
 5. 至少产生两个结构不同的安全候选计划（如 P_T、P_Z、P_TZ），非法动作不进入成本选择。
 6. `explain` 能输出候选、验证报告、CostCard、选中计划与物理请求摘要；IR 与 Plan JSON 中不含任何 RowKey 字节或 HBase 命令。

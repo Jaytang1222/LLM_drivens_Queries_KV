@@ -48,11 +48,12 @@ done
 if [[ "$ok" -eq 1 ]]; then
   echo "=== start-stack: OK ==="
   grep -E "tables=|HBase|ZooKeeper|doctor" /tmp/kart-doctor-boot.log | tail -15 || true
-  echo "-- load fixture into HBase (isolated fixture_* tables) --"
-  if java -Dkart.root="$KART_ROOT" -jar "$KART_JAR" load-fixture-hbase; then
-    echo "fixture_v1_ready ready for chat / query-nl / query-ir"
+  MANIFEST="$KART_ROOT/catalog/tdrive_v1_ready.manifest.json"
+  if [[ -f "$MANIFEST" ]]; then
+    echo "tdrive_v1_ready present — ready for chat / query-nl / query-ir / smoke"
   else
-    echo "WARN: load-fixture-hbase failed — run: ./scripts/kart.sh load-fixture" >&2
+    echo "WARN: missing $MANIFEST" >&2
+    echo "  run: ./scripts/kart.sh run build-snapshot --data datasets/tdrive" >&2
   fi
   exit 0
 fi

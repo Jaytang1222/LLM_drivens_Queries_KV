@@ -23,9 +23,7 @@ class IndexAndVerifyTest {
   void fixturePostingsMatchExpectedAndVerifyOk() throws Exception {
     MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
     List<Trajectory> trajs = FixtureBuilder.trajectories();
-    IndexBuilders.LayoutParams layout = new IndexBuilders.LayoutParams();
-    layout.epochMs = FixtureBuilder.T0;
-    layout.domain = new Rect(0, 0, 100, 100);
+    IndexBuilders.LayoutParams layout = FixtureBuilder.layoutParams();
     IndexBuilders builders = new IndexBuilders(layout);
     Chunker chunker = new Chunker(256);
 

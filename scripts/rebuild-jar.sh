@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-export PATH="$JAVA_HOME/bin:/mnt/c/maven/apache-maven-3.6.3/bin:$PATH"
-REPO=/home/jaytang/.m2/repository
-SRC=/mnt/f/Projects/LLM_KV
-# Prefer projects/llm-kv; build/LLM_KV is a compat symlink to the same tree
-DST=/home/jaytang/projects/llm-kv
-mkdir -p "$(dirname "$DST")"
-# Ensure compat symlink used by older scripts
-if [[ ! -e /home/jaytang/build/LLM_KV ]]; then
-  mkdir -p /home/jaytang/build
-  ln -sfn "$DST" /home/jaytang/build/LLM_KV
-fi
-rsync -a --exclude target --exclude datasets --exclude .git "$SRC/" "$DST/"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/kart-env.sh"
+
+REPO="${KART_MAVEN_REPO}"
+SRC="${KART_SRC}"
+DST="${KART_DST}"
+
+bash "$ROOT/scripts/sync-wsl-workspace.sh"
 cd "$DST"
 mvn -Dmaven.repo.local="$REPO" -q package -DskipTests
-mkdir -p "$SRC/target"
+mkdir -p "$SRC/target" "$DST/target"
 cp -f target/kart.jar "$SRC/target/kart.jar"
-echo "jar rebuilt"
+echo "jar rebuilt -> $SRC/target/kart.jar (built in $DST)"

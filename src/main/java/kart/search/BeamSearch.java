@@ -7,6 +7,7 @@ import kart.cost.CostCard;
 import kart.cost.FastCost;
 import kart.ir.BoundIr;
 import kart.plan.PlanEnvelope;
+import kart.validation.IncrementalValidator;
 import kart.validation.PlanValidator;
 import kart.validation.SafePlanHandle;
 import kart.validation.ValidationReport;
@@ -22,13 +23,14 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Beam search over legal plan actions with budget (T4.4) and validator wiring (T4.6).
+ * Beam search over legal plan actions (IMPLEMENTATION_PLAN §11.5).
  */
 public final class BeamSearch {
 
   private final LayoutContext layout;
   private final FastCost fastCost;
   private final LegalActionGenerator generator = new LegalActionGenerator();
+  private final IncrementalValidator incremental = new IncrementalValidator();
 
   public BeamSearch(LayoutContext layout, FastCost fastCost) {
     this.layout = layout;
@@ -48,16 +50,19 @@ public final class BeamSearch {
     SearchLog log = result.log;
     Set<String> seenStates = new HashSet<String>();
     Set<String> candidateSigs = new HashSet<String>();
+    Set<String> familyEmitted = new HashSet<String>();
     Map<String, PlanEnvelope> candidatesById = new HashMap<String, PlanEnvelope>();
 
-    // Always keep P_FULL
     SearchState empty = SearchState.initial(ir);
     addCandidate(empty.completePlan(), candidatesById, candidateSigs, result);
 
-    // Seed frontier with single-index START states (deterministic diversity)
     List<SearchState> frontier = new ArrayList<SearchState>();
     for (String idx : LegalActionGenerator.availableIndexes(ir)) {
       SearchState s = empty.apply(LegalActionGenerator.start(idx));
+      IncrementalValidator.Result inc = incremental.check(s);
+      if (!inc.ok) {
+        continue;
+      }
       CostCard card = fastCost.estimate(s.completePlan(), ir);
       s.setFastCost(card);
       if (seenStates.add(s.signature())) {
@@ -78,13 +83,12 @@ public final class BeamSearch {
         break;
       }
 
-      List<SearchState> next = new ArrayList<SearchState>();
+      Map<String, List<LegalAction>> legalById = new HashMap<String, List<LegalAction>>();
+      Map<String, CostCard> cardsById = new HashMap<String, CostCard>();
+      Map<String, SearchState> stateById = new HashMap<String, SearchState>();
       double roundBest = Double.POSITIVE_INFINITY;
 
       for (SearchState state : frontier) {
-        if (budget.exhausted() || budget.candidatesFull(candidatesById.size())) {
-          break;
-        }
         List<LegalAction> legal = generator.generate(state);
         CostCard card = state.fastCost();
         if (card == null) {
@@ -92,39 +96,90 @@ public final class BeamSearch {
           state.setFastCost(card);
         }
         roundBest = Math.min(roundBest, card.estimated_ms);
+        legalById.put(state.stateId(), legal);
+        cardsById.put(state.stateId(), card);
+        stateById.put(state.stateId(), state);
+        log.begin(stepNo++, state, legal, card);
+      }
 
-        SearchLog.Step step = log.begin(stepNo++, state, legal, card);
-        ActionSelection sel = policy.propose(state, legal, card, budget);
-        recordSelection(step, sel, policy);
+      List<ActionProposal> proposals = policy.propose(frontier, legalById, cardsById, budget);
+      List<SearchState> next = new ArrayList<SearchState>();
 
-        if (sel.action == null) {
-          step.event = "skip";
-          step.reason = "null_action";
+      for (ActionProposal prop : proposals) {
+        if (budget.exhausted() || budget.candidatesFull(candidatesById.size())) {
+          break;
+        }
+        SearchState state = stateById.get(prop.stateId);
+        if (state == null) {
+          continue;
+        }
+        SearchLog.Step step = findLastStep(log, state.signature());
+        if (step != null) {
+          recordProposal(step, prop, policy);
+        }
+
+        if (prop.action == null) {
+          if (step != null) {
+            step.event = "skip";
+            step.reason = "null_action";
+          }
           continue;
         }
 
-        if (sel.action.isFinish()) {
+        if (prop.action.isFinish()) {
           PlanEnvelope plan = state.completePlan();
-          step.completedPlanId = plan.plan_id;
+          if (step != null) {
+            step.completedPlanId = plan.plan_id;
+          }
           addCandidate(plan, candidatesById, candidateSigs, result);
           if (ruleForMark != null) {
             ruleForMark.markFinished(state.signature());
           }
-          // Keep state for INTERSECT growth (singles → pairs → triples)
           if (!seenStates.contains(state.signature() + "#grown")) {
-            LegalAction inter = firstIntersect(legal);
+            LegalAction inter = firstIntersect(legalById.get(state.stateId()));
             if (inter != null) {
               SearchState grown = state.apply(inter);
-              CostCard gc = fastCost.estimate(grown.completePlan(), ir);
-              grown.setFastCost(gc);
-              if (seenStates.add(grown.signature())) {
-                next.add(grown);
+              IncrementalValidator.Result inc = incremental.check(grown);
+              if (inc.ok) {
+                CostCard gc = fastCost.estimate(grown.completePlan(), ir);
+                grown.setFastCost(gc);
+                if (seenStates.add(grown.signature())) {
+                  next.add(grown);
+                }
               }
             }
             seenStates.add(state.signature() + "#grown");
           }
         } else {
-          SearchState ns = state.apply(sel.action);
+          // §8.2: PARTITION/REPLACE may precede FINISH — still emit the access-complete
+          // family once so PlanSelector can compare the base plan.
+          if (RulePolicy.accessComplete(state)
+              && (prop.action.kind == ActionKind.PARTITION_UNION
+                  || prop.action.kind == ActionKind.REPLACE)
+              && familyEmitted.add(state.signature())) {
+            addCandidate(state.completePlan(), candidatesById, candidateSigs, result);
+            if (ruleForMark != null) {
+              ruleForMark.markFinished(state.signature());
+            }
+          }
+          SearchState ns;
+          try {
+            ns = state.apply(prop.action);
+          } catch (RuntimeException e) {
+            if (step != null) {
+              step.event = "illegal_action";
+              step.reason = e.getMessage();
+            }
+            continue;
+          }
+          IncrementalValidator.Result inc = incremental.check(ns);
+          if (!inc.ok) {
+            if (step != null) {
+              step.event = "infeasible";
+              step.reason = inc.reason;
+            }
+            continue;
+          }
           CostCard nc = fastCost.estimate(ns.completePlan(), ir);
           ns.setFastCost(nc);
           if (seenStates.add(ns.signature())) {
@@ -153,6 +208,16 @@ public final class BeamSearch {
     return result;
   }
 
+  private static SearchLog.Step findLastStep(SearchLog log, String signature) {
+    SearchLog.Step last = null;
+    for (SearchLog.Step s : log.steps()) {
+      if (signature.equals(s.stateSignature)) {
+        last = s;
+      }
+    }
+    return last;
+  }
+
   private void validateAll(BoundIr ir, SearchResult result) {
     QueryCompiler compiler = new QueryCompiler(layout);
     PlanValidator validator = new PlanValidator(layout);
@@ -176,9 +241,6 @@ public final class BeamSearch {
     }
   }
 
-  /**
-   * Validate an extra injected plan (e.g. incomplete suffix) into the report (T4.6).
-   */
   public void validateInjected(BoundIr ir, PlanEnvelope env, SearchResult result) {
     QueryCompiler compiler = new QueryCompiler(layout);
     PlanValidator validator = new PlanValidator(layout);
@@ -232,6 +294,9 @@ public final class BeamSearch {
   }
 
   private static LegalAction firstIntersect(List<LegalAction> legal) {
+    if (legal == null) {
+      return null;
+    }
     for (LegalAction a : legal) {
       if (a.kind == ActionKind.INTERSECT) {
         return a;
@@ -250,28 +315,28 @@ public final class BeamSearch {
     return null;
   }
 
-  private static void recordSelection(SearchLog.Step step, ActionSelection sel,
-                                      ProposalPolicy policy) {
-    if (sel == null) {
+  private static void recordProposal(SearchLog.Step step, ActionProposal prop,
+                                     ProposalPolicy policy) {
+    if (prop == null) {
       step.legal = false;
       step.event = "skip";
       return;
     }
-    step.selectedActionId = sel.action != null ? sel.action.actionId : sel.requestedActionId;
-    step.reason = sel.reason;
-    if (sel.illegalFallback) {
+    step.selectedActionId = prop.action != null ? prop.action.actionId : prop.actionId;
+    step.reason = prop.reasonCode;
+    if (prop.illegal) {
       step.legal = false;
       step.event = "illegal_action";
     } else if (policy instanceof LlmProposalPolicy) {
       LlmProposalPolicy llm = (LlmProposalPolicy) policy;
       step.legal = !llm.lastIllegal;
-      step.event = llm.lastEvent != null ? llm.lastEvent : (sel.fromLlm ? "ok" : "rule_fallback");
-      if (sel.requestedActionId != null) {
-        step.selectedActionId = sel.action != null ? sel.action.actionId : sel.requestedActionId;
-      }
+      step.event = llm.lastEvent != null ? llm.lastEvent : (prop.fromLlm ? "ok" : "rule_fallback");
+    } else if (policy instanceof BestFirstPolicy) {
+      step.legal = true;
+      step.event = "best_first";
     } else {
       step.legal = true;
-      step.event = sel.fromLlm ? "ok" : "rule_fallback";
+      step.event = prop.fromLlm ? "ok" : "rule_fallback";
     }
   }
 }

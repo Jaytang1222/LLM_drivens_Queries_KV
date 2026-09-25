@@ -1,10 +1,10 @@
 # 面向 HBase 的 LLM 驱动轨迹查询系统：实现与实验交接方案
 
-- 版本：v1.0，2026-09-21。
+- 版本：v1.0，2026-09-21；状态栏更新 2026-09-25
 - 项目目录：F:/Projects/LLM_KV。
 - 建议代号：KART，暂定，未做名称查重。
 - 目标：为其他 IDE/Agent 提供可讨论、可实现、可验收的完整技术方案。
-- 当前状态：设计文档，尚未据此实现系统、部署 HBase 或取得实验结果。
+- 当前状态：**MVP 已按本文与 `spec/design.md` 落地**（Java 8 + HBase 2.2.3；见 `spec/task.md` / `docs/environment-lock.md`）。对比实验 E1–E3（`bench-*.sh` / 第三方臂）见 `spec/comparative_experiment.md`，规范已锁、脚本另开。下文个别「首版」措辞若与 design / supported-semantics 冲突，以后两者为准。
 - 主要依据：用户与导师讨论后的《LLM驱动的键值存储下轨迹数据查询-副本1.pptx》，14 页及备注。
 - PPT 路径：C:/Users/jayta/Desktop/paper/PPT/LLM驱动的键值存储下轨迹数据查询-副本1.pptx。
 - PPT SHA256：2EE98AC1C6F882EFA9948FE663B489B274576E3B6F2BD26971F02E478CCF5376。
@@ -66,7 +66,7 @@
 - 第 12 页“物理隔离”实际指 IR 与存储细节解耦，不是数据库事务隔离。IR 不要求用户选索引。
 - 第 7 页“早高峰车辆数”包含聚合，超出第 11 页四类查询。首版明确拒绝 COUNT，不把计数请求静默改成轨迹列表。
 - 第 8 页“LLM+用户双验证”落实为必要的意图澄清和可选语义摘要确认。用户不审核查询计划；语义摘要确认不是形式化正确性证明。
-- DTW/Fréchet/Hausdorff 在 PPT 中是候选能力。首版启用 DTW；其他算法未实现前返回不支持，不能自动替换。
+- DTW/Fréchet/Hausdorff 在 PPT 中是候选能力。**已实现**离散 DTW、离散 Fréchet、对称 Hausdorff（`FULL_TRAJECTORY`）；未知 metric / 连续 Fréchet 等返回 `UNSUPPORTED_QUERY`，不能自动替换为 DTW。
 - “不可能找到优化计划”只有在具备可靠下界和搜索空间定义时才能判断。首版使用预算和停滞条件，不声称全局最优。
 - “只有一篇 NoSQL 工作”“KV 计划优化空白”等概括没有在本次做全面文献核验，不能作为实现前提。后续相关工作需要包括 Phoenix、KV 记录层等已有查询规划能力。
 
@@ -654,8 +654,9 @@ MVP 使用粗粒度动作，避免为添加每个固定后缀发起一次 LLM �
 - INTERSECT_ACCESS(index_id, predicate_refs)。
 - REPLACE_ACCESS(node_id, compatible_index_id)。
 - CHOOSE_MERGE_IMPLEMENTATION(HASH_SET 或 SORT_MERGE)，仅在输入前提满足时。
+- PARTITION_UNION：仅选择系统提供的可证明分区（TIME_BIPART / Z_QUAD）；已实现。
 - FINISH：调用确定性补全器完成后缀。
-- 后续扩展 PARTITION_UNION：仅选择系统提供的可证明分区。
+- 无 LLM 时可用 RulePolicy（固定顺序）或 BestFirstPolicy（按 FastCost 选动作）。
 
 不允许 LLM 改变 q 的时间、空间、粒度、metric、K，或删除必须的精确后缀。
 
@@ -1121,7 +1122,7 @@ GET  /v1/catalog          逻辑能力摘要
 GET  /v1/runs/{run_id}     trace 与指标
 ~~~
 
-状态：OK、NEED_CLARIFICATION、UNSUPPORTED_QUERY、INVALID_IR、NO_SAFE_PLAN、RESOURCE_EXHAUSTED、EXECUTION_FAILED、DATA_INTEGRITY_ERROR。
+状态：OK、NEED_CLARIFICATION、UNSUPPORTED_QUERY、INVALID_IR、NO_SAFE_PLAN、RESOURCE_EXHAUSTED、FAILED（历史文档名 EXECUTION_FAILED）、DATA_INTEGRITY_ERROR、PLAN_ONLY（`--plan-only`）。
 
 ### 15.4 日志与指标
 
@@ -1517,7 +1518,7 @@ T-Drive/CD-Taxi 的真实列、坐标系、时间范围以 profile 报告和配�
 - 只在 SafePlan 集合中选择计划。
 - 计划可编译为 HBase Scan/Get/BatchGet。
 - ExactSTFilter 后与 FullScan Oracle 一致。
-- 轨迹级 DTW Top-K 先过滤、再重建、再评分。
+- 轨迹级 Top-K：先过滤、再重建、再按 DTW / 离散 Fréchet / 对称 Hausdorff 评分。
 - 返回规划、执行、扫描、候选、回表、过滤、RPC 等可观测指标。
 - 无真实 LLM API 时，Mock 模式也能完成端到端回归。
 - 数据和索引 manifest 能被固定版本复现。

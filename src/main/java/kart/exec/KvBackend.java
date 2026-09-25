@@ -26,10 +26,18 @@ public interface KvBackend extends AutoCloseable {
 
   /**
    * Streaming scan; does not retain rows after the consumer returns.
-   * Default falls back to {@link #scan} (OK for MemoryBackend / small tables).
+   * Default falls back to {@link #scan} (OK for small tables).
    */
   default void scanConsume(String table, byte[] start, byte[] stop, List<String> columns,
                            RowConsumer consumer) throws IOException {
+    scanConsume(table, start, stop, columns, 1000, consumer);
+  }
+
+  /**
+   * Streaming scan with HBase Scan caching hint (ignored by memory backends).
+   */
+  default void scanConsume(String table, byte[] start, byte[] stop, List<String> columns,
+                           int caching, RowConsumer consumer) throws IOException {
     for (Row row : scan(table, start, stop, columns)) {
       consumer.accept(row);
     }

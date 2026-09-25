@@ -31,7 +31,7 @@ public final class QueryResult {
   public List<String> trajectoryIds = new ArrayList<String>();
   public List<Scored> topK;
   public ExecutionTrace trace;
-  /** OK | RESOURCE_EXHAUSTED | DATA_INTEGRITY_ERROR | FAILED */
+  /** OK | RESOURCE_EXHAUSTED | DATA_INTEGRITY_ERROR | NO_SAFE_PLAN | FAILED */
   public String status = "OK";
   public String error;
 

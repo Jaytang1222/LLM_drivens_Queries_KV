@@ -66,7 +66,9 @@ class SchemaValidationTest {
   void boundIrRejectsInvalidIncludingStartRow() throws Exception {
     assertFalse(validator.validateBoundIr(
         validBound1().replace("\"snapshot\"", "\"startRow\":\"deadbeef\",\"snapshot\"")).isEmpty());
-    assertFalse(validator.validateBoundIr(validBound1().replace("DTW", "FRECHET")).isEmpty());
+    assertFalse(validator.validateBoundIr(validBound1().replace("DTW", "EDIT_DISTANCE")).isEmpty());
+    assertTrue(validator.validateBoundIr(validBound1().replace("DTW", "FRECHET")).isEmpty());
+    assertTrue(validator.validateBoundIr(validBound1().replace("DTW", "HAUSDORFF")).isEmpty());
     assertFalse(validator.validateBoundIr("{\"ir_version\":\"1.0\"}").isEmpty());
     assertFalse(validator.validateBoundIr(
         validBound1().replace("\"k\":2", "\"k\":\"two\"")).isEmpty());
@@ -83,20 +85,24 @@ class SchemaValidationTest {
         + "\"root\":\"n1\",\"nodes\":[{\"id\":\"n1\",\"op\":\"FULL_SCAN_CHUNKS\",\"inputs\":[]}]}";
     assertTrue(validator.validatePlan(plan).isEmpty());
     assertFalse(validator.validatePlan(plan.replace("FULL_SCAN_CHUNKS", "MAGIC")).isEmpty());
-    assertTrue(validator.validateActionSelection("{\"action_id\":\"a1\",\"reason\":\"x\"}").isEmpty());
+    assertTrue(validator.validateActionSelection(
+        "{\"response_version\":\"1.0\",\"proposals\":[{\"state_id\":\"s0\",\"action_id\":\"a1\",\"reason_code\":\"x\"}]}")
+        .isEmpty());
     assertFalse(validator.validateActionSelection("{\"action_id\":1}").isEmpty());
-    assertFalse(validator.validateActionSelection("{\"action_id\":\"a\",\"extra\":true}").isEmpty());
+    assertFalse(validator.validateActionSelection(
+        "{\"response_version\":\"1.0\",\"proposals\":[{\"state_id\":\"s0\",\"action_id\":\"a\",\"extra\":true}]}")
+        .isEmpty());
   }
 
   private static String validDraft1() {
-    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"temporal\":{\"start\":\"2008-02-02T08:00:00+08:00\",\"end\":\"2008-02-02T08:10:00+08:00\"},"
         + "\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},"
         + "\"result\":{\"mode\":\"TRAJECTORY_IDS\"}}";
   }
 
   private static String validDraft2() {
-    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"spatial\":{\"geometry\":{\"type\":\"RECTANGLE\",\"min_lon\":116.0,\"min_lat\":39.0,"
         + "\"max_lon\":117.0,\"max_lat\":40.0}},"
         + "\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},"
@@ -104,7 +110,7 @@ class SchemaValidationTest {
   }
 
   private static String validDraft3() {
-    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"similarity\":{\"metric\":\"DTW\",\"reference_trajectory_id\":\"R\",\"exclude_reference\":true},"
         + "\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},"
         + "\"result\":{\"mode\":\"TOP_K\",\"k\":2},\"missing\":[\"temporal\"]}";
@@ -112,7 +118,7 @@ class SchemaValidationTest {
 
   private static String validBound1() {
     return "{\"ir_version\":\"1.0\",\"query_id\":\"q1\","
-        + "\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+        + "\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"temporal\":{\"start_ms\":1201910400000,\"end_ms\":1201911000000},"
         + "\"spatial\":{\"min_x\":4,\"min_y\":4,\"max_x\":8,\"max_y\":8,"
         + "\"relation\":\"INTERSECTS\",\"boundary\":\"INCLUDED\"},"
@@ -120,22 +126,22 @@ class SchemaValidationTest {
         + "\"similarity\":{\"metric\":\"DTW\",\"reference_tid\":4,\"scope\":\"FULL_TRAJECTORY\","
         + "\"exclude_reference\":true,\"local_distance\":\"EUCLIDEAN\",\"normalization\":\"NONE\"},"
         + "\"result\":{\"mode\":\"TOP_K\",\"k\":2,\"tie_breaker\":\"TID_ASC\"},"
-        + "\"snapshot\":{\"manifest_id\":\"fixture_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
+        + "\"snapshot\":{\"manifest_id\":\"tdrive_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
   }
 
   private static String validBound2() {
-    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"temporal\":{\"start_ms\":1,\"end_ms\":2},"
         + "\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},"
         + "\"result\":{\"mode\":\"TRAJECTORY_IDS\"},"
-        + "\"snapshot\":{\"manifest_id\":\"fixture_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
+        + "\"snapshot\":{\"manifest_id\":\"tdrive_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
   }
 
   private static String validBound3() {
-    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"fixture_v1\",\"entity\":\"trajectory\"},"
+    return "{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"tdrive_v1\",\"entity\":\"trajectory\"},"
         + "\"predicates\":[{\"field\":\"vehicle_id\",\"op\":\"EQ\",\"value\":\"A\"}],"
         + "\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},"
         + "\"result\":{\"mode\":\"TRAJECTORY_IDS\"},"
-        + "\"snapshot\":{\"manifest_id\":\"fixture_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
+        + "\"snapshot\":{\"manifest_id\":\"tdrive_v1_ready\",\"semantics_version\":\"point_dtw_v1\"}}";
   }
 }

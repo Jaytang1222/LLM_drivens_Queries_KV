@@ -21,6 +21,13 @@ public final class CostCard {
   public String model_version = CostModel.MODEL_VERSION;
   public boolean calibrated = false;
   public double estimated_ms;
+  public double l_hat_index;
+  public double l_hat_set;
+  public double l_hat_fetch;
+  public double l_hat_exact;
+  public double l_hat_reconstruct;
+  public double l_hat_sim;
+  public double l_hat_topk;
   public Map<String, Object> features = new LinkedHashMap<String, Object>();
   public List<String> main_cost_drivers = new ArrayList<String>();
   public Uncertainty uncertainty = new Uncertainty();

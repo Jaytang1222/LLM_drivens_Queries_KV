@@ -48,6 +48,8 @@ public final class BoundIr {
     public double max_y;
     public String relation = "INTERSECTS";
     public String boundary = "INCLUDED";
+    /** Present when spatial came from a registered region_name (confirm UX). */
+    public String region_name;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = false)
@@ -65,12 +67,14 @@ public final class BoundIr {
 
   @JsonIgnoreProperties(ignoreUnknown = false)
   public static class Similarity {
-    public String metric = "DTW";
+    public String metric;
     public long reference_tid;
     public String scope = "FULL_TRAJECTORY";
     public boolean exclude_reference = true;
     public String local_distance = "EUCLIDEAN";
     public String normalization = "NONE";
+    /** Catalog meta chunk count for reference trajectory (cost ref_len). */
+    public Integer reference_chunk_count;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = false)

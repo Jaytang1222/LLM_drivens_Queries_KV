@@ -46,7 +46,7 @@ public final class OpenAiCompatibleClient implements LlmClient {
   public LlmResponse chat(List<LlmMessage> messages, JsonNode responseSchemaHint, LlmOptions opts)
       throws LlmException {
     if (apiKey.isEmpty()) {
-      throw new LlmException("LLM_API_KEY is not set; use --mock or set env");
+      throw new LlmException("LLM_API_KEY is not set; configure .env or environment");
     }
     LlmOptions o = opts == null ? LlmOptions.defaults() : opts;
     String model = o.model != null ? o.model : defaultModel;

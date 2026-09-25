@@ -1,0 +1,29 @@
+{
+  "ir_version": "1.0",
+  "query_id": "s_small_2",
+  "source": {
+    "dataset_id": "tdrive_v1",
+    "entity": "trajectory"
+  },
+  "spatial": {
+    "min_x": 470329.38867069356,
+    "min_y": 4442298.001095969,
+    "max_x": 470829.38867069356,
+    "max_y": 4442798.001095969,
+    "relation": "INTERSECTS",
+    "boundary": "INCLUDED"
+  },
+  "predicates": [],
+  "semantics": {
+    "mode": "OBSERVED_POINT",
+    "coupling": "SAME_POINT"
+  },
+  "result": {
+    "mode": "TRAJECTORY_IDS",
+    "tie_breaker": "TID_ASC"
+  },
+  "snapshot": {
+    "manifest_id": "tdrive_v1_ready",
+    "semantics_version": "point_dtw_v1"
+  }
+}

@@ -1,0 +1,44 @@
+# §13.4 cost coefficients (calibrated offline via FeedbackCalibrator / fit_cost_coeffs.py; freeze during experiments)
+max_llm_calls: 6
+max_candidates: 8
+max_plan_ms: 5000
+beam_width: 3
+stagnation_steps: 2
+max_candidate_chunks: 200000
+max_dtw_cells: 500000000
+max_zorder_ranges: 64
+fetch_batch_size: 500
+cost:
+  calibrated: true
+  model_version: cost_v2_rs_sched
+  concurrency_index: 4
+  concurrency_get: 4
+  concurrency_per_rs: 2
+  alpha_rpc: 8.0
+  alpha_seek: 0.5625
+  alpha_byte: 1.2750000000000008e-05
+  alpha_decode: 0.0006000000000000004
+  beta_hash: 7.75e-05
+  beta_emit: 1.3109474999999915
+  beta_spill: 1e-08
+  beta_sort_merge: 0.00002
+  gamma_rpc: 12.62500000000001
+  gamma_byte: 0.001047000000000003
+  gamma_decode: 1.6406999999999958
+  delta_point: 0.05342499999999976
+  delta_geometry: 0.00005
+  rho_linear: 0.0
+  eta_cell: 0.001160000000000005
+  eta_cell_dtw: 0.0
+  eta_cell_frechet: 0.000012
+  eta_cell_hausdorff: 0.000008
+  theta_heap: 0.15425000000000003
+  soft_memory_bytes: 536870912
+  max_exec_ms: 120000
+  # legacy aliases retained for older readers
+  c_scan: 1.0
+  c_row: 0.01
+  c_get: 0.05
+  c_byte: 0.000001
+  c_point: 0.0001
+  c_dtw: 0.00001

@@ -2,14 +2,16 @@ package kart.snapshot;
 
 import kart.catalog.StatsSnapshot;
 import kart.codec.TimeBucket;
+import kart.codec.VehicleHash;
 import kart.codec.ZOrder;
 import kart.data.Chunk;
 import kart.data.Chunker;
 import kart.data.Trajectory;
+import kart.exec.ExactSTFilter;
+import kart.ir.BoundIr;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,13 +75,29 @@ public final class StatsBuilder {
           }
         }
 
+        // Hash-index posting count per vehicle (one posting per chunk).
+        if (t.vehicleId != null && !t.vehicleId.isEmpty()) {
+          String hk = VehicleHash.hex128(t.vehicleId);
+          Long hc = s.vehicle_hash_posting_counts.get(hk);
+          s.vehicle_hash_posting_counts.put(hk, hc == null ? 1L : hc + 1);
+        }
+
         if (sample(t.tid, c.chunkId)) {
           StatsSnapshot.SampleChunk sc = new StatsSnapshot.SampleChunk();
           sc.tid = t.tid;
           sc.chunk_id = c.chunkId;
+          sc.vehicle_id = t.vehicleId;
           sc.time_buckets = timeBuckets;
           sc.z_cells = zCells;
+          sc.t_min_ms = c.tMinMs;
+          sc.t_max_ms = c.tMaxMs;
+          sc.min_x = c.minX;
+          sc.min_y = c.minY;
+          sc.max_x = c.maxX;
+          sc.max_y = c.maxY;
           s.sample_chunks.add(sc);
+          // Point-level ExactST selectivity probe: nested half-window of chunk envelope.
+          sampleExactFilterProbe(c, s);
         }
       }
       if (i == 1 || i % 500 == 0 || i == n) {
@@ -99,7 +117,51 @@ public final class StatsBuilder {
     System.out.println("STATS_PHASE=done samples=" + s.sample_chunks.size()
         + " elapsed_s=" + ((System.currentTimeMillis() - t0) / 1000));
     System.out.flush();
+    if (s.filter_pass_samples > 0) {
+      s.filter_pass_rate = (s.filter_pass_hits + 1.0) / (s.filter_pass_samples + 2.0);
+    }
     return s;
+  }
+
+  /**
+   * ExactSTFilter selectivity probe: central half of chunk envelope as a synthetic BoundIr,
+   * evaluated with the same {@link ExactSTFilter} used at execution (§13.3).
+   */
+  private static void sampleExactFilterProbe(Chunk c, StatsSnapshot s) {
+    if (c == null || c.points == null || c.points.isEmpty()) {
+      return;
+    }
+    long span = Math.max(1L, c.tMaxMs - c.tMinMs);
+    long qStart = c.tMinMs + span / 4;
+    long qEnd = c.tMaxMs - span / 4;
+    if (qEnd <= qStart) {
+      qEnd = c.tMaxMs + 1;
+      qStart = c.tMinMs;
+    }
+    double midX = (c.minX + c.maxX) / 2.0;
+    double midY = (c.minY + c.maxY) / 2.0;
+    double halfW = Math.max(1e-6, (c.maxX - c.minX) / 4.0);
+    double halfH = Math.max(1e-6, (c.maxY - c.minY) / 4.0);
+
+    BoundIr ir = new BoundIr();
+    ir.temporal = new BoundIr.Temporal();
+    ir.temporal.start_ms = qStart;
+    ir.temporal.end_ms = qEnd;
+    ir.spatial = new BoundIr.Spatial();
+    ir.spatial.min_x = midX - halfW;
+    ir.spatial.max_x = midX + halfW;
+    ir.spatial.min_y = midY - halfH;
+    ir.spatial.max_y = midY + halfH;
+
+    List<Chunk.DecodedPoint> pts = new ArrayList<Chunk.DecodedPoint>(c.points.size());
+    for (kart.data.CanonicalPoint p : c.points) {
+      pts.add(new Chunk.DecodedPoint(p.timestampMs, p.xM, p.yM));
+    }
+    boolean pass = ExactSTFilter.matches(ir, pts, null);
+    s.filter_pass_samples++;
+    if (pass) {
+      s.filter_pass_hits++;
+    }
   }
 
   /** murmur(tid,chunk) mod 1000 < 10 → ~1%. */

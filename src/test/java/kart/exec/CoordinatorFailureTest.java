@@ -39,6 +39,54 @@ class CoordinatorFailureTest {
   Path tmp;
 
   @Test
+  void softMemoryBytesTinyYieldsResourceExhaustedOnFetch() throws Exception {
+    BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+    MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
+    try {
+      LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
+      // Force indexed plan so FETCH Gets account payload bytes against soft_memory.
+      List<PlanEnvelope> candidates = PlanBuilder.buildCandidates(ir);
+      QueryCompiler compiler = new QueryCompiler(layout);
+      PlanValidator validator = new PlanValidator(layout);
+      java.util.ArrayList<SafePlanHandle> safe = new java.util.ArrayList<SafePlanHandle>();
+      for (PlanEnvelope env : candidates) {
+        if (env.plan_id != null && env.plan_id.startsWith("P_FULL")) {
+          continue;
+        }
+        PhysicalPlan phys = compiler.compile(env, ir);
+        ValidationReport report = new ValidationReport();
+        Optional<SafePlanHandle> h = validator.validate(env, ir, phys, report);
+        if (h.isPresent()) {
+          safe.add(h.get());
+        }
+      }
+      assertTrue(!safe.isEmpty(), "expected at least one indexed SafePlan");
+      CostModel model = new CostModel(null);
+      CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, null);
+      java.util.ArrayList<PlanSelector.Scored> scored =
+          new java.util.ArrayList<PlanSelector.Scored>();
+      for (SafePlanHandle h : safe) {
+        CostFeatures f = extractor.extractFinal(h.physicalPlan(), h.plan(), ir);
+        CostCard card = model.estimateFinal(f);
+        scored.add(new PlanSelector.Scored(h, card));
+      }
+      SafePlanHandle selected = PlanSelector.select(scored);
+      assertNotNull(selected);
+
+      ExecLimits limits = ExecLimits.defaults();
+      limits.softMemoryBytes = 1L;
+      Coordinator coord = new Coordinator(kv, ir, layout, limits);
+      QueryResult qr = coord.execute(selected);
+      assertEquals("RESOURCE_EXHAUSTED", qr.status, qr.error);
+      assertTrue(qr.error != null && qr.error.contains("soft_memory"), qr.error);
+      assertTrue(qr.trajectoryIds == null || qr.trajectoryIds.isEmpty());
+      assertTrue(qr.topK == null || qr.topK.isEmpty());
+    } finally {
+      kv.close();
+    }
+  }
+
+  @Test
   void maxCandidateChunksOneYieldsResourceExhausted() throws Exception {
     BoundIr ir = QueryIrFixtureTest.fixtureQuery();
     MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
@@ -72,12 +120,40 @@ class CoordinatorFailureTest {
       byte[] rawKey = RowKeyCodec.encodeRaw(shard, 1L, 0);
       assertNotNull(kv.tableView(layout.tableRaw).remove(rawKey), "expected raw row for A");
 
-      QueryEngine engine = new QueryEngine(kv, layout);
-      QueryEngine.RunResult rr = engine.run(ir, tmp.resolve("runs"));
+      // Force an indexed plan (index posting still names A → Get must raise integrity).
+      List<PlanEnvelope> candidates = PlanBuilder.buildCandidates(ir);
+      QueryCompiler compiler = new QueryCompiler(layout);
+      PlanValidator validator = new PlanValidator(layout);
+      java.util.ArrayList<SafePlanHandle> safe = new java.util.ArrayList<SafePlanHandle>();
+      for (PlanEnvelope env : candidates) {
+        if (env.plan_id != null && env.plan_id.startsWith("P_FULL")) {
+          continue;
+        }
+        PhysicalPlan phys = compiler.compile(env, ir);
+        ValidationReport report = new ValidationReport();
+        Optional<SafePlanHandle> h = validator.validate(env, ir, phys, report);
+        if (h.isPresent()) {
+          safe.add(h.get());
+        }
+      }
+      assertTrue(!safe.isEmpty(), "expected at least one indexed SafePlan");
+      CostModel model = new CostModel(null);
+      CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, null);
+      java.util.ArrayList<PlanSelector.Scored> scored =
+          new java.util.ArrayList<PlanSelector.Scored>();
+      for (SafePlanHandle h : safe) {
+        CostFeatures f = extractor.extractFinal(h.physicalPlan(), h.plan(), ir);
+        CostCard card = model.estimateFinal(f);
+        scored.add(new PlanSelector.Scored(h, card));
+      }
+      SafePlanHandle selected = PlanSelector.select(scored);
+      assertNotNull(selected);
 
-      assertEquals("DATA_INTEGRITY_ERROR", rr.result.status, rr.result.error);
-      assertTrue(rr.result.trajectoryIds == null || rr.result.trajectoryIds.isEmpty());
-      assertTrue(rr.result.topK == null || rr.result.topK.isEmpty());
+      Coordinator coord = new Coordinator(kv, ir, layout, ExecLimits.defaults());
+      QueryResult qr = coord.execute(selected);
+      assertEquals("DATA_INTEGRITY_ERROR", qr.status, qr.error);
+      assertTrue(qr.trajectoryIds == null || qr.trajectoryIds.isEmpty());
+      assertTrue(qr.topK == null || qr.topK.isEmpty());
     } finally {
       kv.close();
     }

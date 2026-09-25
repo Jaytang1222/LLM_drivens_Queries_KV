@@ -4,9 +4,21 @@
   "title": "ActionSelection",
   "type": "object",
   "additionalProperties": false,
-  "required": ["action_id"],
+  "required": ["response_version", "proposals"],
   "properties": {
-    "action_id": { "type": "string" },
-    "reason": { "type": "string" }
+    "response_version": { "type": "string" },
+    "proposals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state_id", "action_id"],
+        "properties": {
+          "state_id": { "type": "string" },
+          "action_id": { "type": "string" },
+          "reason_code": { "type": "string" }
+        }
+      }
+    }
   }
 }

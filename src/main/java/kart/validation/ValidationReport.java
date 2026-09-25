@@ -29,6 +29,7 @@ public final class ValidationReport {
   }
 
   private final List<Finding> findings = new ArrayList<Finding>();
+  private final List<CoverageCertificate> certificates = new ArrayList<CoverageCertificate>();
 
   public void pass(String check, String message) {
     findings.add(new Finding(check, true, message));
@@ -38,7 +39,27 @@ public final class ValidationReport {
     findings.add(new Finding(check, false, message));
   }
 
+  public void addCertificate(CoverageCertificate cert) {
+    if (cert != null) {
+      certificates.add(cert);
+    }
+  }
+
+  public List<CoverageCertificate> certificates() {
+    return certificates;
+  }
+
+  /** Jackson-friendly alias for NFR-3 artifact serialization. */
+  public List<CoverageCertificate> getCertificates() {
+    return certificates;
+  }
+
   public List<Finding> findings() {
+    return findings;
+  }
+
+  /** Jackson-friendly alias for NFR-3 artifact serialization. */
+  public List<Finding> getFindings() {
     return findings;
   }
 

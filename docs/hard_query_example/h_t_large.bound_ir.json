@@ -1,0 +1,31 @@
+{
+  "ir_version": "1.0",
+  "query_id": "h_t_large",
+  "source": {
+    "dataset_id": "tdrive_v1",
+    "entity": "trajectory"
+  },
+  "temporal": {
+    "start_ms": 1201930200000,
+    "end_ms": 1202016600000
+  },
+  "predicates": [
+    {
+      "field": "vehicle_id",
+      "op": "EQ",
+      "value": "8857"
+    }
+  ],
+  "semantics": {
+    "mode": "OBSERVED_POINT",
+    "coupling": "SAME_POINT"
+  },
+  "result": {
+    "mode": "TRAJECTORY_IDS",
+    "tie_breaker": "TID_ASC"
+  },
+  "snapshot": {
+    "manifest_id": "tdrive_v1_ready",
+    "semantics_version": "point_dtw_v1"
+  }
+}
