@@ -1,0 +1,22 @@
+{
+  "din_sql": {
+    "url": "https://github.com/MohammadrezaPourreza/Few-shot-NL2SQL-with-prompting",
+    "commit": "0474801616130413b024fd008b016a190684649e",
+    "path": "experiments/third_party/din-sql"
+  },
+  "text_to_nosql": {
+    "url": "https://github.com/Jinwei-Lu/Text-to-NoSQL",
+    "commit": "d4ac7d2861f7f023bd70daa521b2bc4f5f9952b6",
+    "path": "experiments/third_party/text-to-nosql"
+  },
+  "bao": {
+    "url": "https://github.com/learnedsystems/BaoForPostgreSQL",
+    "commit": "1c15600a6d0a5bf09b08405702889eb1783579ca",
+    "path": "experiments/third_party/bao"
+  },
+  "llmopt": {
+    "url": "https://github.com/lucifer12346/LLMOpt",
+    "commit": "bdc3a3b0085f48cc7b4e61e3acd61098b9bf859f",
+    "path": "experiments/third_party/llmopt"
+  }
+}

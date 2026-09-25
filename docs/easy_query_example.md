@@ -147,4 +147,4 @@ Confirm 摘要应可见：`predicate=vehicle_id EQ 8857` 与 ISO 时间。
 # kart> /quit
 ```
 
-另见：[`hard_query_example.md`](hard_query_example.md)。
+另见：[`hard_query_example.md`](hard_query_example.md)、[`manual_verify_example.md`](manual_verify_example.md)。

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import kart.catalog.StatsSnapshot;
 import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
+import kart.compile.QueryCompiler;
 import kart.config.AppConfig;
 import kart.cost.CostCard;
 import kart.cost.CostFeatures;
@@ -35,6 +36,7 @@ import kart.search.SearchBudget;
 import kart.search.SearchLog;
 import kart.search.SearchResult;
 import kart.validation.SafePlanHandle;
+import kart.validation.PlanValidator;
 import kart.validation.ValidationReport;
 import kart.util.StatusLog;
 
@@ -46,6 +48,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * End-to-end BoundIR → plan search → Final cost-select → execute (or plan-only).
@@ -74,6 +77,11 @@ public final class QueryEngine {
     public Long t_plan_ms;
     /** Wall ms: Coordinator execute only (E3 {@code t_exec}); null when plan-only. */
     public Long t_exec_ms;
+    public long planStartEpochMs;
+    public long planEndEpochMs;
+    public boolean llmRequested;
+    public boolean llmFallback;
+    public String fallbackReason;
     /** {@code selected.estimated_ms - min(safe.estimated_ms)}; 0 under Final Cost select. */
     public Double plan_regret_ms;
     public Double best_safe_estimated_ms;
@@ -174,13 +182,22 @@ public final class QueryEngine {
   }
 
   public RunResult run(BoundIr ir, Path runsRoot) throws IOException {
-    return run(ir, runsRoot, false);
+    return run(ir, runsRoot, false, null);
   }
 
   /**
    * @param planOnly when true, stop after plan select (E2); status {@code PLAN_ONLY}, no Coordinator
    */
   public RunResult run(BoundIr ir, Path runsRoot, boolean planOnly) throws IOException {
+    return run(ir, runsRoot, planOnly, null);
+  }
+
+  /**
+   * @param forcePlanId when non-null, keep only this {@code plan_id} among SafePlans before select
+   *                    (bench {@code fullscan} arm uses {@code P_FULL}); default query paths pass null
+   */
+  public RunResult run(BoundIr ir, Path runsRoot, boolean planOnly, String forcePlanId)
+      throws IOException {
     RunResult rr = new RunResult();
     rr.ir = ir;
     rr.plannerMode = plannerMode;
@@ -198,6 +215,7 @@ public final class QueryEngine {
     rr.safe = new ArrayList<SafePlanHandle>(searchResult.safePlans);
     rr.searchLog = searchResult.log;
     rr.searchStopReason = budget.stopReason();
+    annotateLlmFallback(rr);
     for (SearchResult.Rejection rej : searchResult.rejections) {
       rr.rejections.add(rej);
       if (rej.report != null) {
@@ -230,9 +248,35 @@ public final class QueryEngine {
       rr.best_safe_estimated_ms = Double.valueOf(bestMs);
     }
 
+    if (forcePlanId != null && !forcePlanId.trim().isEmpty()) {
+      String want = forcePlanId.trim();
+      List<PlanSelector.Scored> forced = new ArrayList<PlanSelector.Scored>();
+      for (PlanSelector.Scored s : scored) {
+        if (s.handle != null && s.handle.plan() != null
+            && want.equals(s.handle.plan().plan_id)) {
+          forced.add(s);
+        }
+      }
+      if (forced.isEmpty()) {
+        QueryResult fail = new QueryResult();
+        fail.status = "NO_SAFE_PLAN";
+        fail.error = "forcePlanId=" + want + " not in safe set (" + scored.size() + ")";
+        attachPlanMetrics(fail, rr);
+        rr.result = fail;
+        stampPlanClock(rr, planStart);
+        if (runsRoot != null) {
+          rr.runDir = writeArtifacts(runsRoot, ir, null, null, null, rr.costCards, fail,
+              rr.searchLog, rr.searchStopReason, null, rr.rejectionReports, null, rr);
+        }
+        return rr;
+      }
+      scored = forced;
+    }
+
     // LLM_DIRECT: keep the (sole) validated LLM plan when present; else Final Cost select.
     PlanSelector.Scored best;
-    if (plannerMode == PlannerMode.LLM_DIRECT && scored.size() == 1
+    if (forcePlanId == null
+        && plannerMode == PlannerMode.LLM_DIRECT && scored.size() == 1
         && searchResult.log != null && isDirectAccept(searchResult.log)) {
       best = scored.get(0);
       // Regret vs best SafePlan in the constructor family (baseline #5 metric).
@@ -251,7 +295,7 @@ public final class QueryEngine {
           rr.selectedCost.estimated_ms - rr.best_safe_estimated_ms.doubleValue());
     }
 
-    rr.t_plan_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - planStart));
+    stampPlanClock(rr, planStart);
 
     if (rr.selected == null) {
       QueryResult fail = new QueryResult();
@@ -317,6 +361,168 @@ public final class QueryEngine {
           rr.selectedCost, rr.costCards, rr.result, rr.searchLog, rr.searchStopReason,
           rr.selected.coverageCertificates(), rr.rejectionReports, selectedFeatures, rr);
       StatusLog.info("ARTIFACTS", "runDir=" + rr.runDir);
+    }
+    return rr;
+  }
+
+  /**
+   * Execute exactly one caller-selected plan envelope.
+   *
+   * <p>This is deliberately separate from {@link #run}: fixed baseline arms
+   * (for example FullScan and a published rule template) must not enumerate a
+   * candidate family and then force the selected id.  The envelope is still
+   * compiled and checked by the same compiler/validator before execution.</p>
+   */
+  public RunResult runFixed(BoundIr ir, Path runsRoot, boolean planOnly,
+                            PlanEnvelope envelope) throws IOException {
+    RunResult rr = new RunResult();
+    rr.ir = ir;
+    rr.plannerMode = plannerMode;
+    rr.planOnly = planOnly;
+    long planStart = System.currentTimeMillis();
+    if (ir == null || envelope == null) {
+      stampPlanClock(rr, planStart);
+      QueryResult fail = new QueryResult();
+      fail.status = "NO_SAFE_PLAN";
+      fail.error = "fixed plan or BoundIR is null";
+      rr.result = fail;
+      return rr;
+    }
+    rr.candidates.add(envelope);
+    QueryCompiler compiler = new QueryCompiler(layout);
+    PhysicalPlan physical;
+    try {
+      physical = compiler.compile(envelope, ir);
+    } catch (RuntimeException e) {
+      ValidationReport report = new ValidationReport();
+      report.fail("Compile", e.getMessage() == null ? "compile failed" : e.getMessage());
+      rr.rejections.add(new SearchResult.Rejection(envelope.plan_id, envelope.signature(), report));
+      rr.rejectionReports.add(report);
+      stampPlanClock(rr, planStart);
+      QueryResult fail = new QueryResult();
+      fail.status = "NO_SAFE_PLAN";
+      fail.error = "fixed plan compile failed";
+      attachPlanMetrics(fail, rr);
+      rr.result = fail;
+      return rr;
+    }
+    ValidationReport report = new ValidationReport();
+    Optional<SafePlanHandle> checked = new PlanValidator(layout).validate(
+        envelope, ir, physical, report);
+    if (!checked.isPresent()) {
+      rr.rejections.add(new SearchResult.Rejection(envelope.plan_id, envelope.signature(), report));
+      rr.rejectionReports.add(report);
+      stampPlanClock(rr, planStart);
+      QueryResult failV = new QueryResult();
+      failV.status = "NO_SAFE_PLAN";
+      failV.error = "fixed plan rejected by validator";
+      attachPlanMetrics(failV, rr);
+      rr.result = failV;
+      return rr;
+    }
+    SafePlanHandle selected = checked.get();
+    rr.safe.add(selected);
+    rr.selected = selected;
+    CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
+        planner.cost != null && planner.cost.soft_memory_bytes > 0
+            ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
+    CostFeatures features = extractor.extractFinal(selected.physicalPlan(), selected.plan(), ir);
+    rr.selectedCost = costModel.estimateFinal(features);
+    rr.costCards.add(rr.selectedCost);
+    rr.best_safe_estimated_ms = Double.valueOf(rr.selectedCost.estimated_ms);
+    rr.plan_regret_ms = Double.valueOf(0.0);
+    stampPlanClock(rr, planStart);
+
+    if (planOnly) {
+      QueryResult planned = new QueryResult();
+      planned.status = "PLAN_ONLY";
+      attachPlanMetrics(planned, rr);
+      rr.result = planned;
+      rr.t_exec_ms = null;
+      if (runsRoot != null) {
+        rr.runDir = writeArtifacts(runsRoot, ir, selected.plan(), selected.physicalPlan(),
+            rr.selectedCost, rr.costCards, planned, null, "FIXED_PLAN",
+            selected.coverageCertificates(), rr.rejectionReports, features, rr);
+      }
+      return rr;
+    }
+
+    long execStart = System.currentTimeMillis();
+    Coordinator coord = new Coordinator(kv, ir, layout, limits, regionMapping);
+    coord.applyCostEstimates(features);
+    rr.result = coord.execute(selected);
+    rr.t_exec_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - execStart));
+    attachPlanMetrics(rr.result, rr);
+    if (rr.result != null && rr.result.trace != null) {
+      rr.result.trace.llm_calls = usage.callsAsLongOrNull();
+      rr.result.trace.llm_tokens = usage.tokensOrNull();
+    }
+    if (runsRoot != null) {
+      rr.runDir = writeArtifacts(runsRoot, ir, selected.plan(), selected.physicalPlan(),
+          rr.selectedCost, rr.costCards, rr.result, null, "FIXED_PLAN",
+          selected.coverageCertificates(), rr.rejectionReports, features, rr);
+    }
+    return rr;
+  }
+
+  /**
+   * Execute an already-selected SafePlan without another candidate search.
+   * Used by transplant selectors (Bao) so generate→select is counted once.
+   * {@code t_plan_ms} is copied from {@code planned}; this method only fills
+   * {@code t_exec_ms}.
+   */
+  public RunResult executeSelected(BoundIr ir, Path runsRoot, RunResult planned)
+      throws IOException {
+    RunResult rr = new RunResult();
+    rr.ir = ir;
+    rr.plannerMode = plannerMode;
+    rr.planOnly = false;
+    if (planned != null) {
+      rr.candidates = planned.candidates;
+      rr.safe = planned.safe;
+      rr.costCards = planned.costCards;
+      rr.rejections = planned.rejections;
+      rr.rejectionReports = planned.rejectionReports;
+      rr.selected = planned.selected;
+      rr.selectedCost = planned.selectedCost;
+      rr.searchLog = planned.searchLog;
+      rr.searchStopReason = planned.searchStopReason;
+      rr.best_safe_estimated_ms = planned.best_safe_estimated_ms;
+      rr.plan_regret_ms = planned.plan_regret_ms;
+      rr.llmRequested = planned.llmRequested;
+      rr.llmFallback = planned.llmFallback;
+      rr.fallbackReason = planned.fallbackReason;
+      rr.t_plan_ms = planned.t_plan_ms;
+      rr.planStartEpochMs = planned.planStartEpochMs;
+      rr.planEndEpochMs = planned.planEndEpochMs;
+    }
+    if (rr.selected == null) {
+      QueryResult fail = new QueryResult();
+      fail.status = "NO_SAFE_PLAN";
+      fail.error = "executeSelected: no selected plan";
+      attachPlanMetrics(fail, rr);
+      rr.result = fail;
+      return rr;
+    }
+    CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
+        planner.cost != null && planner.cost.soft_memory_bytes > 0
+            ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
+    CostFeatures features = extractor.extractFinal(
+        rr.selected.physicalPlan(), rr.selected.plan(), ir);
+    long execStart = System.currentTimeMillis();
+    Coordinator coord = new Coordinator(kv, ir, layout, limits, regionMapping);
+    coord.applyCostEstimates(features);
+    rr.result = coord.execute(rr.selected);
+    rr.t_exec_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - execStart));
+    attachPlanMetrics(rr.result, rr);
+    if (rr.result != null && rr.result.trace != null) {
+      rr.result.trace.llm_calls = usage.callsAsLongOrNull();
+      rr.result.trace.llm_tokens = usage.tokensOrNull();
+    }
+    if (runsRoot != null) {
+      rr.runDir = writeArtifacts(runsRoot, ir, rr.selected.plan(), rr.selected.physicalPlan(),
+          rr.selectedCost, rr.costCards, rr.result, rr.searchLog, rr.searchStopReason,
+          rr.selected.coverageCertificates(), rr.rejectionReports, features, rr);
     }
     return rr;
   }
@@ -390,6 +596,71 @@ public final class QueryEngine {
       }
     }
     rr.best_safe_estimated_ms = Double.valueOf(bestMs);
+  }
+
+  private static void stampPlanClock(RunResult rr, long planStart) {
+    long now = System.currentTimeMillis();
+    rr.t_plan_ms = Long.valueOf(Math.max(0L, now - planStart));
+    rr.planStartEpochMs = planStart;
+    rr.planEndEpochMs = now;
+  }
+
+  private void annotateLlmFallback(RunResult rr) {
+    rr.llmRequested = plannerMode == PlannerMode.LLM || plannerMode == PlannerMode.LLM_DIRECT;
+    if (!rr.llmRequested) {
+      return;
+    }
+    if (llm == null) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "no_llm_client";
+      return;
+    }
+    if (rr.searchLog != null && rr.searchLog.hasEvent("llm_direct_fallback")) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "llm_direct_fallback";
+      return;
+    }
+    if (usage == null || usage.calls() == 0) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "zero_llm_calls";
+      return;
+    }
+    if (entirelyRuleFallback(rr.searchLog)) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "rule_fallback";
+      return;
+    }
+    // Spec: any RulePolicy substitution is not merged into the KART LLM arm.
+    if (rr.searchLog != null && rr.searchLog.hasEvent("illegal_action")) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "illegal_action";
+      return;
+    }
+    if (rr.searchLog != null && rr.searchLog.hasEvent("rule_fallback")) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "partial_rule_fill";
+    }
+  }
+
+  public static boolean entirelyRuleFallback(SearchLog log) {
+    if (log == null || log.steps().isEmpty()) {
+      return false;
+    }
+    boolean sawFallback = false;
+    for (SearchLog.Step s : log.steps()) {
+      if (s == null || s.event == null) {
+        continue;
+      }
+      if ("ok".equals(s.event)
+          || "llm_direct".equals(s.event)
+          || "llm_direct_envelope".equals(s.event)) {
+        return false;
+      }
+      if ("rule_fallback".equals(s.event) || "illegal_action".equals(s.event)) {
+        sawFallback = true;
+      }
+    }
+    return sawFallback;
   }
 
   private static void attachPlanMetrics(QueryResult result, RunResult rr) {

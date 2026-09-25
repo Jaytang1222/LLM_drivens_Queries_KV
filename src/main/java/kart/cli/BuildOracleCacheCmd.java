@@ -57,11 +57,22 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       description = "Append FRECHET/HAUSDORFF Top-K clones of topk_st_1 into existing smoke+oracle (preserve other answers)")
   private boolean appendTopkMetrics;
 
+  @Option(names = "--evaluate-workload",
+      description = "Evaluate BoundIRs from an existing workload JSON and write/merge oracle answers")
+  private boolean evaluateWorkload;
+
+  @Option(names = "--workload-in",
+      description = "Input BoundIR workload for --evaluate-workload (default: --workload-out)")
+  private Path workloadIn;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
     if (appendTopkMetrics) {
       return appendTopkMetrics(root);
+    }
+    if (evaluateWorkload) {
+      return evaluateExistingWorkload(root);
     }
     Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
     CatalogStore store = new CatalogStore(cat);
@@ -498,6 +509,102 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
     System.out.println("ORACLE_CACHE_APPEND_OK workload=" + wOut + " oracle=" + oOut
         + " total=" + answers.size());
+    return 0;
+  }
+
+  /**
+   * Recompute FullScanOracle answers for every BoundIR in an existing workload.
+   * Merges into oracle-out (replacing answers for matching query_id).
+   */
+  private int evaluateExistingWorkload(Path root) throws Exception {
+    Path wIn = workloadIn != null ? workloadIn : workloadOut;
+    wIn = wIn.isAbsolute() ? wIn : root.resolve(wIn);
+    Path oOut = oracleOut.isAbsolute() ? oracleOut : root.resolve(oracleOut);
+    if (!Files.isRegularFile(wIn)) {
+      System.err.println("workload not found: " + wIn);
+      return 2;
+    }
+    Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
+    CatalogStore store = new CatalogStore(cat);
+    Manifest m = store.loadManifest(manifestId).orElse(null);
+    if (m == null) {
+      System.err.println("manifest not found: " + manifestId);
+      return 1;
+    }
+    Rect domain = new Rect(m.layout.domain.xmin, m.layout.domain.ymin,
+        m.layout.domain.xmax, m.layout.domain.ymax);
+
+    com.fasterxml.jackson.databind.JsonNode rootNode = MAPPER.readTree(Files.readAllBytes(wIn));
+    com.fasterxml.jackson.databind.JsonNode arr = rootNode.get("queries");
+    if (arr == null || !arr.isArray()) {
+      System.err.println("workload missing queries[]: " + wIn);
+      return 2;
+    }
+    List<BoundIr> queries = new ArrayList<BoundIr>();
+    for (com.fasterxml.jackson.databind.JsonNode q : arr) {
+      if (q.has("utterance") && !q.has("ir_version")) {
+        continue;
+      }
+      queries.add(MAPPER.treeToValue(q, BoundIr.class));
+    }
+    Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
+    System.out.println("ORACLE_EVAL_PHASE=load_cleaned data=" + data + " queries=" + queries.size());
+    List<Trajectory> trajs = TDriveLoader.loadCleaned(data, domain);
+    FullScanOracle oracle = new FullScanOracle(trajs);
+
+    Map<String, Map<String, Object>> byId = new LinkedHashMap<String, Map<String, Object>>();
+    if (Files.isRegularFile(oOut)) {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> prev = MAPPER.readValue(Files.readAllBytes(oOut), Map.class);
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> prevAns = (List<Map<String, Object>>) prev.get("answers");
+      if (prevAns != null) {
+        for (Map<String, Object> row : prevAns) {
+          if (row != null && row.get("query_id") != null) {
+            byId.put(String.valueOf(row.get("query_id")), row);
+          }
+        }
+      }
+    }
+    int nonEmpty = 0;
+    for (BoundIr ir : queries) {
+      FullScanOracle.Answer ans = oracle.evaluate(ir);
+      Map<String, Object> row = new LinkedHashMap<String, Object>();
+      row.put("query_id", ir.query_id);
+      row.put("trajectory_ids", ans.trajectoryIds);
+      if (ans.topK != null) {
+        List<Map<String, Object>> scored = new ArrayList<Map<String, Object>>();
+        for (FullScanOracle.ScoredId s : ans.topK) {
+          Map<String, Object> sc = new LinkedHashMap<String, Object>();
+          sc.put("tid", Long.valueOf(s.tid));
+          sc.put("trajectory_id", s.trajectoryId);
+          sc.put("distance", Double.valueOf(s.distance));
+          scored.add(sc);
+        }
+        row.put("top_k", scored);
+      }
+      byId.put(ir.query_id, row);
+      if (ans.trajectoryIds != null && !ans.trajectoryIds.isEmpty()) {
+        nonEmpty++;
+      }
+      System.out.println("ORACLE_EVAL id=" + ir.query_id
+          + " count=" + (ans.trajectoryIds == null ? 0 : ans.trajectoryIds.size()));
+    }
+    Map<String, Object> cache = new LinkedHashMap<String, Object>();
+    cache.put("manifest_id", manifestId);
+    cache.put("semantics_version",
+        rootNode.has("semantics_version") ? rootNode.get("semantics_version").asText() : m.semantics_version);
+    List<Map<String, Object>> answers = new ArrayList<Map<String, Object>>();
+    for (BoundIr ir : queries) {
+      answers.add(byId.get(ir.query_id));
+    }
+    cache.put("answers", answers);
+    cache.put("total", Integer.valueOf(answers.size()));
+    cache.put("non_empty", Integer.valueOf(nonEmpty));
+    Files.createDirectories(oOut.getParent());
+    Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    System.out.println("ORACLE_EVAL_OK oracle=" + oOut + " total=" + answers.size()
+        + " non_empty=" + nonEmpty);
     return 0;
   }
 

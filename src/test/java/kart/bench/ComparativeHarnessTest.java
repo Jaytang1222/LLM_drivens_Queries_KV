@@ -1,0 +1,156 @@
+package kart.bench;
+
+import kart.ir.BoundIr;
+import kart.llm.LlmResponse;
+import kart.llm.LlmUsageAccumulator;
+import kart.plan.PlanBuilder;
+import kart.query.QueryEngine;
+import kart.search.SearchLog;
+import org.junit.jupiter.api.Test;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** Fairness/honesty helpers for the comparative harness. */
+public final class ComparativeHarnessTest {
+
+  @Test
+  void warmProtocolUsesTwoUntimedPassesByDefault() {
+    CacheProtocol warm = CacheProtocol.from("warm");
+    assertEquals("warm", warm.mode);
+    assertEquals(2, warm.warmupPasses);
+    assertFalse(warm.cacheEnforced());
+    assertTrue(warm.protocolLabel().contains("warmup_2"));
+  }
+
+  @Test
+  void coldProtocolDoesNotClaimEnforcedFlushWithoutOsDrop() {
+    CacheProtocol cold = CacheProtocol.from("cold");
+    assertEquals(0, cold.warmupPasses);
+    assertFalse(cold.cacheEnforced());
+    assertNotNull(cold.formalWarning(1));
+    assertTrue(cold.formalWarning(3).contains("mixed_cache"));
+  }
+
+  @Test
+  void rboRuleIsTzThenTThenZThenHThenFull() {
+    assertArrayEquals(new boolean[] {true, true, false}, RboFixedArm.accessFlags(true, true, true));
+    assertArrayEquals(new boolean[] {true, false, false}, RboFixedArm.accessFlags(true, false, true));
+    assertArrayEquals(new boolean[] {false, true, false}, RboFixedArm.accessFlags(false, true, true));
+    assertArrayEquals(new boolean[] {false, false, true}, RboFixedArm.accessFlags(false, false, true));
+    assertArrayEquals(new boolean[] {false, false, false}, RboFixedArm.accessFlags(false, false, false));
+    BoundIr ir = new BoundIr();
+    ir.query_id = "x";
+    ir.temporal = new BoundIr.Temporal();
+    ir.spatial = new BoundIr.Spatial();
+    ir.spatial.min_x = 0;
+    ir.spatial.min_y = 0;
+    ir.spatial.max_x = 1;
+    ir.spatial.max_y = 1;
+    ir.snapshot = new BoundIr.Snapshot();
+    ir.snapshot.manifest_id = "fixture";
+    ir.predicates.add(predVehicle());
+    boolean[] f = RboFixedArm.accessFlags(true, true, true);
+    assertEquals("P_TZ", PlanBuilder.buildForAccess(ir, f[0], f[1], f[2]).plan_id);
+  }
+
+  @Test
+  void jsonModeFallbackCountsAsTwoCalls() {
+    LlmUsageAccumulator acc = new LlmUsageAccumulator();
+    LlmResponse r = new LlmResponse("{\"ok\":true}");
+    r.attempts = 2;
+    r.jsonModeFallback = true;
+    r.promptTokens = Integer.valueOf(10);
+    r.completionTokens = Integer.valueOf(4);
+    r.latencyMs = 50L;
+    acc.record(r);
+    assertEquals(2, acc.calls());
+    assertEquals(1, acc.jsonModeFallbacks());
+    assertEquals(Long.valueOf(10L), acc.promptTokensOrNull());
+    assertEquals(Long.valueOf(4L), acc.completionTokensOrNull());
+    assertEquals(50L, acc.latencyMs());
+  }
+
+  @Test
+  void entirelyRuleFallbackDetectsOnlyWhenNoLlmOkEvent() {
+    SearchLog ok = new SearchLog();
+    SearchLog.Step s = new SearchLog.Step();
+    s.event = "ok";
+    ok.steps().add(s);
+    assertFalse(QueryEngine.entirelyRuleFallback(ok));
+
+    SearchLog fb = new SearchLog();
+    SearchLog.Step a = new SearchLog.Step();
+    a.event = "illegal_action";
+    SearchLog.Step b = new SearchLog.Step();
+    b.event = "rule_fallback";
+    fb.steps().add(a);
+    fb.steps().add(b);
+    assertTrue(QueryEngine.entirelyRuleFallback(fb));
+  }
+
+  @Test
+  void wrapperPlanClockExcludesExecFromPlan() {
+    TrialResult tr = new TrialResult();
+    tr.t_exec_ms = Long.valueOf(40L);
+    tr.applyWrapperPlanClock(1000L, 90L);
+    assertEquals(Long.valueOf(50L), tr.t_plan_ms);
+    assertEquals(Long.valueOf(90L), tr.t_e2e_ms);
+    assertEquals(Long.valueOf(1000L), tr.extras.get("plan_start_ms"));
+    assertEquals(Long.valueOf(1090L), tr.extras.get("plan_end_ms"));
+  }
+
+  @Test
+  void failClassMapsTimeoutAndExhaustion() {
+    TrialResult t = TrialResult.fail("TIMEOUT after 30s");
+    Map<String, Object> row = new LinkedHashMap<String, Object>();
+    assertEquals("timeout", SuiteRunner.failClass(t, row));
+    t = TrialResult.fail("RESOURCE_EXHAUSTED: dtw cells");
+    assertEquals("resource_exhausted", SuiteRunner.failClass(t, row));
+    row.put("ok_oracle", Boolean.TRUE);
+    assertEquals("ok", SuiteRunner.failClass(new TrialResult(), row));
+  }
+
+  @Test
+  void thirdPartyArmMapsToUpstreamKey() {
+    assertEquals("din_sql", ThirdPartyAudit.upstreamKey("din-spider"));
+    assertEquals("bao", ThirdPartyAudit.upstreamKey("bao"));
+    assertEquals(null, ThirdPartyAudit.upstreamKey("fullscan"));
+  }
+
+  @Test
+  void anyIllegalActionIsLlmFallback() {
+    SearchLog mixed = new SearchLog();
+    SearchLog.Step ok = new SearchLog.Step();
+    ok.event = "ok";
+    SearchLog.Step bad = new SearchLog.Step();
+    bad.event = "illegal_action";
+    mixed.steps().add(ok);
+    mixed.steps().add(bad);
+    assertFalse(QueryEngine.entirelyRuleFallback(mixed));
+  }
+
+  @Test
+  void e2eTimingExcludesArtifactWall() {
+    QueryEngine.RunResult rr = new QueryEngine.RunResult();
+    rr.t_plan_ms = Long.valueOf(10L);
+    rr.t_exec_ms = Long.valueOf(40L);
+    TrialResult tr = TrialResult.fromRun(rr, 80L);
+    assertEquals(Long.valueOf(50L), tr.t_e2e_ms);
+    assertEquals(Long.valueOf(30L), tr.extras.get("t_artifact_ms"));
+  }
+
+  private static BoundIr.Predicate predVehicle() {
+    BoundIr.Predicate p = new BoundIr.Predicate();
+    p.field = "vehicle_id";
+    p.op = "EQ";
+    p.value = "8857";
+    return p;
+  }
+}

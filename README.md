@@ -26,16 +26,19 @@ cd /home/jaytang/projects/llm-kv
 | `docs/how-to-run.md` | 启动 / 验收 / 聊天 |
 | `docs/easy_query_example.md` | 主路径用例与参考结果 |
 | `docs/hard_query_example.md` | 困难用例（+ `docs/hard_query_example/` 冻结 IR） |
+| `docs/manual_verify_example.md` | 人工验证（简单→复杂 + 拒绝） |
 | `docs/supported-semantics.md` | 语义与不支持项 |
 | `docs/regions.md` | 预注册区域 |
 | `docs/environment-lock.md` | JDK / Maven / HBase / LLM |
-| `docs/experiment-scope.md` | 实验范围与 HBase 限制 |
+| `docs/comparative-experiment-readiness-2026-09-25.md` | 对比实验真实性、公平性与运行门禁 |
 | `USER_ACTIONS.md` | 人工项（密钥等） |
 
 ## Layout
 
 ```
-scripts/kart.sh      统一入口（WSL）
+scripts/             5 keepers（kart.sh 统一入口）
+  kart.sh kart-env.sh sync-wsl-workspace.sh
+  run-tdrive-smoke.sh publish-cost-calib-pack.sh
 docs/                操作与验证
 spec/                需求/设计/PDF
 src/main/java/kart/  IR / search / cost / exec

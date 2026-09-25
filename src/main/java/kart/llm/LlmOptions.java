@@ -12,6 +12,15 @@ public final class LlmOptions {
   public boolean jsonObjectFormat = true;
 
   public static LlmOptions defaults() {
-    return new LlmOptions();
+    LlmOptions o = new LlmOptions();
+    String t = System.getenv("KART_LLM_TEMPERATURE");
+    if (t != null && !t.trim().isEmpty()) {
+      try {
+        o.temperature = Double.parseDouble(t.trim());
+      } catch (NumberFormatException ignore) {
+        o.temperature = 0.0;
+      }
+    }
+    return o;
   }
 }

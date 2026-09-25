@@ -1,0 +1,16 @@
+# E1 — LLM → IR
+# Default trials=3 is smoke. Formal single-round table: --trials 1
+kind: compare
+id: parse
+workload: experiments/workloads/nl_ir_v1.json
+oracle: experiments/workloads/nl_ir_v1.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - parse
+arms:
+  - kart
+  - din-spider
+  - din-bird
+  - sag

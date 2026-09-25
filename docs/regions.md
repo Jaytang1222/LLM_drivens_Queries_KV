@@ -16,6 +16,7 @@ Default table populated from **public map coordinates** (approximate AABBs aroun
 | `tdrive_topk_box` | Smoke `topk_st_1` / `h_s_small` envelope | 116.642–116.662 | 40.126–40.142 |
 | `tdrive_topk_wide` | Smoke `topk_st_2*` envelope (H8–H11 chat) | 116.638–116.666 | 40.123–40.145 |
 | `tdrive_topk_s1` | Smoke `topk_s_1` envelope (spatial-only Top-K) | 116.644–116.661 | 40.128–40.140 |
+| `tdrive_topk_mid` | Smoke `topk_st_3` envelope（人工验证 M7） | 116.609–116.695 | 40.095–40.174 |
 | `zhongguancun` | 中关村一带 | 116.28–116.35 | 39.95–40.01 |
 | `wangjing` | 望京一带 | 116.44–116.51 | 39.97–40.03 |
 | `guomao` / `beijing_cbd` | 国贸 / CBD | 116.43–116.48 | 39.89–39.93 |

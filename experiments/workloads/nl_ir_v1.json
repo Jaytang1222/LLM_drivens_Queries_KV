@@ -1,0 +1,382 @@
+{
+  "workload_id": "nl_ir_v1",
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "seed": "2026-09-25-nl-ir-v1-formal",
+  "queries": [
+    {
+      "query_id": "nl_v1",
+      "utterance": "Find trajectories of taxi 8857 between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v2",
+      "utterance": "Show trajectories of taxi 8857 that intersect tdrive_smoke_anchor between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v3",
+      "utterance": "List trajectory ids intersecting tdrive_topk_box between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "oracle_mode": "contains",
+      "gold_must_contain": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v4",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "nl_v5",
+      "utterance": "Top-3 DTW neighbors of 8857-8857_14 intersecting tdrive_smoke_anchor between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_trajectory_ids": [
+        "5340-5340_15",
+        "2376-2376_10",
+        "289-289_12"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "5340-5340_15"
+        },
+        {
+          "trajectory_id": "2376-2376_10"
+        },
+        {
+          "trajectory_id": "289-289_12"
+        }
+      ]
+    },
+    {
+      "query_id": "nl_r1",
+      "utterance": "COUNT how many trajectories intersect beijing_core between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_count"
+    },
+    {
+      "query_id": "nl_r2",
+      "utterance": "Find trajectories whose continuous path segment crosses the ring road (not just GPS samples)",
+      "reject_expected": true,
+      "layer": "reject_continuous"
+    },
+    {
+      "query_id": "nl_r3",
+      "utterance": "Top-3 trajectories most similar to 8857-8857_14 using EDIT_DISTANCE",
+      "reject_expected": true,
+      "layer": "reject_metric"
+    },
+    {
+      "query_id": "nl_r4",
+      "utterance": "Use continuous Fréchet distance to find neighbors of 8857-8857_14",
+      "reject_expected": true,
+      "layer": "reject_frechet"
+    },
+    {
+      "query_id": "nl_r5",
+      "utterance": "Trajectories through 火星广场 between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_unknown_place"
+    },
+    {
+      "query_id": "nl_z1",
+      "utterance": "List trajectory ids intersecting tdrive_topk_box between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "oracle_mode": "contains",
+      "gold_must_contain": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_h1",
+      "utterance": "Find all trajectories of taxi 8857",
+      "reject_expected": false,
+      "layer": "clarify_vehicle_no_window",
+      "clarify_expected": true
+    },
+    {
+      "query_id": "nl_fr1",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using FRECHET",
+      "reject_expected": false,
+      "layer": "topk_frechet",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "nl_hs1",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using HAUSDORFF",
+      "reject_expected": false,
+      "layer": "topk_hausdorff",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "nl_c1",
+      "utterance": "Find taxis that went there yesterday",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "nl_c2",
+      "utterance": "Show similar trajectories",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_similarity"
+    },
+    {
+      "query_id": "nl_r6",
+      "utterance": "Find trajectories of taxi 8857 whose average speed exceeded 80 km/h between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_speed"
+    },
+    {
+      "query_id": "nl_r7",
+      "utterance": "Find pairs of taxis that were within 100 meters of each other between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_pair"
+    },
+    {
+      "query_id": "nl_v6",
+      "utterance": "Find trajectories of taxi 8857 between 2008-02-03T21:00:00+08:00 and 2008-02-03T21:40:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v7",
+      "utterance": "Show taxi 8857 trajectories intersecting tdrive_smoke_anchor from 2008-02-03T21:20:00+08:00 to 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_z2",
+      "utterance": "List trajectory ids intersecting beijing_core between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "oracle_mode": "contains",
+      "gold_must_contain": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v8",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 1 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_trajectory_ids": [
+        "2406-2406_9"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        }
+      ]
+    },
+    {
+      "query_id": "nl_r8",
+      "utterance": "GROUP BY taxi and return average duration in beijing_core",
+      "reject_expected": true,
+      "layer": "reject_agg"
+    },
+    {
+      "query_id": "nl_r9",
+      "utterance": "Delete trajectories of taxi 8857 older than 2008-02-03",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "nl_r10",
+      "utterance": "Find trajectories using continuous Hausdorff over polyline edges",
+      "reject_expected": true,
+      "layer": "reject_continuous"
+    },
+    {
+      "query_id": "nl_r11",
+      "utterance": "Show taxis currently online near Wangjing right now",
+      "reject_expected": true,
+      "layer": "reject_live"
+    },
+    {
+      "query_id": "nl_r12",
+      "utterance": "Rank trajectories by length in kilometers between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_length"
+    },
+    {
+      "query_id": "nl_r13",
+      "utterance": "Find trajectories that stopped for more than 10 minutes in tdrive_smoke_anchor",
+      "reject_expected": true,
+      "layer": "reject_stop"
+    },
+    {
+      "query_id": "nl_r14",
+      "utterance": "Join taxi trajectories with weather rainfall for 2008-02-03",
+      "reject_expected": true,
+      "layer": "reject_join"
+    },
+    {
+      "query_id": "nl_r15",
+      "utterance": "Update vehicle_id of 8857-8857_14 to 9999",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "nl_c3",
+      "utterance": "Find similar taxis near there",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "nl_c4",
+      "utterance": "Show me the busy ones this morning",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_relative_time"
+    },
+    {
+      "query_id": "nl_c5",
+      "utterance": "Top neighbors of that trajectory",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_ref"
+    },
+    {
+      "query_id": "nl_c6",
+      "utterance": "Trajectories in the box",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    },
+    {
+      "query_id": "nl_c7",
+      "utterance": "8857 around noon",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_ambiguous_window"
+    },
+    {
+      "query_id": "nl_c8",
+      "utterance": "Closest paths to the airport",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_place_metric"
+    },
+    {
+      "query_id": "nl_v9",
+      "utterance": "List trajectory ids intersecting tdrive_topk_wide between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "oracle_mode": "contains",
+      "gold_must_contain": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v10",
+      "utterance": "Find trajectories of taxi 8857 intersecting zhongguancun between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "oracle_mode": "contains",
+      "gold_must_contain": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "nl_v11",
+      "utterance": "Top-5 DTW neighbors of 8857-8857_14 intersecting tdrive_smoke_anchor between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_trajectory_ids": [
+        "5340-5340_15",
+        "2376-2376_10",
+        "289-289_12"
+      ]
+    },
+    {
+      "query_id": "nl_v12",
+      "utterance": "Find trajectories of taxi 8857 between 2008-02-03T22:00:00+08:00 and 2008-02-03T22:30:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "nl_r16",
+      "utterance": "Compute the median speed of all taxis in guomao",
+      "layer": "reject_agg",
+      "reject_expected": true
+    },
+    {
+      "query_id": "nl_r17",
+      "utterance": "Export trajectories as GeoJSON for QGIS",
+      "layer": "reject_export",
+      "reject_expected": true
+    },
+    {
+      "query_id": "nl_c9",
+      "utterance": "Something near CBD yesterday evening",
+      "layer": "clarify_vague",
+      "reject_expected": false,
+      "clarify_expected": true
+    },
+    {
+      "query_id": "nl_c10",
+      "utterance": "Find the usual routes",
+      "layer": "clarify_vague",
+      "reject_expected": false,
+      "clarify_expected": true
+    }
+  ],
+  "query_count": 44
+}

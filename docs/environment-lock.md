@@ -15,7 +15,7 @@
 
 Windows `settings.xml` may set `localRepository` to a path like `F:\maven-repository`. Under WSL that becomes a **relative** broken path (`$PWD/F:\...`), so compile sees empty jars.
 
-**Fix used by scripts:** always pass `-Dmaven.repo.local=$HOME/.m2/repository` (see `scripts/rebuild-jar.sh`, `scripts/wsl-test.sh`).
+**Fix used by scripts:** always pass `-Dmaven.repo.local=$HOME/.m2/repository`（`kart.sh rebuild` / `kart.sh test` / `kart-env.sh`）。
 
 ## Dependency notes (OI-8)
 
@@ -44,20 +44,18 @@ Windows `settings.xml` may set `localRepository` to a path like `F:\maven-reposi
 Load secrets in WSL:
 
 ```bash
-source scripts/load-llm-env.sh   # reads gitignored .env
-./scripts/kart.sh probe
+./scripts/kart.sh probe          # loads .env via kart-env
 ./scripts/kart.sh chat           # live DeepSeek
-# or batch:
-./scripts/kart.sh chat-easy
+./scripts/kart.sh chat-easy      # batch
 ```
 
 ## Cost model (P5) — authoritative Java fit
 
 - Version: **`cost_v2_rs_sched`**（§13.4 分项 + `ScheduleEstimate` RS affinity）
-- **Authority:** `kart fit-cost` / `FeedbackCalibrator`（CostModel MAE），**不是** `fit_cost_coeffs.py` 诊断 NNLS。
+- **Authority:** `kart fit-cost` / `FeedbackCalibrator`（CostModel MAE）。
 - Publish pack: `./scripts/kart.sh fit-cost-pack` → `experiments/results/cost_calib_pack_YYYYMMDD/`（pairs + report + coeffs + `planner.yaml.frozen` + `meta.json`）
 - Live pointers: `experiments/results/cost_calibration_report.json`、`cost_coeffs_calibrated.json`、`cost_calibration_meta.json`
-- Merge into `config/planner.yaml` via `scripts/merge_cost_coeffs_into_planner.py`
+- Merge into `config/planner.yaml` is part of `./scripts/kart.sh fit-cost-pack`
 - Freeze coeffs during the experiment window; do not hot-reload mid-query.
 
 ## WSL sync gate

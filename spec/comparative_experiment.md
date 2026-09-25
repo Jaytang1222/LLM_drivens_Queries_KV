@@ -1,7 +1,7 @@
 # KART 对比实验规范（Experiment）
 
-- 版本：v0.1，2026-09-24
-- 状态：规范已锁定；**benchmark 脚本与桥接实现另开任务**（本文不要求代码已存在）
+- 版本：v0.2，2026-09-25
+- 状态：规范已锁定；benchmark 脚本与桥接实现已部分落地。真实性、公平性和可运行性以 [`docs/comparative-experiment-readiness-2026-09-25.md`](../docs/comparative-experiment-readiness-2026-09-25.md) 的审计门禁为准，未通过门禁的结果不得作为正式主表结论。
 - 上游：`spec/design.md`、`spec/IMPLEMENTATION_PLAN.md` §19、`docs/environment-lock.md`
 - 数据与用例参考：`experiments/workloads/tdrive_smoke.json`、`docs/easy_query_example.md`
 
@@ -127,6 +127,7 @@ flowchart TB
 | `--arm <list\|all>` | 参加对比的方法，逗号分隔 | `all` |
 | `--workload <path>` | workload JSON | 见各实验默认路径 |
 | `--run-id <id>` | 结果目录名 | 必填或自动生成时间戳 |
+| `--trials <n>` | 覆盖 suite 的重复次数；cold 正式首轮建议 1，warm P50/P95 建议至少 5 | suite 默认值 |
 
 脚本 **3** 额外：
 
@@ -316,8 +317,8 @@ t_e2e 终点 = 返回轨迹 ID 列表或 Top-K
 
 | `--arm` | 定义 |
 |---|---|
-| `fullscan` | **HBase 原生语义基线**：`P_FULL` = `traj_raw` FullScan + 客户端 ExactFilter（无二级索引访问路径） |
-| `rbo` | 谓词模式 → **固定计划模板**（无代价枚举选优） |
+| `fullscan` | **HBase 原生语义基线**：固定 `P_FULL` = `traj_raw` FullScan + 客户端 ExactFilter（无二级索引访问路径、无候选搜索） |
+| `rbo` | 固定公开规则 `TZ → T → Z → H → FULL` 映射到一个计划模板（无候选搜索、无代价枚举选优） |
 | `cbo` | 生成多个 SafePlan + **CostModel** 选 `estimated_ms` 最小（**无 LLM**） |
 | `kart` | 与 E2 臂 `kart` 相同的规划策略 + 同一执行器 |
 
@@ -374,17 +375,19 @@ t_e2e 终点 = 返回轨迹 ID 列表或 Top-K
 - 与 Spider / BIRD / TEND 公开榜数字直接横比
 - GeoMesa / DITA 等跨引擎主对比（可未来扩展）
 - 多节点扩展实验
-- 本文阶段：**不要求**已实现四个 `bench-*.sh`（规范先行）
+- 本规范不把“脚本能够启动”视为公平性通过；四个 `bench-*.sh` 即使存在，也必须先通过 readiness audit 的 arm 语义、计时、缓存和 Oracle 门禁。
 
 ---
 
-## 11. 实现阶段建议顺序（非本规范交付）
+## 11. 实现阶段建议顺序
 
 1. E3 四臂（本系统能力最近）+ `bench-e2e.sh`
 2. E1 `kart` + `din-spider` / `din-bird` 桥 + `bench-parse.sh`
 3. E1 `sag` 桥
 4. E2 `bao` / `llmopt` / `kart` + `bench-plan.sh`
 5. `bench-all.sh` 串联与 `summary` 汇总
+
+当前实现状态和剩余工作不在本规范中猜测，以 `docs/comparative-experiment-readiness-2026-09-25.md` 为准。
 
 ---
 

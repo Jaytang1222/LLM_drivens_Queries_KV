@@ -94,6 +94,36 @@ public final class QueryEnginePlannerModeTest {
   }
 
   @Test
+  void fixedPlanPathDoesNotEnumerateCandidates() throws Exception {
+    MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
+    try {
+      LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
+      QueryEngine engine = new QueryEngine(kv, layout, ExecLimits.defaults(),
+          null, AppConfig.PlannerConfig.defaults(), null, PlannerMode.RULE);
+      BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+      QueryEngine.RunResult rr = engine.runFixed(ir, tmp.resolve("runs_fixed"), true,
+          PlanBuilder.buildForAccess(ir, false, false, false));
+      assertEquals("PLAN_ONLY", rr.result.status);
+      assertEquals(1, rr.candidates.size());
+      assertEquals(1, rr.safe.size());
+      assertEquals("P_FULL", rr.selected.plan().plan_id);
+      assertEquals(1, rr.costCards.size());
+      assertNotNull(rr.t_plan_ms);
+      assertNull(rr.t_exec_ms);
+
+      QueryEngine.RunResult planned = engine.runFixed(ir, null, true,
+          PlanBuilder.buildForAccess(ir, false, false, false));
+      QueryEngine.RunResult exec = engine.executeSelected(ir, tmp.resolve("runs_exec"), planned);
+      assertEquals("OK", exec.result.status);
+      assertNotNull(exec.t_exec_ms);
+      assertEquals(1, exec.candidates.size());
+      assertEquals("P_FULL", exec.selected.plan().plan_id);
+    } finally {
+      kv.close();
+    }
+  }
+
+  @Test
   void llmDirectAcceptsStubPlanId() throws Exception {
     MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
     try {

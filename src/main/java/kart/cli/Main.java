@@ -25,7 +25,8 @@ import picocli.CommandLine.Command;
         FitCostCmd.class,
         SmokeTdriveCmd.class,
         ProbeLlmCmd.class,
-        ChatCmd.class
+        ChatCmd.class,
+        BenchSuiteCmd.class
     }
 )
 public final class Main implements Runnable {

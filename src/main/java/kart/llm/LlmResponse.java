@@ -11,6 +11,9 @@ public final class LlmResponse {
   public Integer completionTokens;
   public long latencyMs;
   public String rawBody;
+  /** HTTP posts used for this logical chat (2 when JSON-mode is retried without response_format). */
+  public int attempts = 1;
+  public boolean jsonModeFallback;
 
   public LlmResponse() {}
 

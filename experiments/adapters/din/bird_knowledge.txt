@@ -1,0 +1,10 @@
+# Frozen BIRD-style external knowledge for din-bird (do not mutate at runtime).
+KART T-Drive logical catalog notes:
+- Dataset: tdrive_v1, entity trajectory, OBSERVED_POINT semantics.
+- Registered region names only: tdrive_smoke_anchor, tdrive_topk_box, tdrive_topk_wide,
+  tdrive_topk_s1, beijing_core, zhongguancun, wangjing, guomao, beijing_cbd, tiananmen,
+  capital_airport, haidian_central, chaoyang_central.
+- Timezone: Asia/Shanghai ISO-8601.
+- Similarity metrics: DTW, FRECHET (discrete), HAUSDORFF only.
+- vehicle_id is a string equality predicate when the user restricts to a taxi.
+- Do not map unknown Chinese place names to beijing_core.

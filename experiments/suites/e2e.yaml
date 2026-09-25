@@ -1,0 +1,17 @@
+# E3 — end-to-end from gold BoundIR
+# trials: 3 is harness/smoke. Formal first-run: --cache cold --trials 1
+# Formal warm P50/P95: --cache warm --trials 5
+kind: compare
+id: e2e
+workload: experiments/workloads/bound_ir_v1.json
+oracle: experiments/workloads/bound_ir_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - kart

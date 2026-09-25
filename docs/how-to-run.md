@@ -4,16 +4,12 @@
 Windows 改代码后必须同步再跑实验：
 
 ```bash
-bash scripts/sync-wsl-workspace.sh   # 或 ./scripts/kart.sh sync
-bash scripts/check-wsl-sync.sh       # 或 ./scripts/kart.sh sync-check
-# 核对：
-#   ls /mnt/f/Projects/LLM_KV/KART_SYNC_*
-#   ls /home/jaytang/projects/llm-kv/KART_SYNC_*
-#   cat /home/jaytang/projects/llm-kv/KART_SYNC_LATEST.txt
+./scripts/kart.sh sync         # Windows → WSL
+./scripts/kart.sh sync-check   # stamp + 关键文件 hash
 ```
 
 路径：**Live LLM → BoundIR → BeamSearch → HBase（T-Drive / `tdrive_v1_ready`）** 为生产/验收主路径。  
-单元/性质测试仍可使用 `MemoryBackend` + fixture（不替代 HBase smoke）。对比实验 `bench-*.sh` 见 `spec/comparative_experiment.md`（脚本另开任务）。实验范围：[`experiment-scope.md`](experiment-scope.md)。
+单元/性质测试仍可使用 `MemoryBackend` + fixture（不替代 HBase smoke）。对比实验 `bench-*.sh` 见 `spec/comparative_experiment.md`；运行前必须先读 [`comparative-experiment-readiness-2026-09-25.md`](comparative-experiment-readiness-2026-09-25.md)，其中列出了公平性门禁和当前已知限制。
 
 ## 主流程
 
@@ -27,7 +23,7 @@ bash scripts/check-wsl-sync.sh       # 或 ./scripts/kart.sh sync-check
 | Oracle smoke | `./scripts/kart.sh smoke` → **24/24**（含 DTW / FRECHET / HAUSDORFF Top-K） |
 | 收工 | `./scripts/kart.sh down` |
 
-验证用例与参考结果：[`easy_query_example.md`](easy_query_example.md)、[`hard_query_example.md`](hard_query_example.md)。语义：[`supported-semantics.md`](supported-semantics.md)。区域名：[`regions.md`](regions.md)。环境钉死：[`environment-lock.md`](environment-lock.md)。
+验证用例与参考结果：[`easy_query_example.md`](easy_query_example.md)、[`hard_query_example.md`](hard_query_example.md)、[`manual_verify_example.md`](manual_verify_example.md)。语义：[`supported-semantics.md`](supported-semantics.md)。区域名：[`regions.md`](regions.md)。环境钉死：[`environment-lock.md`](environment-lock.md)。
 
 ## Live LLM（`.env`，勿提交）
 
@@ -75,16 +71,10 @@ LLM_JSON_MODE=true
 # 一键：采集 pairs → fit-cost → 合并 planner.yaml → 归档可重放包
 ./scripts/kart.sh fit-cost-pack
 
-# 或分步：
-python3 scripts/gen-cost-calib-ir.py --out experiments/workloads/cost_calib
-bash scripts/collect-cost-traces.sh
-./scripts/kart.sh run fit-cost --pairs runs/cost_calib --manifest tdrive_v1_ready \
-  --report experiments/results/cost_calibration_report.json \
-  --coeffs experiments/results/cost_coeffs_calibrated.json
-python3 scripts/merge_cost_coeffs_into_planner.py \
-  --coeffs experiments/results/cost_coeffs_calibrated.json \
-  --planner config/planner.yaml
+# 需要时先生成 BoundIR 网格：
+./scripts/kart.sh gen-cost-ir
+# 或：./scripts/publish-cost-calib-pack.sh --gen-ir experiments/workloads/cost_calib
 ```
 
 `config/planner.yaml` 中 `cost.calibrated: true` 表示已发布权威拟合系数。  
-诊断脚本 `fit_cost_coeffs.py` **不得**单独作为实验冻结来源。归档：`experiments/results/cost_calib_pack_*` + `cost_calibration_meta.json`。
+权威来源：`kart fit-cost` / `FeedbackCalibrator`；归档：`experiments/results/cost_calib_pack_*` + `cost_calibration_meta.json`。

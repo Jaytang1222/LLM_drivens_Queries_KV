@@ -1,0 +1,21 @@
+# Compare suite — native arms only (external arms listed as unsupported placeholders)
+kind: compare
+id: compare
+workload: experiments/workloads/tdrive_smoke.json
+oracle: experiments/workloads/tdrive_smoke.oracle.json
+manifest: tdrive_v1_ready
+catalog: catalog
+require_oracle: true
+trials: 1
+# Use limit for harness smoke; remove or raise for full runs
+limit: 3
+stages:
+  - plan
+  - e2e
+arms:
+  - rule
+  - best_first
+  - fullscan
+  # - llm
+  # - llm_direct
+  # - kart

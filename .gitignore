@@ -37,5 +37,11 @@ KART_SYNC_*
 __pycache__/
 *.pyc
 
+# Large cloned upstreams (commits frozen in experiments/third_party/commits.json)
+experiments/third_party/din-sql/
+experiments/third_party/text-to-nosql/
+experiments/third_party/bao/
+experiments/third_party/llmopt/
+
 # jqwik property-test seed/cache (regenerated on mvn test)
 .jqwik-database

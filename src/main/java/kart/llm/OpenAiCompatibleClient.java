@@ -66,36 +66,28 @@ public final class OpenAiCompatibleClient implements LlmClient {
       }
 
       byte[] payload = MAPPER.writeValueAsBytes(body);
-      URL url = new URL(baseUrl + "/chat/completions");
-      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn.setRequestMethod("POST");
-      conn.setConnectTimeout(o.timeoutMs);
-      conn.setReadTimeout(o.timeoutMs);
-      conn.setDoOutput(true);
-      conn.setRequestProperty("Content-Type", "application/json");
-      conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-
-      long t0 = System.currentTimeMillis();
-      OutputStream os = conn.getOutputStream();
-      try {
-        os.write(payload);
-      } finally {
-        os.close();
+      Posted posted = post(baseUrl + "/chat/completions", payload, o.timeoutMs, apiKey);
+      int attempts = 1;
+      boolean jsonFallback = false;
+      if (posted.code >= 400 && o.jsonObjectFormat && jsonModeSupported && body.has("response_format")) {
+        jsonFallback = true;
+        attempts = 2;
+        body.remove("response_format");
+        payload = MAPPER.writeValueAsBytes(body);
+        Posted retry = post(baseUrl + "/chat/completions", payload, o.timeoutMs, apiKey);
+        retry.latencyMs += posted.latencyMs;
+        posted = retry;
+      }
+      if (posted.code >= 400) {
+        throw new LlmException("HTTP " + posted.code + ": " + posted.raw);
       }
 
-      int code = conn.getResponseCode();
-      InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
-      String raw = readAll(in);
-      long latency = System.currentTimeMillis() - t0;
-
-      if (code >= 400) {
-        throw new LlmException("HTTP " + code + ": " + raw);
-      }
-
-      JsonNode root = MAPPER.readTree(raw);
+      JsonNode root = MAPPER.readTree(posted.raw);
       LlmResponse resp = new LlmResponse();
-      resp.rawBody = raw;
-      resp.latencyMs = latency;
+      resp.rawBody = posted.raw;
+      resp.latencyMs = posted.latencyMs;
+      resp.attempts = attempts;
+      resp.jsonModeFallback = jsonFallback;
       resp.model = text(root, "model", model);
       JsonNode usage = root.get("usage");
       if (usage != null) {
@@ -126,6 +118,39 @@ public final class OpenAiCompatibleClient implements LlmClient {
   /** OI-1: probe whether response_format=json_object is accepted. */
   public boolean probeJsonMode() {
     return jsonModeSupported;
+  }
+
+  private static Posted post(String urlStr, byte[] payload, int timeoutMs, String apiKey)
+      throws Exception {
+    URL url = new URL(urlStr);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("POST");
+    conn.setConnectTimeout(timeoutMs);
+    conn.setReadTimeout(timeoutMs);
+    conn.setDoOutput(true);
+    conn.setRequestProperty("Content-Type", "application/json");
+    conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+    long t0 = System.currentTimeMillis();
+    OutputStream os = conn.getOutputStream();
+    try {
+      os.write(payload);
+    } finally {
+      os.close();
+    }
+    int code = conn.getResponseCode();
+    InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+    String raw = readAll(in);
+    Posted p = new Posted();
+    p.code = code;
+    p.raw = raw;
+    p.latencyMs = Math.max(0L, System.currentTimeMillis() - t0);
+    return p;
+  }
+
+  private static final class Posted {
+    int code;
+    String raw;
+    long latencyMs;
   }
 
   private static String env(String key, String def) {

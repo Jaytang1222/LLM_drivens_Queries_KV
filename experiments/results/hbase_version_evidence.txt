@@ -1,5 +1,5 @@
 === KART HBase version evidence ===
-utc=2026-09-25T05:45:27Z
+utc=2026-09-25T11:41:51Z
 git_commit=f5dd7ad8f240b12208c303eccddec427809d3e9a
 KART_ROOT=/home/jaytang/projects/llm-kv
 KART_DST=/home/jaytang/projects/llm-kv

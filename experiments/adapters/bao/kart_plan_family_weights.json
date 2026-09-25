@@ -1,0 +1,12 @@
+{
+  "protocol": "bao_arm_select_over_kart_plan_family",
+  "note": "Hand-set KART plan-family preferences — NOT BaoForPostgreSQL IMDb-trained weights",
+  "weights": {
+    "T": 3.0,
+    "Z": 2.5,
+    "H": 2.0,
+    "COMBO": 2.2,
+    "FULL": 0.2,
+    "other": 1.0
+  }
+}

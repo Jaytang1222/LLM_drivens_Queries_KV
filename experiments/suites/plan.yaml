@@ -1,0 +1,15 @@
+# E2 — plan generate→select
+# plan_ok is availability, not Oracle quality. Default trials=3 is smoke.
+kind: compare
+id: plan
+workload: experiments/workloads/bound_ir_v1.json
+oracle: experiments/workloads/bound_ir_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 3
+stages:
+  - plan
+arms:
+  - kart
+  - bao
+  - llmopt

@@ -257,4 +257,4 @@
   --manifest tdrive_v1_ready
 ```
 
-另见：[`easy_query_example.md`](easy_query_example.md)。
+另见：[`easy_query_example.md`](easy_query_example.md)、[`manual_verify_example.md`](manual_verify_example.md)。

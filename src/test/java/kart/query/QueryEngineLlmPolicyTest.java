@@ -5,24 +5,21 @@ import kart.config.AppConfig;
 import kart.exec.ExecLimits;
 import kart.exec.MemoryBackend;
 import kart.ir.BoundIr;
-import kart.llm.MockLlmClient;
-import kart.llm.PromptBuilder;
+import kart.llm.ScriptedLlmClient;
 import kart.snapshot.FixtureBuilder;
 import kart.snapshot.SnapshotBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * FR-3.6 / supported-semantics: when LlmClient is provided, QueryEngine uses LlmProposalPolicy
- * (StatusLog policy=llm). Mock may rule-fallback on action proposals; wiring still counts.
+ * FR-3.6: when LlmClient is provided, QueryEngine uses LlmProposalPolicy.
+ * Scripted responses may miss action JSON → rule fallback; wiring still yields SafePlans.
  */
 public final class QueryEngineLlmPolicyTest {
 
@@ -31,19 +28,15 @@ public final class QueryEngineLlmPolicyTest {
 
   @Test
   void withLlmClientSearchStillYieldsSafePlans() throws Exception {
-    Path root = Paths.get(".").toAbsolutePath().normalize();
-    if (!Files.isDirectory(root.resolve("testdata/llm-mock"))) {
-      root = Paths.get("..").toAbsolutePath().normalize();
-    }
     MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
     try {
       LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
-      MockLlmClient mock = new MockLlmClient(root.resolve("testdata/llm-mock"));
-      AppConfig.RegionsConfig regions = AppConfig.load(root).regions();
-      mock.bindUtterances(new PromptBuilder(regions, "fixture_v1"));
+      // Non-action JSON → LlmProposalPolicy falls back to RulePolicy; engine must still finish.
+      ScriptedLlmClient llm = new ScriptedLlmClient(
+          "{}", "{}", "{}", "{}", "{}", "{}", "{}", "{}", "{}", "{}");
 
       QueryEngine engine = new QueryEngine(kv, layout, ExecLimits.defaults(),
-          null, AppConfig.PlannerConfig.defaults(), mock);
+          null, AppConfig.PlannerConfig.defaults(), llm);
       BoundIr ir = QueryIrFixtureTest.fixtureQuery();
       QueryEngine.RunResult rr = engine.run(ir, tmp.resolve("runs"));
       assertNotNull(rr);

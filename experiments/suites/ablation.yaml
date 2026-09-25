@@ -1,0 +1,30 @@
+# Ablation suite — base + enabled factors (unsafe factors stay disabled)
+kind: ablation
+id: ablation
+workload: experiments/workloads/tdrive_smoke.json
+oracle: experiments/workloads/tdrive_smoke.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+limit: 3
+stages:
+  - e2e
+base_arm: rule
+factors:
+  - id: no_llm_policy
+    enabled: true
+    overrides:
+      policy: rule
+  - id: best_first_instead
+    enabled: true
+    overrides:
+      policy: best_first
+  - id: narrow_beam
+    enabled: true
+    overrides:
+      beam_width: 1
+      max_candidates: 4
+  - id: no_coverage_check
+    enabled: false
+    unsafe: true
+    overrides: {}

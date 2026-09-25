@@ -1,0 +1,15 @@
+# Parameter sweep — overlay planner knobs (does not rewrite config/planner.yaml)
+kind: param
+id: param
+workload: experiments/workloads/tdrive_smoke.json
+oracle: experiments/workloads/tdrive_smoke.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+limit: 2
+stages:
+  - e2e
+base_arm: rule
+grid:
+  beam_width: [1, 3]
+  max_candidates: [4, 8]
