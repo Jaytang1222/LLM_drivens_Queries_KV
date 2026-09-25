@@ -77,6 +77,16 @@ public final class RulePolicy implements ProposalPolicy {
       return ActionSelection.of(part, "rule_partition");
     }
 
+    // Single-index ablation: INTERSECT is not legal, but REPLACE of the other
+    // index would ping-pong T↔Z and never FINISH. Emit P_T/P_Z/P_H first.
+    if (state.usedIndexes().size() == 1 && !alreadyFinished) {
+      LegalAction finSingle = firstOfKind(legal, ActionKind.FINISH);
+      if (finSingle != null) {
+        finishedSignatures.add(sig);
+        return ActionSelection.of(finSingle, "rule_finish_no_intersect");
+      }
+    }
+
     LegalAction replace = firstOfKind(legal, ActionKind.REPLACE);
     if (replace != null && !alreadyFinished) {
       return ActionSelection.of(replace, "rule_replace");

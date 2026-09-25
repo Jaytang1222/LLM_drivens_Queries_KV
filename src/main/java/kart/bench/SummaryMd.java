@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,9 +30,22 @@ public final class SummaryMd {
                            SuiteSpec suite, CacheProtocol cache, int trialCount) throws Exception {
     StringBuilder sb = new StringBuilder();
     sb.append("# ").append(runId).append(" / ").append(suite.id).append('\n').append('\n');
-    sb.append("External DIN/SAG/Bao/LLMOpt arms are **control-flow transplants** ")
-        .append("(DraftIR / KART plan family), not upstream SQL/Mongo/PostgreSQL reproductions. ")
-        .append("See `experiments/adapters/TRANSPLANT.md`.\n\n");
+    if (suite != null && suite.kind != null && "ablation".equalsIgnoreCase(suite.kind.trim())) {
+      sb.append("Ablation is **leave-one-out vs Full KART** (`spec/ablation_experiment.md`). ")
+          .append("External comparative arms are not in this table. ")
+          .append("`no_coverage` (if present) is a **risk control**, not a deployable baseline.\n\n");
+      int uniqueQ = uniqueQueryCount(trials);
+      sb.append("- bound queries in this summary: `").append(uniqueQ).append("`");
+      sb.append(" (formal BoundIR count is `").append(SuiteRunner.FORMAL_BOUND_IR_COUNT).append("`)\n");
+      if (uniqueQ < SuiteRunner.FORMAL_BOUND_IR_COUNT) {
+        sb.append("- warning: incomplete BoundIR workload; do not treat this as the formal ablation table\n");
+      }
+      sb.append('\n');
+    } else {
+      sb.append("External DIN/SAG/Bao/LLMOpt arms are **control-flow transplants** ")
+          .append("(DraftIR / KART plan family), not upstream SQL/Mongo/PostgreSQL reproductions. ")
+          .append("See `experiments/adapters/TRANSPLANT.md`.\n\n");
+    }
     sb.append("Conclusions are limited to this **single-node mixed HBase classpath** environment.\n\n");
     if (cache != null) {
       sb.append("- cache mode: `").append(cache.mode).append("`\n");
@@ -151,7 +165,15 @@ public final class SummaryMd {
         appendFailTaxonomy(sb, e.getValue());
       }
       if ("e2e".equalsIgnoreCase(stage) || "plan".equalsIgnoreCase(stage)) {
-        appendFamilyBreakdown(sb, e.getValue(), stage);
+        appendKeyedBreakdown(sb, e.getValue(), stage, "family", "by family");
+        appendKeyedBreakdown(sb, e.getValue(), stage, "selectivity", "by selectivity");
+        appendKeyedBreakdown(sb, e.getValue(), stage, "metric", "by metric");
+        appendKeyedBreakdown(sb, e.getValue(), stage, "k", "by k");
+        appendKeyedBreakdown(sb, e.getValue(), stage, "empty_boundary", "by empty/boundary");
+        if (suite != null && suite.kind != null
+            && "ablation".equalsIgnoreCase(suite.kind.trim())) {
+          appendFactorFamily(sb, e.getValue(), stage);
+        }
       }
     }
 
@@ -183,31 +205,31 @@ public final class SummaryMd {
     sb.append("\n\n");
   }
 
-  private static void appendFamilyBreakdown(StringBuilder sb, List<Map<String, Object>> rows,
-                                            String stage) {
-    Map<String, List<Map<String, Object>>> byFam = new LinkedHashMap<String, List<Map<String, Object>>>();
+  private static void appendKeyedBreakdown(StringBuilder sb, List<Map<String, Object>> rows,
+                                           String stage, String field, String heading) {
+    Map<String, List<Map<String, Object>>> byKey = new LinkedHashMap<String, List<Map<String, Object>>>();
     boolean any = false;
     for (Map<String, Object> r : rows) {
-      Object fam = r.get("family");
-      if (fam == null) {
+      Object v = r.get(field);
+      if (v == null) {
         continue;
       }
       any = true;
-      String key = String.valueOf(fam);
-      List<Map<String, Object>> list = byFam.get(key);
+      String key = String.valueOf(v);
+      List<Map<String, Object>> list = byKey.get(key);
       if (list == null) {
         list = new ArrayList<Map<String, Object>>();
-        byFam.put(key, list);
+        byKey.put(key, list);
       }
       list.add(r);
     }
     if (!any) {
       return;
     }
-    sb.append("### by family\n\n");
-    sb.append("| family | n | ok | t_p50 |\n|---|---:|---:|---:|\n");
+    sb.append("### ").append(heading).append("\n\n");
+    sb.append("| ").append(field).append(" | n | ok | t_p50 |\n|---|---:|---:|---:|\n");
     String latKey = latencyKey(stage);
-    for (Map.Entry<String, List<Map<String, Object>>> e : byFam.entrySet()) {
+    for (Map.Entry<String, List<Map<String, Object>>> e : byKey.entrySet()) {
       int ok = 0;
       List<Long> lat = new ArrayList<Long>();
       for (Map<String, Object> r : e.getValue()) {
@@ -223,6 +245,63 @@ public final class SummaryMd {
           .append(" |\n");
     }
     sb.append('\n');
+  }
+
+  private static void appendFactorFamily(StringBuilder sb, List<Map<String, Object>> rows,
+                                         String stage) {
+    Map<String, List<Map<String, Object>>> byKey = new LinkedHashMap<String, List<Map<String, Object>>>();
+    boolean any = false;
+    for (Map<String, Object> r : rows) {
+      Object factor = r.get("factor");
+      Object fam = r.get("family");
+      if (factor == null || fam == null) {
+        continue;
+      }
+      any = true;
+      String key = factor + " / " + fam;
+      List<Map<String, Object>> list = byKey.get(key);
+      if (list == null) {
+        list = new ArrayList<Map<String, Object>>();
+        byKey.put(key, list);
+      }
+      list.add(r);
+    }
+    if (!any) {
+      return;
+    }
+    sb.append("### by factor × family\n\n");
+    sb.append("| factor / family | n | ok | t_p50 |\n|---|---:|---:|---:|\n");
+    String latKey = latencyKey(stage);
+    for (Map.Entry<String, List<Map<String, Object>>> e : byKey.entrySet()) {
+      int ok = 0;
+      List<Long> lat = new ArrayList<Long>();
+      for (Map<String, Object> r : e.getValue()) {
+        if (isPass(r, stage)) {
+          ok++;
+          addLong(lat, r.get(latKey));
+        }
+      }
+      sb.append("| ").append(e.getKey())
+          .append(" | ").append(e.getValue().size())
+          .append(" | ").append(ok).append("/").append(e.getValue().size())
+          .append(" | ").append(fmt(percentile(lat, 0.50)))
+          .append(" |\n");
+    }
+    sb.append('\n');
+  }
+
+  private static int uniqueQueryCount(List<Map<String, Object>> trials) {
+    if (trials == null) {
+      return 0;
+    }
+    LinkedHashSet<String> ids = new LinkedHashSet<String>();
+    for (Map<String, Object> t : trials) {
+      Object q = t.get("query_id");
+      if (q != null) {
+        ids.add(String.valueOf(q));
+      }
+    }
+    return ids.size();
   }
 
   private static String latencyKey(String stage) {
@@ -249,6 +328,9 @@ public final class SummaryMd {
     Map<String, List<Map<String, Object>>> m = new LinkedHashMap<String, List<Map<String, Object>>>();
     for (Map<String, Object> r : rows) {
       Object arm = r.get("arm");
+      if (arm == null) {
+        arm = r.get("factor");
+      }
       if (arm == null) {
         arm = r.get("arm_or_factor");
       }

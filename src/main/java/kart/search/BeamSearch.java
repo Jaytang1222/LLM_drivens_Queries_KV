@@ -29,12 +29,19 @@ public final class BeamSearch {
 
   private final LayoutContext layout;
   private final FastCost fastCost;
-  private final LegalActionGenerator generator = new LegalActionGenerator();
+  private final LegalActionGenerator generator;
   private final IncrementalValidator incremental = new IncrementalValidator();
+  private final SearchOptions options;
 
   public BeamSearch(LayoutContext layout, FastCost fastCost) {
+    this(layout, fastCost, SearchOptions.defaults());
+  }
+
+  public BeamSearch(LayoutContext layout, FastCost fastCost, SearchOptions options) {
     this.layout = layout;
     this.fastCost = fastCost != null ? fastCost : new FastCost(null);
+    this.options = options != null ? options : SearchOptions.defaults();
+    this.generator = new LegalActionGenerator(this.options.allowIntersect);
   }
 
   public SearchResult search(BoundIr ir, ProposalPolicy policy, SearchBudget budget) {
@@ -188,7 +195,7 @@ public final class BeamSearch {
         }
       }
 
-      if (roundBest < Double.POSITIVE_INFINITY) {
+      if (options.useFastCost && roundBest < Double.POSITIVE_INFINITY) {
         budget.observeBest(roundBest);
       }
 
@@ -220,7 +227,7 @@ public final class BeamSearch {
 
   private void validateAll(BoundIr ir, SearchResult result) {
     QueryCompiler compiler = new QueryCompiler(layout);
-    PlanValidator validator = new PlanValidator(layout);
+    PlanValidator validator = new PlanValidator(layout, options.skipCoverageCheck);
     for (PlanEnvelope env : result.candidates) {
       PhysicalPlan phys;
       try {
@@ -243,7 +250,7 @@ public final class BeamSearch {
 
   public void validateInjected(BoundIr ir, PlanEnvelope env, SearchResult result) {
     QueryCompiler compiler = new QueryCompiler(layout);
-    PlanValidator validator = new PlanValidator(layout);
+    PlanValidator validator = new PlanValidator(layout, options.skipCoverageCheck);
     PhysicalPlan phys;
     try {
       phys = compiler.compile(env, ir);
@@ -275,9 +282,12 @@ public final class BeamSearch {
     byId.put(id, plan);
   }
 
-  private static List<SearchState> trimBeam(List<SearchState> states, int beamWidth) {
+  private List<SearchState> trimBeam(List<SearchState> states, int beamWidth) {
     if (states.size() <= beamWidth) {
       return states;
+    }
+    if (!options.useFastCost) {
+      return new ArrayList<SearchState>(states.subList(0, beamWidth));
     }
     List<SearchState> copy = new ArrayList<SearchState>(states);
     Collections.sort(copy, new Comparator<SearchState>() {

@@ -146,7 +146,16 @@ rsync -a --delete \
   --exclude '.jqwik-database' \
   --exclude 'F:\maven-repository' \
   --exclude .env \
+  --exclude experiments/results \
+  --exclude experiments/third_party \
   "$SRC/" "$DST/"
+
+# Preserve WSL-local evidence file if Windows copy is older/missing
+mkdir -p "$DST/experiments/results"
+if [[ -f "$SRC/experiments/results/hbase_version_evidence.txt" ]]; then
+  cp -f "$SRC/experiments/results/hbase_version_evidence.txt" \
+    "$DST/experiments/results/hbase_version_evidence.txt"
+fi
 
 cp -f "$STAMP_PATH" "$DST/$STAMP_NAME"
 cp -f "$STAMP_DIR/KART_SYNC_LATEST.txt" "$DST/KART_SYNC_LATEST.txt"

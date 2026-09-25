@@ -151,6 +151,9 @@ public final class AppConfig {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class PlannerConfig {
+    public static final String FINAL_SELECT_ESTIMATED_MS = "estimated_ms";
+    public static final String FINAL_SELECT_PLAN_ID = "plan_id";
+
     public int max_llm_calls = 6;
     public int max_candidates = 8;
     public long max_plan_ms = 5000;
@@ -161,6 +164,14 @@ public final class AppConfig {
     public int max_zorder_ranges = 64;
     public int fetch_batch_size = 500;
     public CostCoeffs cost = new CostCoeffs();
+    /** Ablation: Fast Cost ranks/prunes the beam. Default on (comparative unchanged). */
+    public boolean use_fast_cost = true;
+    /** Ablation: allow INTERSECT families. Default on. */
+    public boolean allow_intersect = true;
+    /** Ablation unsafe: skip CoverageCheck only. Default off. */
+    public boolean skip_coverage_check = false;
+    /** Ablation: {@code estimated_ms} (default) or {@code plan_id} lexicographic pick. */
+    public String final_select = FINAL_SELECT_ESTIMATED_MS;
 
     public static PlannerConfig defaults() {
       return new PlannerConfig();
@@ -178,6 +189,10 @@ public final class AppConfig {
       c.max_dtw_cells = this.max_dtw_cells;
       c.max_zorder_ranges = this.max_zorder_ranges;
       c.fetch_batch_size = this.fetch_batch_size;
+      c.use_fast_cost = this.use_fast_cost;
+      c.allow_intersect = this.allow_intersect;
+      c.skip_coverage_check = this.skip_coverage_check;
+      c.final_select = this.final_select;
       if (this.cost != null) {
         c.cost = copyCost(this.cost);
       }

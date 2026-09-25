@@ -34,10 +34,26 @@ public final class PlanSelector {
   }
 
   public static Scored selectScored(List<Scored> scored) {
+    return selectScored(scored, false);
+  }
+
+  /**
+   * @param byPlanId when true, ignore estimated_ms (ablation {@code no_final_cost})
+   */
+  public static Scored selectScored(List<Scored> scored, boolean byPlanId) {
     if (scored == null || scored.isEmpty()) {
       return null;
     }
     List<Scored> copy = new ArrayList<Scored>(scored);
+    if (byPlanId) {
+      Collections.sort(copy, new Comparator<Scored>() {
+        @Override
+        public int compare(Scored a, Scored b) {
+          return planId(a).compareTo(planId(b));
+        }
+      });
+      return copy.get(0);
+    }
     Collections.sort(copy, new Comparator<Scored>() {
       @Override
       public int compare(Scored a, Scored b) {

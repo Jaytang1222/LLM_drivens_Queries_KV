@@ -70,7 +70,9 @@ public final class BenchContext {
     if (!keepArtifacts) {
       return null;
     }
-    return runDir.resolve("artifacts").resolve(armId).resolve(queryId);
+    String cell = extras.containsKey("factor")
+        ? String.valueOf(extras.get("factor")) : armId;
+    return runDir.resolve("artifacts").resolve(cell).resolve(queryId);
   }
 
   public QueryEngine newEngine(kart.search.PlannerMode mode) {

@@ -45,14 +45,24 @@ public final class PlanValidator {
 
   private final LayoutContext layout;
   private final IrSchemaValidator schemas;
+  private final boolean skipCoverageCheck;
 
   public PlanValidator(LayoutContext layout) {
-    this(layout, loadSchemasQuietly());
+    this(layout, loadSchemasQuietly(), false);
+  }
+
+  public PlanValidator(LayoutContext layout, boolean skipCoverageCheck) {
+    this(layout, loadSchemasQuietly(), skipCoverageCheck);
   }
 
   public PlanValidator(LayoutContext layout, IrSchemaValidator schemas) {
+    this(layout, schemas, false);
+  }
+
+  public PlanValidator(LayoutContext layout, IrSchemaValidator schemas, boolean skipCoverageCheck) {
     this.layout = layout;
     this.schemas = schemas;
+    this.skipCoverageCheck = skipCoverageCheck;
   }
 
   private static IrSchemaValidator loadSchemasQuietly() {
@@ -82,7 +92,11 @@ public final class PlanValidator {
       ok = semanticCheck(env, ir, report);
     }
     if (ok) {
-      ok = coverageCheck(env, ir, phys, report);
+      if (skipCoverageCheck) {
+        report.pass("CoverageCheck", "SKIPPED_UNSAFE");
+      } else {
+        ok = coverageCheck(env, ir, phys, report);
+      }
     }
     if (ok) {
       ok = physicalSafetyCheck(env, phys, report);

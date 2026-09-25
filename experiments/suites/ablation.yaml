@@ -1,30 +1,48 @@
-# Ablation suite — base + enabled factors (unsafe factors stay disabled)
+# Planning-layer leave-one-out (spec/ablation_experiment.md)
+# Formal first-run: --cache cold --trials 1
+# Formal warm P50/P95: --cache warm --trials 5
+# Risk arm no_coverage: --allow-unsafe --factor no_coverage
 kind: ablation
 id: ablation
-workload: experiments/workloads/tdrive_smoke.json
-oracle: experiments/workloads/tdrive_smoke.oracle.json
+workload: experiments/workloads/bound_ir_v1.json
+oracle: experiments/workloads/bound_ir_v1.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
-trials: 1
-limit: 3
+trials: 3
 stages:
   - e2e
-base_arm: rule
+base_arm: kart
 factors:
-  - id: no_llm_policy
+  - id: no_llm_rule
     enabled: true
     overrides:
       policy: rule
-  - id: best_first_instead
+  - id: no_llm_best_first
     enabled: true
     overrides:
       policy: best_first
-  - id: narrow_beam
+  - id: llm_direct
     enabled: true
     overrides:
-      beam_width: 1
-      max_candidates: 4
-  - id: no_coverage_check
-    enabled: false
+      policy: llm_direct
+  - id: no_fast_cost
+    enabled: true
+    overrides:
+      use_fast_cost: false
+  - id: no_final_cost
+    enabled: true
+    overrides:
+      final_select: plan_id
+  - id: single_index
+    enabled: true
+    overrides:
+      allow_intersect: false
+  - id: uncalibrated
+    enabled: true
+    overrides:
+      uncalibrated: true
+  - id: no_coverage
+    enabled: true
     unsafe: true
-    overrides: {}
+    overrides:
+      skip_coverage_check: true

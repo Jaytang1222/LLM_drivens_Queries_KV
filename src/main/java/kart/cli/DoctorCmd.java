@@ -53,7 +53,13 @@ public final class DoctorCmd implements Callable<Integer> {
     String quorum = conf.get("hbase.zookeeper.quorum", "(unset)");
     String port = conf.get("hbase.zookeeper.property.clientPort", "(unset)");
     System.out.println("hbase.zookeeper.quorum=" + quorum + " clientPort=" + port);
-    System.out.println("hbase-client jar version (Approximate): 2.2.3 (pom)");
+    String[] clientVer = kart.bench.HBaseEnvProbe.clientJarVersions();
+    System.out.println("hbase-client code source: " + (clientVer[2] == null ? "(unknown path)" : clientVer[2]));
+    System.out.println("hbase-client version: "
+        + (clientVer[0] == null ? "(unresolved)" : clientVer[0])
+        + " source=" + clientVer[3]);
+    System.out.println("hbase-client specification: "
+        + (clientVer[1] == null ? "(none)" : clientVer[1]));
 
     try (Connection conn = ConnectionFactory.createConnection(conf);
          Admin admin = conn.getAdmin()) {
@@ -64,7 +70,15 @@ public final class DoctorCmd implements Callable<Integer> {
       }
       // Cluster status is best-effort on 2.2
       try {
-        System.out.println("HBase cluster status: " + admin.getClusterStatus().getHBaseVersion());
+        org.apache.hadoop.hbase.ClusterStatus cluster = admin.getClusterStatus();
+        System.out.println("HBase cluster status: " + cluster.getHBaseVersion());
+        StringBuilder rsErr = new StringBuilder();
+        Integer rs = kart.bench.HBaseEnvProbe.regionServerCount(null, cluster, rsErr);
+        if (rs == null) {
+          System.out.println("WARN: region_server_count unresolved: " + rsErr);
+        } else {
+          System.out.println("region_server_count: " + rs);
+        }
       } catch (Throwable t) {
         System.out.println("WARN: could not read cluster HBase version: " + t.getMessage());
       }

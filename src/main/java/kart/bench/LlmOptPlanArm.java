@@ -38,10 +38,10 @@ public final class LlmOptPlanArm implements Arm {
 
   @Override
   public TrialResult run(BoundIr ir, BenchContext ctx) throws Exception {
-    long t0 = System.currentTimeMillis();
     Path tmp = Files.createTempFile(ctx.runDir, "llmopt-ir-", ".json");
     try {
       Files.write(tmp, MAPPER.writeValueAsBytes(ir));
+      long t0 = System.currentTimeMillis();
       Path script = root.resolve("experiments/adapters/llmopt/llmopt_bridge.py");
       List<String> cmd = new ArrayList<String>();
       cmd.add(pythonBin());
@@ -70,34 +70,45 @@ public final class LlmOptPlanArm implements Arm {
       boolean ok = proc.waitFor(180, TimeUnit.SECONDS);
       if (!ok) {
         proc.destroyForcibly();
-        return TrialResult.fail("llmopt bridge timeout");
+        return stampFail(t0, "llmopt bridge timeout");
       }
       String stdout = new String(bos.toByteArray(), StandardCharsets.UTF_8).trim();
       int brace = stdout.indexOf('{');
       JsonNode rootNode = MAPPER.readTree(brace >= 0 ? stdout.substring(brace) : stdout);
       if (!"OK".equals(rootNode.path("status").asText())) {
-        TrialResult fail = TrialResult.fail(rootNode.path("error").asText("llmopt failed"));
-        fail.t_plan_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - t0));
-        return fail;
+        return stampFail(t0, rootNode.path("error").asText("llmopt failed"));
       }
       String planId = rootNode.path("plan_id").asText(null);
       if (planId == null || planId.isEmpty()) {
-        return TrialResult.fail("llmopt: empty plan_id");
+        return stampFail(t0, "llmopt: empty plan_id");
       }
       long tBridge = Math.max(0L, System.currentTimeMillis() - t0);
 
       QueryEngine engine = ctx.newEngine(PlannerMode.RULE);
-      Path art = ctx.artifactDir(id(), ir.query_id);
-      QueryEngine.RunResult rr = engine.run(ir, art, ctx.planOnly, planId);
-      long wall = System.currentTimeMillis() - t0;
+      QueryEngine.RunResult planned = engine.run(ir, null, true, planId);
+      long planEnd = planned.planEndEpochMs > t0
+          ? planned.planEndEpochMs : System.currentTimeMillis();
+      long tPlan = Math.max(tBridge, planEnd - t0);
+      planned.t_plan_ms = Long.valueOf(tPlan);
+      planned.planStartEpochMs = t0;
+      planned.planEndEpochMs = t0 + tPlan;
+
+      QueryEngine.RunResult rr = planned;
+      long wall = tPlan;
+      if (!ctx.planOnly) {
+        Path art = ctx.artifactDir(id(), ir.query_id);
+        rr = engine.executeSelected(ir, art, planned);
+        wall = Math.max(0L, System.currentTimeMillis() - t0);
+      }
       TrialResult tr = TrialResult.fromRun(rr, wall);
-      long javaPlan = rr != null && rr.t_plan_ms != null ? rr.t_plan_ms.longValue() : 0L;
-      tr.t_plan_ms = Long.valueOf(tBridge + javaPlan);
+      tr.t_plan_ms = Long.valueOf(tPlan);
       tr.extras.put("plan_start_ms", Long.valueOf(t0));
-      tr.extras.put("plan_end_ms", Long.valueOf(t0 + tr.t_plan_ms.longValue()));
+      tr.extras.put("plan_end_ms", Long.valueOf(t0 + tPlan));
       tr.extras.put("t_bridge_ms", Long.valueOf(tBridge));
       if (tr.t_exec_ms != null) {
-        tr.t_e2e_ms = Long.valueOf(tr.t_plan_ms.longValue() + tr.t_exec_ms.longValue());
+        tr.t_e2e_ms = Long.valueOf(tPlan + tr.t_exec_ms.longValue());
+      } else {
+        tr.t_e2e_ms = Long.valueOf(tPlan);
       }
       tr.extras.put("llmopt_protocol", "G_then_S");
       tr.extras.put("llmopt_candidates", rootNode.path("candidates").toString());
@@ -109,6 +120,8 @@ public final class LlmOptPlanArm implements Arm {
       }
       tr.extras.put("llmopt_intentional_changes",
           "KART plan_id family; Java validator/executor instead of pg_hint_plan; fair LLM not author checkpoint");
+      tr.extras.put("llmopt_java_path",
+          "beam_search_then_forcePlanId; search time is inside t_plan because that is how the SafePlan is validated");
       if (rootNode.has("usage")) {
         JsonNode u = rootNode.get("usage");
         if (u.has("calls")) {
@@ -138,6 +151,15 @@ public final class LlmOptPlanArm implements Arm {
         //
       }
     }
+  }
+
+  private static TrialResult stampFail(long t0, String error) {
+    TrialResult fail = TrialResult.fail(error);
+    long plan = Math.max(0L, System.currentTimeMillis() - t0);
+    fail.t_plan_ms = Long.valueOf(plan);
+    fail.extras.put("plan_start_ms", Long.valueOf(t0));
+    fail.extras.put("plan_end_ms", Long.valueOf(t0 + plan));
+    return fail;
   }
 
   private static String pythonBin() {

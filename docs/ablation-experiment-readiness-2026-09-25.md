@@ -1,8 +1,8 @@
 # 对比实验真实性、公平性与可运行性审计
 
 - 审计日期：2026-09-25
-- 适用范围：`spec/comparative_experiment.md` 定义的 E1（NL → IR）、E2（计划生成 → 选择）、E3（端到端）
-- 结论状态：**原生 E3 smoke、Bao/LLMOpt E2 smoke、固定基线语义门禁和 arm 顺序轮换已通过；正式公平对比仍未达标。** 当前结果可以用于检查 harness、Oracle、计划计时和 HBase 连通性；不能直接写成论文中的完整多臂公平结论。
+- 适用范围：`spec/comparative_experiment.md` 定义的 E1（NL → IR）、E2（计划生成 → 选择）、E3（端到端），以及 `spec/ablation_experiment.md` 定义的规划侧 leave-one-out 消融
+- 结论状态：**消融套件的 Full/7 个主因素/1 个风险因素均已实现并通过单查询 smoke 的语义门禁；HBase 版本与 RegionServer 元数据、整次运行 `cache_enforced` 聚合、arm 顺序轮换和 LLMOpt `t_plan` 边界已得到运行时证据。正式公平的全量消融主表仍未达标。** 当前结果可以用于检查 harness、Oracle、因子展开和计时边界；不能直接写成完整 workload、可证明 cold latency 或论文级因果结论。
 
 ## 1. 本次检查得到的事实
 
@@ -25,7 +25,9 @@
 | LLMOpt E2 计时复核 | WSL `audit-plan-llmopt-recheck`：3 query × 3 trial，`plan_ok=9/9`；9 行 `t_plan_ms=plan_end_ms-plan_start_ms`，并记录 `llmopt_java_path=beam_search_then_forcePlanId` | 通过（仅 smoke；移植臂，含 Java 搜索路径） |
 | E3 臂顺序轮换复核 | WSL `audit-recheck-rotation`：3 query × 3 arm × 2 trial，`oracle_fail=0`；`arm_position` 覆盖 0/1/2，query/trial 间顺序发生轮换 | 通过；不能消除同一 RegionServer 的缓存继承 |
 | 正式 workload 定义 | BoundIR 65 条、NL 44 条；BoundIR catalog 覆盖 T/Z/TZ/H/TH/ZH/TZH，选择率含 small/medium/large/mixed/empty/boundary；NL 为 supported 16、reject 17、clarify 11 | 数据集定义已扩展；完整全量运行尚未完成 |
-| HBase 环境元数据复核 | 新 `doctor` 已移除写死版本，但运行时 `target/kart.jar` manifest 无 HBase 版本；`audit-recheck-rotation/meta.json` 的 client 版本和 `region_server_count` 仍缺失 | 未通过；需修正探测后重跑 |
+| HBase 环境元数据复核 | `audit-ablation-smoke/meta.json` / `audit-ablation-risk/meta.json` 已记录 `hbase_client_implementation_version=2.2.3`、`hbase_client_specification_version=2.2`、`hbase_client_version_source=classpath_pom_plus_lib_hbase_client_manifest_spec`、`region_server_count=1`；同时记录 cluster version `2.1.2` | 通过元数据完整性检查；仍是单节点混合 classpath，不能外推到同版本多 RegionServer 集群 |
+| 消融套件主臂展开 | `audit-ablation-smoke` 产生 Full + `no_llm_rule` + `no_llm_best_first` + `llm_direct` + `no_fast_cost` + `no_final_cost` + `single_index` + `uncalibrated` 共 8 行；`no_coverage` 默认跳过 | 通过（limit=1 smoke） |
+| 消融因子语义与 Oracle | 8/8 主臂行 `ok_oracle=true`；`no_final_cost` 产生 `plan_id=P_FULL` 且 `plan_regret_ms` 显著增大；`single_index` 未生成 INTERSECT；`uncalibrated` 使用独立冻结系数文件；风险臂 `audit-ablation-risk` 显式 `allow_unsafe=true` 且 1/1 Oracle 通过 | 通过语义 smoke；风险臂尚未证明会在完整 workload 上暴露漏查 |
 | 第三方入口审计 | 两次运行的 `meta.json` 均记录 upstream commit、入口文件 SHA256、adapter SHA256，`missing_upstreams=[]`、`ready_for_external_arms=true` | 通过可追溯性检查；仍不是原系统复现 |
 
 ### 1.2 已修正的实现问题
@@ -36,6 +38,9 @@
 4. `CacheProtocol` 现在按整次运行累计判断 `cache_enforced`，并在 E2/E3 记录 `arm_position`；本轮 18 行 E3 结果证明轮换生效。
 5. LLMOpt 的 `t_plan` 现在覆盖 Python G→S 和 Java SafePlan 落地；本轮 9 行均有可核对的 `plan_start_ms`/`plan_end_ms`。
 6. workload 已扩展为 65 条 BoundIR 和 44 条 NL；本次审计不再把它们描述为 24 条或 5+5 smoke 数据集。
+7. 消融套件已按 `spec/ablation_experiment.md` 固定为 `base_arm: kart`（Full KART），主因子与风险因子均能展开；`no_coverage` 默认跳过，必须显式 `--allow-unsafe`。
+8. 消融行已记录 `factor`、`unsafe`、`arm_position`、`t_plan_ms`/`t_exec_ms`/`t_e2e_ms`、Oracle 结果、计划候选与执行指标；`t_e2e_ms` 不包含 artifact 写入时间。
+9. 本轮 WSL smoke 已验证：Full/7 个主因子为 8/8 Oracle，通过 `uncalibrated` 独立系数加载、`no_final_cost` 的 plan-id 选择、`single_index` 的 INTERSECT 禁止；`no_coverage` 风险行在显式授权下可运行。
 
 这些修改已经在本轮 WSL 重新同步、重建 jar 后复核；以后修改 Java 或脚本仍必须在 WSL 重新同步并重建 jar：
 
@@ -138,17 +143,15 @@ DIN/SAG 每条 query 都通过 Python 子进程启动；KART 是同一 JVM 内�
 
 后续汇总仍应按 family、选择率、空结果/边界、DTW/Fréchet/Hausdorff、不同 k 和 E1 的 supported/reject/clarify 分层报告；不能只报告成功样例。
 
-### P1：HBase 版本与 RegionServer 元数据仍需修正
+### P1：HBase 版本与 RegionServer 元数据（探测已修正，环境仍有限定）
 
-写死的 `2.2.3 (pom)` 已经移除，`doctor` 现在确实尝试从 `Connection` 所在 jar 的 manifest 读取版本。但本轮实际运行的 `target/kart.jar` 是 shade 后的 fat jar，`Connection.class` 的 CodeSource 指向该应用 jar，而它的 manifest 没有 HBase `Implementation-Version`/`Specification-Version`；因此 `doctor` 和新结果的 `meta.json` 实际为 `manifest missing`/`null`，不能说客户端版本已经被有效写入。`hbase-client-2.2.3.jar` 仍存在于 Maven/HBase lib，不能把它未经运行时绑定证明的版本写成实际 client 版本。
+本轮修复已经得到运行时证据：`audit-ablation-smoke/meta.json` 和 `audit-ablation-risk/meta.json` 均写入 `hbase_client_implementation_version=2.2.3`、`hbase_client_specification_version=2.2`、`hbase_client_version_source=classpath_pom_plus_lib_hbase_client_manifest_spec`、`hbase_client_jar=/home/jaytang/projects/llm-kv/target/kart.jar`，并写入 `region_server_count=1`。因此“版本字段为空”和“RegionServer 数量缺失”不再是当前实现的阻塞问题。
 
-同一轮 `audit-recheck-rotation/meta.json` 也没有 `region_server_count`；当前反射探测没有得到 live server map/size，且没有把缺失明确标成失败。因此这两项修复在运行时尚未验收通过。
-
-环境锁定文档和 `hbase-evidence` 仍显示：HBase client 依赖为 2.2.3，但 cluster status 为 2.1.2，属于混合 classpath。结论只能写：
+仍然存在的是环境事实，而非探测缺陷：`hbase_env` 同时记录 client 2.2.3 与 cluster 2.1.2，属于单节点混合 classpath；`hbase_client_jar` 指向应用 fat jar，版本来源已由探测器标明，不能将该字段误写成干净的独立 `hbase-client` 运行时证明。结论只能写：
 
 > 在当前单节点、混合 classpath 的 HBase 环境中……
 
-不能外推到干净的 HBase 2.2.3 集群、多 RegionServer 或生产负载。完善指导：在 fat jar 场景下应从实际依赖 jar 的 manifest 读取（或在构建时保留并校验依赖 manifest），记录真实 `hbase_client_jar`；同时用可访问的 `Admin.getClusterMetrics().getLiveServerMetrics().size()`/兼容 API 写入 `region_server_count`，探测失败时在 meta 中显式记录失败原因。修复后必须重新运行 `doctor`、`hbase-evidence`，再运行 bench，并检查 `meta.json` 非空版本和 RegionServer 数量。
+不能外推到干净的 HBase 2.2.3 集群、多 RegionServer 或生产负载。若要消除这一限定，需准备 client/server 版本一致的隔离环境，并重新运行 `doctor`、`hbase-evidence` 和全量消融；当前代码在探测失败时已经把字段写为 `null` 并输出 warning，正式门禁仍应拒绝缺失值。
 
 ### P1：运行 provenance 必须从 dirty 变为可复现
 
@@ -283,4 +286,126 @@ experiments/results/<run_id>/summary.md
 - [ ] 正式 workload 的 Oracle 全部通过；失败率、超时和成功子集分母写入汇总（当前 smoke 证据为 E3 18/18、Bao E2 9/9、LLMOpt E2 9/9）。
 - [ ] `meta.json` 可重放，且结论明确限定在单节点混合 classpath 环境。
 
-在这些门禁全部通过前，当前系统的正确表述是：**“对比实验 harness、固定基线 E3 smoke、Bao/LLMOpt E2 smoke 和轮换机制可运行，公平性整改进行中；尚未达到正式论文级多臂比较门禁。”**
+在这些对比实验门禁全部通过前，当前对比系统的正确表述是：**“对比实验 harness、固定基线 E3 smoke、Bao/LLMOpt E2 smoke 和轮换机制可运行，公平性整改进行中；尚未达到正式论文级多臂比较门禁。”** 消融专项的放行条件与当前阻塞项见第 6 节。
+
+## 6. 消融实验专项复核（2026-09-25）
+
+本节针对 `spec/ablation_experiment.md`、`experiments/suites/ablation.yaml`、`scripts/bench-ablation.sh` 及实际 WSL 产物复核。它不把消融结果与 E1/E2/E3 外部对比臂混写。
+
+### 6.1 已确认正确的实现
+
+| 检查项 | 当前证据 | 结论 |
+|---|---|---|
+| Full 基线 | suite 的 `base_arm: kart`；`audit-ablation-smoke` 的 `full` 行为 `planner_mode=kart`、`llm_requested=true` | 是 Full KART，不是 RulePolicy 冒充 |
+| 主因素展开 | Full + `no_llm_rule`、`no_llm_best_first`、`llm_direct`、`no_fast_cost`、`no_final_cost`、`single_index`、`uncalibrated` 共 8 个 cell | 与规范 §4.2 对齐 |
+| 风险因素 | `no_coverage` 在默认 smoke 中跳过；显式 `--allow-unsafe --factor no_coverage` 后 `unsafe=true` | 默认不会把不安全臂混入主表 |
+| 因子语义 | `no_final_cost` 使用 `plan_id` 选择并出现较大的 `plan_regret_ms`；`single_index` 没有 INTERSECT；`uncalibrated` 读取独立冻结系数 | 不是通过缩小 beam 等近似替代 |
+| 正确性门禁 | 主 smoke 8/8 Oracle；风险 smoke 1/1 Oracle | 只能作为 smoke 正确性证据 |
+| 计时与审计字段 | 每行有 `factor`、`unsafe`、`arm_position`、`t_plan_ms`、`t_exec_ms`、`t_e2e_ms`、候选/执行指标；`t_e2e=t_plan+t_exec`，artifact IO 单独记录 | 字段边界基本符合规范 |
+| HBase 环境记录 | 两个消融 smoke 的 `meta.json` 都有 client 版本、cluster 版本和 `region_server_count=1` | 探测字段完整；环境仍受混合 classpath 限制 |
+
+已执行的最小复核命令与结果：
+
+```bash
+# Java 单元门禁（当前 Windows checkout 可复现）
+mvn -q -Dtest=AblationHarnessTest,ComparativeHarnessTest test
+# 结果：exit 0
+
+# WSL 单查询消融 smoke
+./scripts/bench-ablation.sh \
+  --run-id audit-ablation-smoke \
+  --limit 1 --trials 1 --cache cold
+# 结果：8 行，Oracle 8/8；no_coverage 默认跳过
+
+# WSL 风险 smoke
+./scripts/bench-ablation.sh \
+  --run-id audit-ablation-risk \
+  --factor no_coverage --allow-unsafe \
+  --limit 1 --trials 1 --cache cold
+# 结果：unsafe=true、allow_unsafe=true，Oracle 1/1
+```
+
+### 6.2 仍未达到正式公平门禁的事项
+
+#### A. P0：实际只跑了 1/65，不能证明完整消融结论
+
+`audit-ablation-smoke` 和 `audit-ablation-risk` 都使用 `--limit 1`。因此当前只能证明一条 `T/small` 查询上的 harness 与 Oracle 对齐，不能证明 65 条 BoundIR、所有 family、选择率、空结果/边界和 Top-K 层都正确。风险臂也没有触发漏查，不能据此声称 CoverageCheck 已被证实必要或不必要。
+
+完善步骤：
+
+1. 正式主表去掉 `--limit`，让 suite 读取完整 `bound_ir_v1.json`；运行后检查 `meta.json.suite_ablation_bound_query_count == 65`。
+2. 主表逐 `(query_id, factor)` 统计 `ok_oracle`、`fail_class`、超时和 `RESOURCE_EXHAUSTED`。`summary.md` 已按 `family`、`selectivity`、`metric`、`k`、empty/boundary 分层；正式结论仍须完整 65 条而不是 `--limit` smoke。
+3. 风险臂单独运行完整 65 条并保留 `--keep-artifacts`；逐查询比较 FullScan Oracle，记录漏查明细。即使风险臂 65/65 通过，也只能说明本 workload 未暴露错误，不能改写为“CoverageCheck 不重要”。
+
+#### B. P0：当前 cold 结果不是可证明的 cold latency
+
+两次 smoke 的 `meta.json` 都显示：HBase flush 全部成功，但 `KART_DROP_PAGE_CACHE` 未设置，OS page-cache 为 `0/8` 或 `0/1`，所以 `cache_enforced=false`；同时 `sequential_arm_cache_carryover=true`。arm 顺序虽按 query/trial 轮换，但仍在同一 RegionServer 和同一进程中运行，后执行臂可能继承前臂缓存。`cold --trials 3` 也不能自动变成三个独立冷样本。
+
+完善步骤：
+
+1. **冷主表**：在 WSL 配置无密码 sudo，设置 `export KART_DROP_PAGE_CACHE=1`，用 `--cache cold --trials 1`；只有 `hbase_flush_ok == hbase_flush_attempts`、`os_flush_ok == os_flush_attempts > 0`、`cache_enforced=true` 才能进入 cold 主表。
+2. 若无法取得 page-cache flush 权限，把结果标为 `first-run smoke`，不要给出 cold P50/P95；改跑 `--cache warm --trials 5` 作为 warm 附录。
+3. warm 预热阶段已与计时样本使用同一轮换族（`shift = warmup_pass + query_index`），并写入 `meta.json.cache_protocol.warmup_arm_order_policy`。仍共享同一 RegionServer，`sequential_arm_cache_carryover=true`；若要彻底隔离缓存，仍须拆独立进程/独立 run。
+4. 若需要三次 cold 重复，应启动三个独立 run（每次 `--trials 1` 且每次成功 drop page cache），不要在同一进程使用 `--trials 3` 代替。
+
+#### C. P1：消融因子的 cost 状态在 meta 中仍不够可审计 — **harness 已落地，待全量运行复核**
+
+`meta.json` 现写入规范化 `factors[]`，每项含 `id`、`arm`、`overrides`、`unsafe`、`cost_calibrated`、`cost_model_version`、`cost_coeffs_path`、`cost_coeffs_sha256`。顶层 `cost_calibrated` 标明只表示 base `planner.yaml`；`uncalibrated` cell 必须 `cost_calibrated=false` 且 SHA256 对应 `config/cost_coeffs_uncalibrated.yaml`。正式 run 后仍须核对这些字段，不能只看全局 base 值。
+
+#### D. P1：JSONL 行结构对非 LLM 臂不完全统一 — **harness 已落地，待全量运行复核**
+
+所有 E2/E3 消融行固定写出 `llm_calls`、`tokens_in`、`tokens_out`；未调用 LLM 时为 JSON `null`（不再省略键）。调用失败时仍写实际 calls/tokens 与 `fallback_reason`。正式全量 workload 上仍须检查每行键集合一致。
+
+#### E. P1：单因子筛选命令不自动带上 Full 配对基线 — **harness 已落地**
+
+`--factor no_llm_rule` 现在自动展开 `full` + 该因子。`--factor no_coverage --allow-unsafe` 仍为独立风险 run，不自动配对 Full。单臂诊断使用 `--no-pair-full`。正式主表仍建议省略 `--factor` 一次跑 Full + 全部安全主因子。
+
+#### F. P1：当前 dirty worktree 结果只能作审计 smoke
+
+两个消融 smoke 的 `meta.json` 记录 `git_worktree_dirty=true`。这与当前正在修改文档/代码的工作状态一致，不是 harness 错误，但意味着这些结果不可作为正式可复现数据。正式运行前应提交并冻结实现、suite、workload、Oracle 和环境锁定文件，确认 `git status --porcelain` 为空，再运行并保留新 run 的 commit/hash。
+
+### 6.3 可直接执行的正式消融流程
+
+以下命令在 WSL canonical workspace 执行；PowerShell checkout 只用于查看文档，避免两个 workspace 的 jar/脚本不同步。
+
+```bash
+cd /home/jaytang/projects/llm-kv
+git status --porcelain                 # 正式 run 前必须为空
+./scripts/kart.sh sync
+./scripts/kart.sh sync-check
+./scripts/kart.sh rebuild
+./scripts/kart.sh doctor
+./scripts/kart.sh hbase-evidence
+
+# 1) 主表：Full + 7 个安全主因素，完整 65 条 BoundIR；默认跳过 no_coverage
+./scripts/bench-ablation.sh \
+  --run-id abl-main-cold-20260925 \
+  --cache cold --trials 1
+
+# 2) warm 附录：同一 workload、同一 suite、5 个计时样本
+./scripts/bench-ablation.sh \
+  --run-id abl-main-warm-20260925 \
+  --cache warm --trials 5
+
+# 3) 风险表：完整 65 条，显式授权，单独保存 artifact
+./scripts/bench-ablation.sh \
+  --run-id abl-risk-no-coverage-20260925 \
+  --factor no_coverage --allow-unsafe \
+  --cache cold --trials 1 --keep-artifacts
+```
+
+冷主表命令只有在 `KART_DROP_PAGE_CACHE=1` 且每次 page-cache drop 成功时才是正式 cold；否则按 `meta.json.cache_enforced=false` 降级为 smoke。正式汇总前至少检查：
+
+```text
+suite_ablation_bound_query_count == 65
+git_worktree_dirty == false
+cache_enforced == true（cold 主表）或 cache == warm（warm 附录）
+主表无 unsafe=true 的行
+每个 (query_id, factor) 均有预定 trials，且 ok_oracle/fail_class 可统计
+```
+
+### 6.4 消融 readiness 结论
+
+- **现在可以开始**：工程 smoke、因子展开验证、Oracle 回归、计划/执行字段检查，以及在明确标注为 mixed-cache/first-run 的内部调试运行。
+- **现在还不能宣称**：完整 65 条 workload 的消融结论、可证明 OS-cold 的延迟差异、风险臂已暴露漏查、或论文级 leave-one-out 因果结论。
+- **正式主表放行条件**：完成 A–F 中的全量 workload、cache 协议（含已落地的因子级 cost 元数据、统一 JSONL schema、`--factor` 自动配对 Full、warm 预热轮换）和 clean commit 门禁；HBase 版本字段与 `region_server_count` 当前已不再是阻塞项，但混合 classpath 限定必须保留在报告中。

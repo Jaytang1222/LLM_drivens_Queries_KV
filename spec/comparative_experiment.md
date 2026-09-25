@@ -406,3 +406,4 @@ t_e2e 终点 = 返回轨迹 ID 列表或 Top-K
 
 - MVP 需求曾关闭「完整基线论文实验」（OI-7）；本文是 **MVP 之后的对比实验规范**，不改变线上正确性门禁（结果须与 Oracle 一致）
 - 计划搜索、验证器、代价模型行为以 `spec/design.md` 为准；本文只定义对比臂与测量边界
+- 规划侧内部消融（leave-one-out）见 [`spec/ablation_experiment.md`](ablation_experiment.md)，与本文正交，不把对比臂列入消融

@@ -13,6 +13,16 @@ import java.util.List;
  */
 public final class LegalActionGenerator {
 
+  private final boolean allowIntersect;
+
+  public LegalActionGenerator() {
+    this(true);
+  }
+
+  public LegalActionGenerator(boolean allowIntersect) {
+    this.allowIntersect = allowIntersect;
+  }
+
   public List<LegalAction> generate(SearchState state) {
     BoundIr ir = state.ir();
     List<String> available = availableIndexes(ir);
@@ -25,7 +35,7 @@ public final class LegalActionGenerator {
           out.add(start(idx));
         }
       } else {
-        if (!state.uses(idx)) {
+        if (!state.uses(idx) && allowIntersect) {
           out.add(intersect(idx));
         }
         if (!(state.usedIndexes().size() == 1 && state.uses(idx))) {

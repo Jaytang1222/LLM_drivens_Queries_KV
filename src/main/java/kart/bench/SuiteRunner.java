@@ -34,6 +34,9 @@ public final class SuiteRunner {
   private static final ObjectMapper MAPPER = new ObjectMapper()
       .enable(SerializationFeature.INDENT_OUTPUT);
 
+  /** Formal BoundIR cardinality for {@code bound_ir_v1.json} (spec / audit gate). */
+  public static final int FORMAL_BOUND_IR_COUNT = 65;
+
   public static final class Options {
     public Path root;
     public Path suitePath;
@@ -48,6 +51,11 @@ public final class SuiteRunner {
     public Path workloadOverride;
     public Path oracleOverride;
     public boolean keepArtifacts;
+    /**
+     * Ablation: when {@code --factor} names a safe leave-one-out, still include {@code full}
+     * so paired deltas are defined. Risk-only filters ({@code no_coverage}) stay unpaired.
+     */
+    public boolean noPairFull;
     /** Optional override for suite.trials. */
     public Integer trials;
   }
@@ -177,18 +185,20 @@ public final class SuiteRunner {
     Path parsePath = resultDir.resolve("parse.jsonl");
     Path planPath = resultDir.resolve("plan.jsonl");
     Path e2ePath = resultDir.resolve("e2e.jsonl");
+    Path ablationPath = resultDir.resolve("ablation.jsonl");
 
     try {
       TrialWriter parseWriter = hasParse ? new TrialWriter(parsePath, true) : null;
       TrialWriter planWriter = null;
       TrialWriter e2eWriter = null;
+      TrialWriter ablationWriter = null;
       try {
         for (RunCell cell : cells) {
           if (cell.unsafe && !opt.allowUnsafe) {
             System.out.println("BENCH skip unsafe cell " + cell.label);
             continue;
           }
-          AppConfig.PlannerConfig planner = PlannerOverlay.apply(basePlanner, cell.overrides);
+          AppConfig.PlannerConfig planner = PlannerOverlay.apply(basePlanner, cell.overrides, opt.root);
           for (String stage : suite.stages) {
             if ("parse".equalsIgnoreCase(stage)) {
               ParseArm parm = registry.resolveParse(cell.armId);
@@ -264,41 +274,85 @@ public final class SuiteRunner {
               }
               continue;
             }
+          }
+        }
 
-            boolean planOnly = "plan".equalsIgnoreCase(stage);
-            boolean requireOracle = suite.require_oracle && !planOnly;
+        for (String stage : suite.stages) {
+          if ("parse".equalsIgnoreCase(stage)) {
+            continue;
+          }
+          boolean planOnly = "plan".equalsIgnoreCase(stage);
+          boolean requireOracle = suite.require_oracle && !planOnly;
+          List<RunCell> runnable = new ArrayList<RunCell>();
+          List<Arm> arms = new ArrayList<Arm>();
+          List<BenchContext> ctxs = new ArrayList<BenchContext>();
+          List<BenchContext> warmCtxs = new ArrayList<BenchContext>();
+          for (RunCell cell : cells) {
+            if (cell.unsafe && !opt.allowUnsafe) {
+              continue;
+            }
             Arm arm = registry.resolve(cell.armId);
             if (arm == null) {
               System.err.println("BENCH unknown arm: " + cell.armId);
               continue;
             }
-            if (planOnly && planWriter == null) {
-              planWriter = new TrialWriter(planPath, true);
+            AppConfig.PlannerConfig planner = PlannerOverlay.apply(basePlanner, cell.overrides, opt.root);
+            runnable.add(cell);
+            arms.add(arm);
+            ctxs.add(newCtx(opt, suite, stage, planOnly, requireOracle,
+                resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell));
+            warmCtxs.add(newCtxKeepArtifacts(opt, suite, stage, planOnly, requireOracle,
+                resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell, false));
+          }
+          if (runnable.isEmpty()) {
+            continue;
+          }
+          if (planOnly && planWriter == null) {
+            planWriter = new TrialWriter(planPath, true);
+          }
+          if (!planOnly && e2eWriter == null) {
+            e2eWriter = new TrialWriter(e2ePath, true);
+            if (isAblation(suite)) {
+              ablationWriter = new TrialWriter(ablationPath, true);
             }
-            if (!planOnly && e2eWriter == null) {
-              e2eWriter = new TrialWriter(e2ePath, true);
-            }
-
-            BenchContext ctx = newCtx(opt, suite, stage, planOnly, requireOracle,
-                resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell);
-            BenchContext warmCtx = newCtxKeepArtifacts(opt, suite, stage, planOnly, requireOracle,
-                resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell, false);
-
-            for (BoundIr ir : queries) {
-              if (!planOnly && cacheProtocol.warmupPasses > 0) {
-                for (int w = 0; w < cacheProtocol.warmupPasses; w++) {
+          }
+          int nArm = runnable.size();
+          cacheProtocol.armOrderPolicy = "rotate_by_query_and_trial";
+          cacheProtocol.warmupArmOrderPolicy = (!planOnly && cacheProtocol.warmupPasses > 0)
+              ? "rotate_by_query_and_warmup_pass"
+              : "n/a";
+          if (!planOnly && cacheProtocol.warmupPasses > 0) {
+            for (int w = 0; w < cacheProtocol.warmupPasses; w++) {
+              for (int qi = 0; qi < queries.size(); qi++) {
+                BoundIr ir = queries.get(qi);
+                int shift = nArm == 0 ? 0 : (w + qi) % nArm;
+                for (int pos = 0; pos < nArm; pos++) {
+                  int ai = (pos + shift) % nArm;
                   try {
-                    arm.run(ir, warmCtx);
+                    arms.get(ai).run(ir, warmCtxs.get(ai));
                   } catch (Exception ignore) {
                     // discarded untimed warmup
                   }
                 }
               }
-              for (int trial = 1; trial <= trialCount; trial++) {
+            }
+          }
+          for (int trial = 1; trial <= trialCount; trial++) {
+            for (int qi = 0; qi < queries.size(); qi++) {
+              BoundIr ir = queries.get(qi);
+              int shift = nArm == 0 ? 0 : (trial - 1 + qi) % nArm;
+              for (int pos = 0; pos < nArm; pos++) {
+                int ai = (pos + shift) % nArm;
+                RunCell cell = runnable.get(ai);
                 Map<String, Object> row = new LinkedHashMap<String, Object>();
                 row.put("run_id", opt.runId);
                 row.put("query_id", ir.query_id);
                 row.put("arm", cell.label);
+                row.put("planner_mode", cell.armId);
+                if (cell.extras.get("factor") != null) {
+                  row.put("factor", cell.extras.get("factor"));
+                }
+                row.put("unsafe", Boolean.valueOf(cell.unsafe));
                 row.put("trial", Integer.valueOf(trial));
                 row.put("stage", stage);
                 row.put("cache", opt.cache == null ? "cold" : opt.cache);
@@ -306,18 +360,18 @@ public final class SuiteRunner {
                 if (catalog.containsKey(ir.query_id)) {
                   row.putAll(catalog.get(ir.query_id));
                 }
-
+                putQueryStrata(row, ir);
+                row.put("arm_position", Integer.valueOf(pos));
+                row.put("arm_order_shift", Integer.valueOf(shift));
                 if (!planOnly && "cold".equals(cacheProtocol.mode)) {
                   cacheProtocol.flushBeforeTrial(kv, layout);
                 }
-
                 TrialResult tr;
                 try {
-                  tr = arm.run(ir, ctx);
+                  tr = arms.get(ai).run(ir, ctxs.get(ai));
                 } catch (Exception ex) {
                   tr = TrialResult.fail(ex.toString());
                 }
-
                 row.put("plan_id", tr.plan_id);
                 row.put("t_plan_ms", tr.t_plan_ms);
                 row.put("t_exec_ms", tr.t_exec_ms);
@@ -332,25 +386,40 @@ public final class SuiteRunner {
                 enrichTrace(row, tr);
                 if (tr.extras != null) {
                   for (Map.Entry<String, Object> extra : tr.extras.entrySet()) {
-                    if (extra.getKey() != null && extra.getValue() != null) {
+                    if (extra.getKey() == null) {
+                      continue;
+                    }
+                    if (extra.getValue() != null || isLlmSchemaKey(extra.getKey())) {
                       row.put(extra.getKey(), extra.getValue());
                     }
                   }
                   if (Boolean.TRUE.equals(tr.extras.get("llm_fallback"))
                       && ("kart".equals(cell.armId) || "llm".equals(cell.armId)
                       || "llm_direct".equals(cell.armId))) {
-                    row.put("arm_requested", cell.armId);
-                    row.put("arm", "kart".equals(cell.armId)
-                        ? "kart-rule-fallback" : (cell.armId + "-rule-fallback"));
+                    row.put("arm_requested", cell.label);
+                    if (isAblation(suite)) {
+                      row.put("arm", cell.label + "-rule-fallback");
+                    } else {
+                      row.put("arm", "kart".equals(cell.armId)
+                          ? "kart-rule-fallback" : (cell.armId + "-rule-fallback"));
+                    }
+                  }
+                }
+                ensureLlmSchema(row);
+                if (isAblation(suite)) {
+                  AppConfig.PlannerConfig cellPlanner = ctxs.get(ai).planner;
+                  if (cellPlanner != null && cellPlanner.cost != null) {
+                    row.put("cost_calibrated", Boolean.valueOf(cellPlanner.cost.calibrated));
+                    row.put("cost_model_version", cellPlanner.cost.model_version);
+                  } else {
+                    row.put("cost_calibrated", null);
                   }
                 }
                 row.put("cache_enforced", Boolean.valueOf(cacheProtocol.cacheEnforced()));
                 row.put("cache_protocol", cacheProtocol.protocolLabel());
-
                 Boolean okOracle;
-                Boolean planOk = null;
                 if (planOnly) {
-                  planOk = Boolean.valueOf(tr.error == null
+                  Boolean planOk = Boolean.valueOf(tr.error == null
                       && tr.run != null && tr.run.selected != null);
                   okOracle = planOk;
                   row.put("plan_ok", planOk);
@@ -373,16 +442,19 @@ public final class SuiteRunner {
                 if (requireOracle && !okOracle.booleanValue()) {
                   oracleFail++;
                 }
-
                 if (planOnly && planWriter != null) {
                   planWriter.write(row);
                 }
                 if (!planOnly && e2eWriter != null) {
                   e2eWriter.write(row);
                 }
+                if (!planOnly && ablationWriter != null) {
+                  ablationWriter.write(row);
+                }
                 allTrials.add(row);
                 System.out.println("BENCH " + suite.id + " stage=" + stage
                     + " cell=" + cell.label + " q=" + ir.query_id
+                    + " arm_position=" + pos
                     + " ok_oracle=" + okOracle
                     + " t_e2e_ms=" + tr.t_e2e_ms
                     + (tr.error != null ? (" err=" + tr.error) : ""));
@@ -399,6 +471,9 @@ public final class SuiteRunner {
         }
         if (e2eWriter != null) {
           e2eWriter.close();
+        }
+        if (ablationWriter != null) {
+          ablationWriter.close();
         }
       }
     } finally {
@@ -564,6 +639,38 @@ public final class SuiteRunner {
     meta.put("trials", Integer.valueOf(trialCount));
     if (cfg.planner() != null && cfg.planner().cost != null) {
       meta.put("cost_calibrated", Boolean.valueOf(cfg.planner().cost.calibrated));
+      meta.put("cost_calibrated_scope",
+          "base planner.yaml; per-cell cost_calibrated is in factors[]");
+    }
+    if (isAblation(suite)) {
+      meta.put("experiment_kind", "ablation");
+      meta.put("base_arm", suite.base_arm);
+      meta.put("allow_unsafe", Boolean.valueOf(opt.allowUnsafe));
+      meta.put("ablation_pair_full", Boolean.valueOf(!opt.noPairFull));
+      meta.put("ablation_no_pair_full", Boolean.valueOf(opt.noPairFull));
+      if (opt.limit != null) {
+        meta.put("query_limit", opt.limit);
+      }
+      meta.put("formal_bound_ir_count", Integer.valueOf(FORMAL_BOUND_IR_COUNT));
+      meta.put("formal_workload_complete", Boolean.valueOf(boundCount >= FORMAL_BOUND_IR_COUNT));
+      Map<String, Object> budget = new LinkedHashMap<String, Object>();
+      if (cfg.planner() != null) {
+        budget.put("beam_width", Integer.valueOf(cfg.planner().beam_width));
+        budget.put("max_llm_calls", Integer.valueOf(cfg.planner().max_llm_calls));
+        budget.put("max_candidates", Integer.valueOf(cfg.planner().max_candidates));
+        budget.put("max_plan_ms", Long.valueOf(cfg.planner().max_plan_ms));
+        budget.put("stagnation_steps", Integer.valueOf(cfg.planner().stagnation_steps));
+      }
+      meta.put("search_budget", budget);
+      Path uncal = PlannerOverlay.uncalibratedPath(opt.root);
+      meta.put("cost_uncalibrated_path", PlannerOverlay.UNCALIBRATED_COEFFS);
+      if (Files.isRegularFile(uncal)) {
+        meta.put("cost_uncalibrated_sha256", sha256(uncal));
+      }
+      if (cfg.planner() != null && cfg.planner().cost != null) {
+        meta.put("cost_model_version", cfg.planner().cost.model_version);
+      }
+      meta.put("factors", factorAudit(opt.root, cfg.planner(), cells));
     }
     String model = System.getenv("LLM_MODEL");
     String base = System.getenv("LLM_BASE_URL");
@@ -581,6 +688,13 @@ public final class SuiteRunner {
     fairness.put("early_reject_shared", "ParseFairness/Dialog.earlyUnsupportedReason");
     fairness.put("e3_t_e2e", "t_plan_ms + t_exec_ms excluding artifact IO");
     fairness.put("e1_query_order", "deterministic shuffle of NL items with workload seed; same order for all arms");
+    if (isAblation(suite)) {
+      fairness.put("ablation_pair_full", Boolean.valueOf(!opt.noPairFull));
+      fairness.put("ablation_llm_schema",
+          "llm_calls/tokens_in/tokens_out always present; JSON null if no LLM");
+      fairness.put("ablation_warmup_rotation",
+          "warm untimed passes rotate by query and warmup pass, matching timed-trial family");
+    }
     meta.put("fairness", fairness);
     if (hbaseEnv != null) {
       meta.put("hbase_env", hbaseEnv);
@@ -668,7 +782,7 @@ public final class SuiteRunner {
     return bos.toByteArray();
   }
 
-  private static final class RunCell {
+  static final class RunCell {
     String armId;
     String label;
     Map<String, Object> overrides = new LinkedHashMap<String, Object>();
@@ -676,41 +790,49 @@ public final class SuiteRunner {
     boolean unsafe;
   }
 
-  private static List<RunCell> expandCells(SuiteSpec suite, ArmRegistry registry, Options opt,
+  static List<RunCell> expandCells(SuiteSpec suite, ArmRegistry registry, Options opt,
                                            boolean parseStage) {
     List<RunCell> cells = new ArrayList<RunCell>();
     String kind = suite.kind == null ? "compare" : suite.kind.trim().toLowerCase();
 
     if ("ablation".equals(kind)) {
+      String baseArm = suite.base_arm != null ? suite.base_arm : "kart";
       RunCell base = new RunCell();
-      base.armId = suite.base_arm != null ? suite.base_arm : "rule";
-      base.label = "base:" + base.armId;
-      base.extras.put("factor", "base");
-      if (passArmFilter(base.armId, opt) && passFactorFilter("base", opt)) {
+      base.armId = baseArm;
+      base.label = "full";
+      base.extras.put("factor", "full");
+      boolean wantFull = passArmFilter(base.armId, opt)
+          && (shouldPairFull(suite, opt)
+              || passFactorFilter("full", opt)
+              || passFactorFilter("base", opt));
+      if (wantFull) {
         cells.add(base);
       }
-      for (SuiteSpec.Factor f : suite.factors) {
-        if (f == null || !f.enabled || f.id == null) {
-          continue;
+      if (suite.factors != null) {
+        for (SuiteSpec.Factor f : suite.factors) {
+          if (f == null || !f.enabled || f.id == null) {
+            continue;
+          }
+          if (f.unsafe && !opt.allowUnsafe) {
+            System.out.println("BENCH skip unsafe factor " + f.id + " (pass --allow-unsafe)");
+            continue;
+          }
+          if (!passFactorFilter(f.id, opt)) {
+            continue;
+          }
+          RunCell c = new RunCell();
+          String policy = overridePolicy(f.overrides);
+          c.armId = policy != null ? policy : baseArm;
+          if (!passArmFilter(c.armId, opt)) {
+            continue;
+          }
+          c.label = f.id;
+          c.overrides.putAll(f.overrides != null ? f.overrides
+              : Collections.<String, Object>emptyMap());
+          c.extras.put("factor", f.id);
+          c.unsafe = f.unsafe;
+          cells.add(c);
         }
-        if (f.unsafe && !opt.allowUnsafe) {
-          continue;
-        }
-        if (!passFactorFilter(f.id, opt)) {
-          continue;
-        }
-        RunCell c = new RunCell();
-        String policy = overridePolicy(f.overrides);
-        c.armId = policy != null ? policy : base.armId;
-        if (!passArmFilter(c.armId, opt)) {
-          continue;
-        }
-        c.label = "ablate:" + f.id;
-        c.overrides.putAll(f.overrides != null ? f.overrides
-            : Collections.<String, Object>emptyMap());
-        c.extras.put("factor", f.id);
-        c.unsafe = f.unsafe;
-        cells.add(c);
       }
       return cells;
     }
@@ -783,6 +905,11 @@ public final class SuiteRunner {
     return p == null ? null : String.valueOf(p);
   }
 
+  private static boolean isAblation(SuiteSpec suite) {
+    return suite != null && suite.kind != null
+        && "ablation".equalsIgnoreCase(suite.kind.trim());
+  }
+
   private static boolean passArmFilter(String armId, Options opt) {
     if (opt.armFilter == null || opt.armFilter.isEmpty()) {
       return true;
@@ -807,6 +934,158 @@ public final class SuiteRunner {
       }
     }
     return false;
+  }
+
+  /**
+   * Safe {@code --factor} selections auto-include Full so paired deltas are defined.
+   * Risk-only filters ({@code no_coverage}) stay unpaired. {@code --no-pair-full} disables this.
+   */
+  static boolean shouldPairFull(SuiteSpec suite, Options opt) {
+    if (opt == null || opt.noPairFull) {
+      return false;
+    }
+    if (opt.factorFilter == null || opt.factorFilter.isEmpty()) {
+      return false;
+    }
+    return !factorFilterIsRiskOnly(suite, opt);
+  }
+
+  static boolean factorFilterIsRiskOnly(SuiteSpec suite, Options opt) {
+    if (opt == null || opt.factorFilter == null || opt.factorFilter.isEmpty()) {
+      return false;
+    }
+    LinkedHashSet<String> ids = new LinkedHashSet<String>();
+    for (String f : opt.factorFilter) {
+      if (f == null || f.trim().isEmpty()) {
+        continue;
+      }
+      String n = f.trim().toLowerCase();
+      if ("full".equals(n) || "base".equals(n)) {
+        continue;
+      }
+      ids.add(n);
+    }
+    if (ids.isEmpty()) {
+      return false;
+    }
+    if (suite == null || suite.factors == null) {
+      return false;
+    }
+    for (String id : ids) {
+      SuiteSpec.Factor found = null;
+      for (SuiteSpec.Factor f : suite.factors) {
+        if (f != null && f.id != null && id.equalsIgnoreCase(f.id.trim())) {
+          found = f;
+          break;
+        }
+      }
+      if (found == null || !found.unsafe) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static void ensureLlmSchema(Map<String, Object> row) {
+    if (row == null) {
+      return;
+    }
+    if (!row.containsKey("llm_calls")) {
+      row.put("llm_calls", null);
+    }
+    if (!row.containsKey("tokens_in")) {
+      row.put("tokens_in", null);
+    }
+    if (!row.containsKey("tokens_out")) {
+      row.put("tokens_out", null);
+    }
+  }
+
+  static boolean isLlmSchemaKey(String key) {
+    return "llm_calls".equals(key) || "tokens_in".equals(key) || "tokens_out".equals(key);
+  }
+
+  static void putQueryStrata(Map<String, Object> row, BoundIr ir) {
+    if (row == null || ir == null) {
+      return;
+    }
+    if (ir.similarity != null && ir.similarity.metric != null
+        && !ir.similarity.metric.trim().isEmpty()) {
+      row.put("metric", ir.similarity.metric.trim());
+    } else if (!row.containsKey("metric")) {
+      row.put("metric", "none");
+    }
+    if (ir.result != null && ir.result.mode != null) {
+      row.put("result_mode", ir.result.mode);
+    }
+    if (ir.result != null && ir.result.k != null) {
+      row.put("k", ir.result.k);
+    } else if (!row.containsKey("k")) {
+      row.put("k", "n/a");
+    }
+    Object sel = row.get("selectivity");
+    if (sel != null) {
+      String s = String.valueOf(sel).trim().toLowerCase();
+      if ("empty".equals(s) || "boundary".equals(s)) {
+        row.put("empty_boundary", s);
+      } else if (!row.containsKey("empty_boundary")) {
+        row.put("empty_boundary", "interior");
+      }
+    }
+  }
+
+  static boolean isUncalibratedOverride(Map<String, Object> overrides) {
+    if (overrides == null) {
+      return false;
+    }
+    Object v = overrides.get("uncalibrated");
+    if (v == null) {
+      return false;
+    }
+    if (v instanceof Boolean) {
+      return ((Boolean) v).booleanValue();
+    }
+    String s = String.valueOf(v).trim().toLowerCase();
+    return "true".equals(s) || "yes".equals(s) || "1".equals(s);
+  }
+
+  static List<Map<String, Object>> factorAudit(Path root, AppConfig.PlannerConfig base,
+                                               List<RunCell> cells) {
+    List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
+    if (cells == null) {
+      return out;
+    }
+    for (RunCell c : cells) {
+      out.add(factorAuditEntry(root, base, c));
+    }
+    return out;
+  }
+
+  static Map<String, Object> factorAuditEntry(Path root, AppConfig.PlannerConfig base, RunCell c) {
+    Map<String, Object> m = new LinkedHashMap<String, Object>();
+    if (c == null) {
+      return m;
+    }
+    AppConfig.PlannerConfig planner = PlannerOverlay.apply(base, c.overrides, root);
+    boolean uncal = isUncalibratedOverride(c.overrides);
+    String rel = uncal ? PlannerOverlay.UNCALIBRATED_COEFFS : "config/planner.yaml";
+    Path coeffsPath = root != null ? root.resolve(rel) : java.nio.file.Paths.get(rel);
+    m.put("id", c.label);
+    m.put("arm", c.armId);
+    m.put("factor", c.extras != null ? c.extras.get("factor") : null);
+    m.put("overrides", new LinkedHashMap<String, Object>(c.overrides));
+    m.put("unsafe", Boolean.valueOf(c.unsafe));
+    if (planner != null && planner.cost != null) {
+      m.put("cost_calibrated", Boolean.valueOf(planner.cost.calibrated));
+      m.put("cost_model_version", planner.cost.model_version);
+    } else {
+      m.put("cost_calibrated", null);
+      m.put("cost_model_version", null);
+    }
+    m.put("cost_coeffs_path", rel);
+    m.put("cost_coeffs_sha256", sha256(coeffsPath));
+    m.put("cost_source", uncal ? "frozen_uncalibrated_yaml" : "planner_yaml");
+    return m;
   }
 
   private static List<Map<String, Object>> cartesian(Map<String, List<Object>> grid) {
@@ -844,6 +1123,7 @@ public final class SuiteRunner {
       Map<String, Object> m = new LinkedHashMap<String, Object>();
       m.put("label", c.label);
       m.put("arm", c.armId);
+      m.put("factor", c.extras.get("factor"));
       m.put("overrides", c.overrides);
       m.put("unsafe", Boolean.valueOf(c.unsafe));
       out.add(m);

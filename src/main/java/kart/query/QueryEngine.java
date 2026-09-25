@@ -34,6 +34,7 @@ import kart.search.ProposalPolicy;
 import kart.search.RulePolicy;
 import kart.search.SearchBudget;
 import kart.search.SearchLog;
+import kart.search.SearchOptions;
 import kart.search.SearchResult;
 import kart.validation.SafePlanHandle;
 import kart.validation.PlanValidator;
@@ -274,8 +275,12 @@ public final class QueryEngine {
     }
 
     // LLM_DIRECT: keep the (sole) validated LLM plan when present; else Final Cost select.
+    // Ablation no_final_cost: lexicographic plan_id (even if mode is LLM_DIRECT).
     PlanSelector.Scored best;
-    if (forcePlanId == null
+    SearchOptions opts = SearchOptions.from(planner);
+    if (opts.selectByPlanId()) {
+      best = PlanSelector.selectScored(scored, true);
+    } else if (forcePlanId == null
         && plannerMode == PlannerMode.LLM_DIRECT && scored.size() == 1
         && searchResult.log != null && isDirectAccept(searchResult.log)) {
       best = scored.get(0);
@@ -528,16 +533,17 @@ public final class QueryEngine {
   }
 
   private SearchResult runSearch(BoundIr ir, SearchBudget budget, FastCost fastCost) {
+    SearchOptions opts = SearchOptions.from(planner);
     if (plannerMode == PlannerMode.LLM_DIRECT) {
       if (llm == null) {
         StatusLog.info("ENGINE", "llm_direct without LlmClient → RulePolicy fallback");
-        return new BeamSearch(layout, fastCost).search(ir, new RulePolicy(), budget);
+        return new BeamSearch(layout, fastCost, opts).search(ir, new RulePolicy(), budget);
       }
-      LlmDirectPlanPlanner direct = new LlmDirectPlanPlanner(layout, fastCost, llm);
+      LlmDirectPlanPlanner direct = new LlmDirectPlanPlanner(layout, fastCost, llm, opts);
       direct.setUsageAccumulator(usage);
       return direct.plan(ir, budget);
     }
-    BeamSearch search = new BeamSearch(layout, fastCost);
+    BeamSearch search = new BeamSearch(layout, fastCost, opts);
     ProposalPolicy policy = buildProposalPolicy(fastCost);
     return search.search(ir, policy, budget);
   }

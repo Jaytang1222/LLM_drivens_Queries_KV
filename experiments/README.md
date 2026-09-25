@@ -27,8 +27,14 @@ Useful: `--limit N`, `--trials N`, `--workload path`, `--arm a,b`, `--cache cold
 | `warm` | 2 untimed in-process warmups (all arms), then timed samples. | `--trials 5` (or more) for P50/P95. |
 
 Do not mix cold/warm in one main table. Repeated `cold --trials 3` is mixed-cache smoke.
-Arms run sequentially on one RegionServer; later arms may see a warmer cache. That
-carry-over is recorded in `meta.json` (`sequential_arm_cache_carryover`).
+Without passwordless `sudo` for `drop_caches`, use `--cache warm --trials 5` for formal
+latency; do not put `cache_enforced=false` cold runs in the cold main table.
+Arms still share one RegionServer. Timed E2/E3 samples rotate arm order by query and
+trial (`arm_position` on each row). Warm untimed passes use the same rotation family
+(`warmup_arm_order_policy=rotate_by_query_and_warmup_pass`). Carry-over remains
+possible and is recorded (`sequential_arm_cache_carryover=true`). `cache_enforced`
+is true only when every BlockCache clear and every OS page-cache drop in that run
+succeeded.
 
 ## Timing (honest split)
 
@@ -51,6 +57,32 @@ Read `summary.md` for main tables. JSONL rows match §4.4 fields plus the split
 timings, `query_class`, and provenance extras. `meta.json` must include workload
 SHA256, git commit, dirty flag, JDK/host, HBase site/evidence hashes, LLM model,
 third-party audit (entry files + adapter SHA256), and cache protocol.
+
+## Ablation (planning leave-one-out)
+
+Orthogonal to the four comparative entries. Spec: `spec/ablation_experiment.md`.
+
+```bash
+./scripts/bench-ablation.sh --run-id abl1 --cache cold --trials 1
+./scripts/bench-ablation.sh --run-id abl1-risk --allow-unsafe --factor no_coverage --cache cold --trials 1
+```
+
+`--factor` on a **safe** leave-one-out id auto-includes `full` so paired deltas are
+defined in one run (`no_llm_rule`, `no_llm_best_first`, `llm_direct`, `no_fast_cost`,
+`no_final_cost`, `single_index`, `uncalibrated`). `--factor no_coverage --allow-unsafe`
+stays unpaired (risk table). Use `--no-pair-full` for single-arm diagnostics.
+`no_coverage` is omitted unless `--allow-unsafe`.
+
+Results also write `ablation.jsonl` (same rows as `e2e.jsonl` plus `factor` / `unsafe`).
+Do not put DIN/SAG/Bao/LLMOpt/fullscan/rbo/cbo in this suite.
+
+`meta.json.hbase_env` records the runtime client version of the shaded classes
+(`hbase_client_implementation_version` from classpath `pom.properties`, usually
+`2.2.3`) and `hbase_client_specification_version` from the dedicated
+`hbase-client-*.jar` under `$HBASE_HOME/lib` or Maven local when the fat jar
+manifest has no Spec. `region_server_count` comes from cluster status; failure
+leaves it null with `region_server_probe_error`. Cluster version may still differ
+(e.g. client 2.2.3 vs cluster 2.1.2); conclusions stay single-node mixed classpath.
 
 ## Fairness & authenticity
 

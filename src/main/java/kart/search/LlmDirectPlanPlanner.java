@@ -32,18 +32,30 @@ public final class LlmDirectPlanPlanner {
   private final FastCost fastCost;
   private final LlmClient llm;
   private final LlmOptions options;
+  private final SearchOptions searchOptions;
   private LlmUsageAccumulator usage;
 
   public LlmDirectPlanPlanner(LayoutContext layout, FastCost fastCost, LlmClient llm) {
-    this(layout, fastCost, llm, LlmOptions.defaults());
+    this(layout, fastCost, llm, LlmOptions.defaults(), SearchOptions.defaults());
   }
 
   public LlmDirectPlanPlanner(LayoutContext layout, FastCost fastCost, LlmClient llm,
                               LlmOptions options) {
+    this(layout, fastCost, llm, options, SearchOptions.defaults());
+  }
+
+  public LlmDirectPlanPlanner(LayoutContext layout, FastCost fastCost, LlmClient llm,
+                              SearchOptions searchOptions) {
+    this(layout, fastCost, llm, LlmOptions.defaults(), searchOptions);
+  }
+
+  public LlmDirectPlanPlanner(LayoutContext layout, FastCost fastCost, LlmClient llm,
+                              LlmOptions options, SearchOptions searchOptions) {
     this.layout = layout;
     this.fastCost = fastCost != null ? fastCost : new FastCost(layout, null);
     this.llm = llm;
     this.options = options != null ? options : LlmOptions.defaults();
+    this.searchOptions = searchOptions != null ? searchOptions : SearchOptions.defaults();
   }
 
   public void setUsageAccumulator(LlmUsageAccumulator usage) {
@@ -54,8 +66,9 @@ public final class LlmDirectPlanPlanner {
    * @return search result; {@code stopReason} on budget may be set by caller
    */
   public SearchResult plan(BoundIr ir, SearchBudget budget) {
-    BeamSearch beam = new BeamSearch(layout, fastCost);
-    List<PlanEnvelope> family = PlanBuilder.buildCandidatesWithMergeVariants(ir);
+    BeamSearch beam = new BeamSearch(layout, fastCost, searchOptions);
+    List<PlanEnvelope> family =
+        PlanBuilder.buildCandidatesWithMergeVariants(ir, searchOptions.allowIntersect);
     Map<String, PlanEnvelope> byId = indexByPlanId(family);
 
     PlanEnvelope chosen = null;

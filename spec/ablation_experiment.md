@@ -1,7 +1,7 @@
 # KART 消融实验规范（Ablation）
 
 - 版本：v0.1，2026-09-25
-- 状态：规范已锁定（讨论结论）；harness / 引擎开关以本文操作化为准，缺口记为后续实现，**不豁免公平性**。
+- 状态：规范已锁定；规划侧 leave-one-out 开关与 `experiments/suites/ablation.yaml` 已按本文落地。正式主表仍须 HBase 冷跑与 Oracle 门禁，不得以「脚本能启动」代替。
 - 上游：`spec/design.md` §8–10、`spec/IMPLEMENTATION_PLAN.md` §19.2、`docs/environment-lock.md`
 - 正交规范：[`spec/comparative_experiment.md`](comparative_experiment.md)（外部方法 / HBase 基线横比；**不**在消融中复用为臂）
 - 数据与用例：与对比实验 E2/E3 同一 `experiments/workloads/bound_ir_v1.json` 及对应 Oracle
@@ -102,7 +102,8 @@ flowchart TB
 |---|---|---|
 | `--run-id <id>` | 结果目录名 | 必填或自动时间戳 |
 | `--suite <path>` | 套件 YAML | `experiments/suites/ablation.yaml` |
-| `--factor <list\|all>` | 参加因子（含 `base`/`full`） | 已启用且非 unsafe 的因子 |
+| `--factor <list\|all>` | 参加因子。安全因子会自动带上 `full` 以便配对 delta；仅 `no_coverage` 等风险筛选不自动配对 | 已启用且非 unsafe 的因子 |
+| `--no-pair-full` | 关闭安全 `--factor` 的自动 Full 配对（单臂诊断） | 关闭 |
 | `--workload <path>` | 覆盖套件内 workload | 套件默认 |
 | `--cache cold\|warm` | 缓存协议 | `cold`（主表） |
 | `--allow-unsafe` | 允许跑 `unsafe: true` 因子 | 关闭 |
@@ -175,12 +176,12 @@ experiments/results/<run_id>/
 
 | 因子 | 现有能力 | 规范要求的缺口（若尚未落地） |
 |---|---|---|
-| `full` / `no_llm_*` / `llm_direct` | `PlannerMode`：`llm` / `rule` / `best_first` / `llm_direct` | suite 的 `base_arm` 须改为 Full（`llm`/`kart`），见 `experiments/suites/ablation.yaml` |
-| `no_fast_cost` | 搜索路径使用 Fast Cost | 需可关闭搜索侧 Fast 排序/剪枝的开关 |
-| `no_final_cost` | `PlanSelector` 按 `estimated_ms` | 需固定选取模式（本规范默认 plan_id 序） |
-| `single_index` | PlanBuilder 可生成 INTERSECT 族 | 需禁止 INTERSECT 的合法动作 / 构建开关 |
-| `uncalibrated` | `cost.calibrated` + 系数文件 | 需冻结「预校准」系数文件路径写入 meta |
-| `no_coverage` | `PlanValidator.coverageCheck` | 需可跳过 Coverage 的 unsafe 开关 |
+| `full` / `no_llm_*` / `llm_direct` | `PlannerMode`：`llm` / `rule` / `best_first` / `llm_direct` | 已落地：`base_arm: kart`，factor id 对齐 §4.2 |
+| `no_fast_cost` | `PlannerConfig.use_fast_cost` | 已落地：关闭 beam 按 Fast Cost 排序/停滞剪枝 |
+| `no_final_cost` | `PlannerConfig.final_select=plan_id` | 已落地：SafePlan 按 `plan_id` 字典序选取 |
+| `single_index` | `PlannerConfig.allow_intersect` | 已落地：合法动作 / PlanBuilder 禁止 INTERSECT |
+| `uncalibrated` | overlay → `config/cost_coeffs_uncalibrated.yaml` | 已落地；禁止用测试集回灌 |
+| `no_coverage` | `PlannerConfig.skip_coverage_check` | 已落地；须 `--allow-unsafe` |
 
 未实现的因子不得用「近似替代」（例如用缩 beam 冒充 `no_fast_cost`）填主表；实现完成并写入 meta 后方可作为正式结论。
 
@@ -220,6 +221,9 @@ experiments/results/<run_id>/
 - `factor`：`full` 或 §4 因子 id
 - `arm`：实际 `PlannerMode` / 线名（如 `llm`、`rule`）
 - `unsafe`：是否风险臂
+- `llm_calls` / `tokens_in` / `tokens_out`：**每行都必须有键**；该臂未调用 LLM 时写 JSON `null`（不得省略键；汇总若把 null 当 0 须显式转换）
+- 分层辅助键：`family`、`selectivity`、`metric`、`k`、`empty_boundary`（来自 catalog + BoundIR）
+- 消融行另有 `cost_calibrated`（该 cell 实际系数，不是全局 base）
 - 重复：每 `(query, factor)` 建议 ≥3，报 P50/P95
 
 ---
@@ -282,11 +286,12 @@ experiments/results/<run_id>/
 - `manifest_id`、`semantics_version`、`git_commit`（本仓库）
 - JDK / HBase client·server / ZK（对齐 `docs/environment-lock.md`）
 - `LLM_BASE_URL`、`LLM_MODEL`（无密钥）
-- `base_arm` / `factors`（含 overrides、`unsafe`）
-- `workload` 路径与校验和、`oracle` 路径、`cache`、`trials`
+- `base_arm` / `factors[]`：每项含 `id`、`arm`、`overrides`、`unsafe`、`cost_calibrated`、`cost_model_version`、`cost_coeffs_path`、`cost_coeffs_sha256`
+- 顶层 `cost_calibrated` 仅表示 base `planner.yaml`；逐因子状态以 `factors[]` 为准（`uncalibrated` 必须为 `false`）
+- `workload` 路径与校验和、`oracle` 路径、`cache`、`trials`、`formal_workload_complete`
 - `search_budget`（`beam_width`、`max_llm_calls`、`max_candidates`、`max_plan_ms` 等）
-- `cost.calibrated`、`cost.model_version`、系数文件路径（`full` vs `uncalibrated` 分别记录）
 - `allow_unsafe`
+- `cache_protocol.warmup_arm_order_policy`：warm 预热与计时样本使用同一轮换族
 
 工作目录：WSL 内文档约定路径；HBase / `kart.sh up` 就绪后再跑含执行的消融。
 
@@ -309,17 +314,17 @@ experiments/results/<run_id>/
 - `IMPLEMENTATION_PLAN.md` §19.2「必做消融」由本文操作化为可运行臂表；并增加主表臂 `llm_direct`（动作搜索 vs 直接计划）及将「无 LLM」拆为 `rule` / `best_first`
 - 计划搜索、验证器、代价模型行为以 `design.md` §8–10 为准；本文只定义消融因素与测量边界
 - 对比实验规范定义外部公平横比；本文定义内部因果消融；二者互补，互不替代
-- 套件文件 `experiments/suites/ablation.yaml` 须演进为：`base_arm` = Full（`llm`/`kart`），factors 对齐 §4.2–4.3；当前仓库中以 `rule` 为 base、混入 `narrow_beam` 的草稿**不符合**本文，实现阶段应修正
+- 套件文件 `experiments/suites/ablation.yaml`：`base_arm: kart`（Full），factors 对齐 §4.2–4.3；`no_coverage` 为 `unsafe`，默认跳过
 
 ---
 
 ## 12. 实现阶段建议顺序
 
-1. 修正 suite：`base_arm=llm`（或 `kart`），因子 id 对齐 §4；去掉 param 型 `narrow_beam`
-2. 落地已有 `PlannerMode` 臂：`full` / `no_llm_rule` / `no_llm_best_first` / `llm_direct`
-3. 落地 `uncalibrated`（冻结系数切换）
-4. 落地 `single_index`、`no_fast_cost`、`no_final_cost` 开关
-5. 落地 `no_coverage`（`--allow-unsafe`）
-6. 与对比实验同一 workload 跑正式 cold 主表 + 风险表，生成 `summary.md`
+1. ~~修正 suite：`base_arm=llm`（或 `kart`），因子 id 对齐 §4；去掉 param 型 `narrow_beam`~~ 已落地
+2. ~~落地已有 `PlannerMode` 臂：`full` / `no_llm_rule` / `no_llm_best_first` / `llm_direct`~~ 已落地
+3. ~~落地 `uncalibrated`（冻结系数：`config/cost_coeffs_uncalibrated.yaml`）~~ 已落地
+4. ~~落地 `single_index`、`no_fast_cost`、`no_final_cost` 开关~~ 已落地
+5. ~~落地 `no_coverage`（`--allow-unsafe`）~~ 已落地
+6. 与对比实验同一 workload 跑正式 cold 主表 + 风险表，生成 `summary.md`（HBase 环境；本文不填数字）
 
-当前实现完成度不在本规范中猜测；以仓库代码与审计文档为准。
+入口：`scripts/bench-ablation.sh`。因子语义未按 §4 执行的 run 仍不得进论文主表。

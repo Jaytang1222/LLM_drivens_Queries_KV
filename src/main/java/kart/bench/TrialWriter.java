@@ -1,5 +1,6 @@
 package kart.bench;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -16,7 +17,8 @@ import java.util.Map;
 public final class TrialWriter implements AutoCloseable {
 
   private static final ObjectMapper MAPPER = new ObjectMapper()
-      .disable(SerializationFeature.INDENT_OUTPUT);
+      .disable(SerializationFeature.INDENT_OUTPUT)
+      .setSerializationInclusion(JsonInclude.Include.ALWAYS);
 
   private final BufferedWriter out;
 

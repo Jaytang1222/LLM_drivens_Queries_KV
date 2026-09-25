@@ -18,6 +18,13 @@ public final class PlanBuilder {
 
   /** Returns candidate plans in deterministic order (HASH_SET merges + P_FULL). */
   public static List<PlanEnvelope> buildCandidates(BoundIr ir) {
+    return buildCandidates(ir, true);
+  }
+
+  /**
+   * @param allowIntersect when false, omit INTERSECT families (single-index + {@code P_FULL} only)
+   */
+  public static List<PlanEnvelope> buildCandidates(BoundIr ir, boolean allowIntersect) {
     boolean hasT = ir.temporal != null;
     boolean hasZ = ir.spatial != null;
     int vehicleIdx = vehicleEqPredicateIndex(ir);
@@ -34,18 +41,19 @@ public final class PlanBuilder {
     if (hasH) {
       out.add(buildIndexed(ir, "P_H", false, false, true, vehicleIdx));
     }
-    // intersections
-    if (hasT && hasZ) {
-      out.add(buildIndexed(ir, "P_TZ", true, true, false, vehicleIdx));
-    }
-    if (hasT && hasH) {
-      out.add(buildIndexed(ir, "P_TH", true, false, true, vehicleIdx));
-    }
-    if (hasZ && hasH) {
-      out.add(buildIndexed(ir, "P_ZH", false, true, true, vehicleIdx));
-    }
-    if (hasT && hasZ && hasH) {
-      out.add(buildIndexed(ir, "P_TZH", true, true, true, vehicleIdx));
+    if (allowIntersect) {
+      if (hasT && hasZ) {
+        out.add(buildIndexed(ir, "P_TZ", true, true, false, vehicleIdx));
+      }
+      if (hasT && hasH) {
+        out.add(buildIndexed(ir, "P_TH", true, false, true, vehicleIdx));
+      }
+      if (hasZ && hasH) {
+        out.add(buildIndexed(ir, "P_ZH", false, true, true, vehicleIdx));
+      }
+      if (hasT && hasZ && hasH) {
+        out.add(buildIndexed(ir, "P_TZH", true, true, true, vehicleIdx));
+      }
     }
     // full scan fallback, always present
     out.add(buildFull(ir, vehicleIdx));
@@ -57,7 +65,15 @@ public final class PlanBuilder {
    * (used by LLM-direct baseline / merge-arm coverage; does not change default beam families).
    */
   public static List<PlanEnvelope> buildCandidatesWithMergeVariants(BoundIr ir) {
-    List<PlanEnvelope> out = new ArrayList<PlanEnvelope>(buildCandidates(ir));
+    return buildCandidatesWithMergeVariants(ir, true);
+  }
+
+  public static List<PlanEnvelope> buildCandidatesWithMergeVariants(BoundIr ir,
+                                                                   boolean allowIntersect) {
+    List<PlanEnvelope> out = new ArrayList<PlanEnvelope>(buildCandidates(ir, allowIntersect));
+    if (!allowIntersect) {
+      return out;
+    }
     boolean hasT = ir.temporal != null;
     boolean hasZ = ir.spatial != null;
     boolean hasH = vehicleEqPredicateIndex(ir) >= 0;

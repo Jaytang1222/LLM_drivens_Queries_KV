@@ -20,7 +20,15 @@ public final class CacheProtocol {
   public boolean osPageCacheFlushed;
   public int hbaseFlushAttempts;
   public int hbaseFlushOk;
+  public int osFlushAttempts;
+  public int osFlushOk;
   public String osFlushNote = "not_attempted";
+  /** Recorded by the runner. Rotation does not remove carry-over. */
+  public String armOrderPolicy = "suite_order";
+  /**
+   * Warm untimed passes: {@code n/a} for cold; rotated like timed trials for warm.
+   */
+  public String warmupArmOrderPolicy = "n/a";
 
   private CacheProtocol(String mode, int warmupPasses) {
     this.mode = mode;
@@ -43,7 +51,11 @@ public final class CacheProtocol {
   }
 
   public boolean cacheEnforced() {
-    return "cold".equals(mode) && "ok".equals(hbaseBlockCacheFlush) && osPageCacheFlushed;
+    return "cold".equals(mode)
+        && hbaseFlushAttempts > 0
+        && hbaseFlushOk == hbaseFlushAttempts
+        && osFlushAttempts > 0
+        && osFlushOk == osFlushAttempts;
   }
 
   public String protocolLabel() {
@@ -137,10 +149,21 @@ public final class CacheProtocol {
     m.put("hbase_flush_attempts", Integer.valueOf(hbaseFlushAttempts));
     m.put("hbase_flush_ok", Integer.valueOf(hbaseFlushOk));
     m.put("os_page_cache_flushed", Boolean.valueOf(osPageCacheFlushed));
+    m.put("os_flush_attempts", Integer.valueOf(osFlushAttempts));
+    m.put("os_flush_ok", Integer.valueOf(osFlushOk));
     m.put("os_page_cache_note", osFlushNote);
+    m.put("arm_order_policy", armOrderPolicy);
+    m.put("warmup_arm_order_policy", warmupArmOrderPolicy);
     m.put("sequential_arm_cache_carryover", Boolean.TRUE);
     m.put("sequential_arm_note",
-        "arms run sequentially on one RegionServer; later arms may see warmer HBase/OS cache");
+        "arms still share one RegionServer in one process; order rotates by query and trial, "
+            + "but a later arm can still see a warmer cache");
+    if ("warm".equals(mode)) {
+      m.put("warmup_note",
+          "untimed warmup uses the same rotation family as timed samples "
+              + "(shift = warmup_pass + query_index); independently, timed trials use "
+              + "shift = trial-1 + query_index");
+    }
     String warn = formalWarning(trialCount);
     if (warn != null) {
       m.put("warning", warn);
@@ -149,6 +172,7 @@ public final class CacheProtocol {
   }
 
   private void maybeDropPageCache() {
+    osFlushAttempts++;
     if (!"1".equals(env("KART_DROP_PAGE_CACHE", ""))) {
       osFlushNote = "skipped_KART_DROP_PAGE_CACHE_not_set";
       osPageCacheFlushed = false;
@@ -159,12 +183,16 @@ public final class CacheProtocol {
           .redirectErrorStream(true)
           .start();
       int code = p.waitFor();
-      osPageCacheFlushed = code == 0;
-      osFlushNote = osPageCacheFlushed ? "drop_caches_ok" : "drop_caches_exit_" + code;
+      if (code == 0) {
+        osFlushOk++;
+        osFlushNote = "drop_caches_ok";
+      } else {
+        osFlushNote = "drop_caches_exit_" + code;
+      }
     } catch (Exception e) {
-      osPageCacheFlushed = false;
       osFlushNote = "drop_caches_failed:" + e.getMessage();
     }
+    osPageCacheFlushed = osFlushAttempts > 0 && osFlushOk == osFlushAttempts;
   }
 
   private static Method findClearBlockCache(Class<?> adminClass) {

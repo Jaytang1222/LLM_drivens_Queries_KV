@@ -1,6 +1,6 @@
 === KART HBase version evidence ===
-utc=2026-09-25T11:41:51Z
-git_commit=f5dd7ad8f240b12208c303eccddec427809d3e9a
+utc=2026-09-25T13:45:54Z
+git_commit=b9e9ac6ba26609e70fcad6b9d44b1518c7be3f73
 KART_ROOT=/home/jaytang/projects/llm-kv
 KART_DST=/home/jaytang/projects/llm-kv
 HBASE_HOME=/home/jaytang/hbase
@@ -11,11 +11,13 @@ experiment_manifest=tdrive_v1_ready
 project root: /home/jaytang/projects/llm-kv
 JDK: 1.8.0_482 (/usr/lib/jvm/java-8-openjdk-amd64/jre)
 OK: hbase-site.xml at /home/jaytang/projects/llm-kv/config/hbase/hbase-site.xml
-WARN: env LLM_BASE_URL not set (LLM features unavailable)
-WARN: env LLM_MODEL not set (LLM features unavailable)
-WARN: env LLM_API_KEY not set (LLM features unavailable)
+OK: env LLM_BASE_URL is set (value not printed)
+OK: env LLM_MODEL is set (value not printed)
+OK: env LLM_API_KEY is set (value not printed)
 hbase.zookeeper.quorum=localhost clientPort=2181
-hbase-client jar version (Approximate): 2.2.3 (pom)
+hbase-client code source: /home/jaytang/projects/llm-kv/target/kart.jar
+hbase-client version: 2.2.3 source=classpath_pom_plus_lib_hbase_client_manifest_spec
+hbase-client specification: 2.2
 OK: connected to HBase; tables=93
   - cd-test
   - cd-test_meta
@@ -111,6 +113,7 @@ OK: connected to HBase; tables=93
   - traj_meta_v1
   - traj_raw_v1
 HBase cluster status: 2.1.2
+region_server_count: 1
 === doctor: OK ===
 
 --- HBASE_CLASSPATH hint (TMan-spatial may pin cluster status to 2.1.2) ---

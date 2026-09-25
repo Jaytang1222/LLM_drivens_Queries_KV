@@ -1,0 +1,35 @@
+# Frozen uncalibrated CostCoeffs priors (ablation arm `uncalibrated`).
+# Values match AppConfig.CostCoeffs Java defaults (pre-fit). Do not overwrite
+# with test-set refits. Comparative Full KART keeps config/planner.yaml (calibrated).
+calibrated: false
+model_version: cost_v2_rs_sched
+concurrency_index: 4
+concurrency_get: 4
+concurrency_per_rs: 2
+alpha_rpc: 1.0
+alpha_seek: 0.5
+alpha_byte: 0.000001
+alpha_decode: 0.0001
+beta_hash: 0.00001
+beta_emit: 0.00001
+beta_spill: 0.00000001
+beta_sort_merge: 0.00002
+gamma_rpc: 0.05
+gamma_byte: 0.000001
+gamma_decode: 0.0001
+delta_point: 0.0001
+delta_geometry: 0.00005
+rho_linear: 0.00005
+eta_cell: 0.00001
+eta_cell_dtw: 0.0
+eta_cell_frechet: 0.0
+eta_cell_hausdorff: 0.0
+theta_heap: 0.001
+soft_memory_bytes: 536870912
+max_exec_ms: 120000
+c_scan: 1.0
+c_row: 0.01
+c_get: 0.05
+c_byte: 0.000001
+c_point: 0.0001
+c_dtw: 0.00001

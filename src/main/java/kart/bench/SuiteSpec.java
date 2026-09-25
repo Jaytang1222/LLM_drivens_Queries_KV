@@ -30,7 +30,7 @@ public final class SuiteSpec {
   public Integer limit; // optional query limit for smoke subsets
   public List<String> stages = new ArrayList<String>();
   public List<String> arms = new ArrayList<String>();
-  public String base_arm = "rule";
+  public String base_arm = "kart";
   public List<Factor> factors = new ArrayList<Factor>();
   public Map<String, List<Object>> grid = new LinkedHashMap<String, List<Object>>();
   public boolean unsafe = false;

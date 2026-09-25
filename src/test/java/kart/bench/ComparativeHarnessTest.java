@@ -30,6 +30,51 @@ public final class ComparativeHarnessTest {
   }
 
   @Test
+  void fatJarManifestIsNotTreatedAsHBaseClientVersion() {
+    String[] shaded = HBaseEnvProbe.resolveClientVersion(
+        "/home/jaytang/projects/llm-kv/target/kart.jar",
+        null, "2.2", "2.2.3", "2.2.3", true);
+    assertEquals("2.2.3", shaded[0]);
+    assertEquals("2.2", shaded[1]);
+    assertEquals("classpath_pom_plus_lib_hbase_client_manifest_spec", shaded[2]);
+    assertFalse(HBaseEnvProbe.isDedicatedHBaseClientJar("kart.jar"));
+    assertTrue(HBaseEnvProbe.isDedicatedHBaseClientJar("hbase-client-2.2.3.jar"));
+
+    String[] dedicated = HBaseEnvProbe.resolveClientVersion(
+        "hbase-client-2.2.3.jar", "2.2.3", "2.2", null, null);
+    assertEquals("2.2.3", dedicated[0]);
+    assertEquals("2.2", dedicated[1]);
+    assertEquals("hbase_client_jar_manifest", dedicated[2]);
+
+    String[] missing = HBaseEnvProbe.resolveClientVersion("kart.jar", null, null, null, null);
+    assertEquals(null, missing[0]);
+    assertEquals("unresolved", missing[2]);
+  }
+
+  @Test
+  void regionServerCountFallsBackToClusterStatus() {
+    StringBuilder errors = new StringBuilder();
+    assertEquals(Integer.valueOf(1),
+        HBaseEnvProbe.regionServerCount(null, new FakeStatus(1), errors));
+    StringBuilder miss = new StringBuilder();
+    assertEquals(null, HBaseEnvProbe.regionServerCount(null, null, miss));
+  }
+
+  @Test
+  void coldEnforcedOnlyWhenEveryFlushSucceeds() {
+    CacheProtocol cold = CacheProtocol.from("cold");
+    cold.hbaseFlushAttempts = 2;
+    cold.hbaseFlushOk = 2;
+    cold.osFlushAttempts = 2;
+    cold.osFlushOk = 1;
+    assertFalse(cold.cacheEnforced());
+    cold.osFlushOk = 2;
+    assertTrue(cold.cacheEnforced());
+    cold.hbaseFlushOk = 1;
+    assertFalse(cold.cacheEnforced());
+  }
+
+  @Test
   void coldProtocolDoesNotClaimEnforcedFlushWithoutOsDrop() {
     CacheProtocol cold = CacheProtocol.from("cold");
     assertEquals(0, cold.warmupPasses);
@@ -103,7 +148,7 @@ public final class ComparativeHarnessTest {
     assertEquals(Long.valueOf(50L), tr.t_plan_ms);
     assertEquals(Long.valueOf(90L), tr.t_e2e_ms);
     assertEquals(Long.valueOf(1000L), tr.extras.get("plan_start_ms"));
-    assertEquals(Long.valueOf(1090L), tr.extras.get("plan_end_ms"));
+    assertEquals(Long.valueOf(1050L), tr.extras.get("plan_end_ms"));
   }
 
   @Test
@@ -144,6 +189,17 @@ public final class ComparativeHarnessTest {
     TrialResult tr = TrialResult.fromRun(rr, 80L);
     assertEquals(Long.valueOf(50L), tr.t_e2e_ms);
     assertEquals(Long.valueOf(30L), tr.extras.get("t_artifact_ms"));
+  }
+
+  /** Stand-in for HBase 2.1 ClusterStatus, which exposes getServersSize(). */
+  public static final class FakeStatus {
+    private final int servers;
+    FakeStatus(int servers) {
+      this.servers = servers;
+    }
+    public int getServersSize() {
+      return servers;
+    }
   }
 
   private static BoundIr.Predicate predVehicle() {

@@ -27,7 +27,7 @@ public final class BenchSuiteCmd implements Callable<Integer> {
   private String[] arms;
 
   @Option(names = "--factor", split = ",",
-      description = "Filter ablation factors (comma-separated); default: enabled factors")
+      description = "Filter ablation factors; safe ids auto-include full unless --no-pair-full")
   private String[] factors;
 
   @Option(names = "--allow-unsafe", description = "Allow factors/suites marked unsafe")
@@ -50,6 +50,10 @@ public final class BenchSuiteCmd implements Callable<Integer> {
 
   @Option(names = "--keep-artifacts", description = "Write per-query artifacts/ (off by default)")
   private boolean keepArtifacts;
+
+  @Option(names = "--no-pair-full",
+      description = "Ablation: do not auto-include Full when --factor selects a safe arm")
+  private boolean noPairFull;
 
   @Option(names = "--config-root", description = "Project root (default: -Dkart.root or cwd)")
   private Path configRoot;
@@ -79,6 +83,7 @@ public final class BenchSuiteCmd implements Callable<Integer> {
     opt.workloadOverride = workload;
     opt.oracleOverride = oracle;
     opt.keepArtifacts = keepArtifacts;
+    opt.noPairFull = noPairFull;
 
     SuiteRunner.Result r = new SuiteRunner().run(opt);
     return Integer.valueOf(r.exitCode);

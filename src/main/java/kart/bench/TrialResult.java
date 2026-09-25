@@ -41,6 +41,12 @@ public final class TrialResult {
         t.extras.put("plan_start_ms", Long.valueOf(rr.planStartEpochMs));
         t.extras.put("plan_end_ms", Long.valueOf(rr.planEndEpochMs));
       }
+      if (rr.plan_regret_ms != null) {
+        t.extras.put("plan_regret_ms", rr.plan_regret_ms);
+      }
+      if (rr.best_safe_estimated_ms != null) {
+        t.extras.put("best_safe_estimated_ms", rr.best_safe_estimated_ms);
+      }
       t.extras.put("llm_requested", Boolean.valueOf(rr.llmRequested));
       if (rr.llmFallback) {
         t.extras.put("llm_fallback", Boolean.TRUE);
@@ -66,16 +72,18 @@ public final class TrialResult {
    * execute. Artifact IO that happened after exec is left on {@code t_wall_ms}.
    */
   public void applyWrapperPlanClock(long startEpochMs, long wallMs) {
-    extras.put("plan_start_ms", Long.valueOf(startEpochMs));
-    extras.put("plan_end_ms", Long.valueOf(startEpochMs + Math.max(0L, wallMs)));
     extras.put("t_wall_ms", Long.valueOf(wallMs));
+    long plan;
     if (t_exec_ms != null) {
-      long plan = Math.max(0L, wallMs - t_exec_ms.longValue());
+      plan = Math.max(0L, wallMs - t_exec_ms.longValue());
       t_plan_ms = Long.valueOf(plan);
       t_e2e_ms = Long.valueOf(plan + t_exec_ms.longValue());
     } else {
-      t_plan_ms = Long.valueOf(Math.max(0L, wallMs));
+      plan = Math.max(0L, wallMs);
+      t_plan_ms = Long.valueOf(plan);
     }
+    extras.put("plan_start_ms", Long.valueOf(startEpochMs));
+    extras.put("plan_end_ms", Long.valueOf(startEpochMs + plan));
   }
 
   public static TrialResult fail(String error) {
