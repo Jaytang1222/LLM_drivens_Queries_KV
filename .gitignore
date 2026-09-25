@@ -43,5 +43,13 @@ experiments/third_party/text-to-nosql/
 experiments/third_party/bao/
 experiments/third_party/llmopt/
 
+# Bench run outputs (regenerated; keep only frozen HBase evidence in git)
+experiments/results/**
+!experiments/results/hbase_version_evidence.txt
+
+# Local helper scratch (not part of formal harness)
+experiments/adapters/_poll_*.sh
+experiments/adapters/_check_*.py
+
 # jqwik property-test seed/cache (regenerated on mvn test)
 .jqwik-database
