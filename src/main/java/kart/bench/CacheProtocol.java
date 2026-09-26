@@ -171,6 +171,12 @@ public final class CacheProtocol {
     return m;
   }
 
+  /**
+   * Preferred passwordless helper installed by {@code scripts/install-kart-drop-page-cache.sh}.
+   * Avoids fragile sudoers matching of {@code sh -c "...; ..."}.
+   */
+  public static final String DROP_PAGE_CACHE_HELPER = "/usr/local/sbin/kart-drop-page-cache";
+
   private void maybeDropPageCache() {
     osFlushAttempts++;
     if (!"1".equals(env("KART_DROP_PAGE_CACHE", ""))) {
@@ -179,13 +185,19 @@ public final class CacheProtocol {
       return;
     }
     try {
-      Process p = new ProcessBuilder("sudo", "-n", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches")
-          .redirectErrorStream(true)
-          .start();
+      ProcessBuilder pb;
+      java.io.File helper = new java.io.File(DROP_PAGE_CACHE_HELPER);
+      if (helper.isFile()) {
+        pb = new ProcessBuilder("sudo", "-n", DROP_PAGE_CACHE_HELPER);
+      } else {
+        pb = new ProcessBuilder("sudo", "-n", "sh", "-c",
+            "sync; echo 3 > /proc/sys/vm/drop_caches");
+      }
+      Process p = pb.redirectErrorStream(true).start();
       int code = p.waitFor();
       if (code == 0) {
         osFlushOk++;
-        osFlushNote = "drop_caches_ok";
+        osFlushNote = helper.isFile() ? "drop_caches_ok_helper" : "drop_caches_ok";
       } else {
         osFlushNote = "drop_caches_exit_" + code;
       }

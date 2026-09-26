@@ -646,7 +646,9 @@ public final class SuiteRunner {
       meta.put("experiment_kind", "ablation");
       meta.put("base_arm", suite.base_arm);
       meta.put("allow_unsafe", Boolean.valueOf(opt.allowUnsafe));
-      meta.put("ablation_pair_full", Boolean.valueOf(!opt.noPairFull));
+      // Actual expanded cells, not the --no-pair-full switch. Default main table includes full.
+      boolean pairedFull = cellsIncludeFull(cells);
+      meta.put("ablation_pair_full", Boolean.valueOf(pairedFull));
       meta.put("ablation_no_pair_full", Boolean.valueOf(opt.noPairFull));
       if (opt.limit != null) {
         meta.put("query_limit", opt.limit);
@@ -689,7 +691,7 @@ public final class SuiteRunner {
     fairness.put("e3_t_e2e", "t_plan_ms + t_exec_ms excluding artifact IO");
     fairness.put("e1_query_order", "deterministic shuffle of NL items with workload seed; same order for all arms");
     if (isAblation(suite)) {
-      fairness.put("ablation_pair_full", Boolean.valueOf(!opt.noPairFull));
+      fairness.put("ablation_pair_full", Boolean.valueOf(cellsIncludeFull(cells)));
       fairness.put("ablation_llm_schema",
           "llm_calls/tokens_in/tokens_out always present; JSON null if no LLM");
       fairness.put("ablation_warmup_rotation",
@@ -930,6 +932,29 @@ public final class SuiteRunner {
     String n = factorId.trim().toLowerCase();
     for (String f : opt.factorFilter) {
       if (f != null && f.trim().toLowerCase().equals(n)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * True when the expanded ablation cells actually contain the Full baseline.
+   * Used for {@code meta.ablation_pair_full} (not the same as {@link #shouldPairFull}).
+   */
+  static boolean cellsIncludeFull(List<RunCell> cells) {
+    if (cells == null) {
+      return false;
+    }
+    for (RunCell c : cells) {
+      if (c == null) {
+        continue;
+      }
+      if ("full".equals(c.label)) {
+        return true;
+      }
+      Object factor = c.extras == null ? null : c.extras.get("factor");
+      if (factor != null && "full".equalsIgnoreCase(String.valueOf(factor).trim())) {
         return true;
       }
     }

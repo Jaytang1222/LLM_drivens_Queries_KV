@@ -150,6 +150,12 @@ rsync -a --delete \
   --exclude experiments/third_party \
   "$SRC/" "$DST/"
 
+# NTFS copies drop +x. Do not rewrite CRLF here: that would break sync-check hashes.
+# scripts/*.sh must already be LF (.gitattributes: *.sh text eol=lf).
+if [[ -d "$DST/scripts" ]]; then
+  find "$DST/scripts" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
+fi
+
 # Preserve WSL-local evidence file if Windows copy is older/missing
 mkdir -p "$DST/experiments/results"
 if [[ -f "$SRC/experiments/results/hbase_version_evidence.txt" ]]; then

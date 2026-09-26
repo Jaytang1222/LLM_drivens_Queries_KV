@@ -231,6 +231,31 @@ public final class AblationHarnessTest {
     List<String> labels = cellLabels(s, opt);
     assertEquals(1, labels.size(), labels.toString());
     assertEquals("no_coverage", labels.get(0));
+    assertFalse(SuiteRunner.shouldPairFull(s, opt));
+    assertFalse(SuiteRunner.cellsIncludeFull(
+        SuiteRunner.expandCells(s, new ArmRegistry(root), opt, false)));
+  }
+
+  @Test
+  void pairFullFlagFollowsExpandedCells() throws Exception {
+    Path root = Paths.get(".").toAbsolutePath().normalize();
+    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    ArmRegistry registry = new ArmRegistry(root);
+
+    SuiteRunner.Options main = newOptions(root);
+    assertTrue(SuiteRunner.cellsIncludeFull(SuiteRunner.expandCells(s, registry, main, false)));
+    assertFalse(SuiteRunner.shouldPairFull(s, main),
+        "shouldPairFull is only for --factor auto-include; default main already has full");
+
+    SuiteRunner.Options safe = newOptions(root);
+    safe.factorFilter.add("no_llm_rule");
+    assertTrue(SuiteRunner.shouldPairFull(s, safe));
+    assertTrue(SuiteRunner.cellsIncludeFull(SuiteRunner.expandCells(s, registry, safe, false)));
+
+    SuiteRunner.Options solo = newOptions(root);
+    solo.factorFilter.add("no_fast_cost");
+    solo.noPairFull = true;
+    assertFalse(SuiteRunner.cellsIncludeFull(SuiteRunner.expandCells(s, registry, solo, false)));
   }
 
   @Test
