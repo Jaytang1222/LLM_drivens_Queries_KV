@@ -1,0 +1,4 @@
+# WSL bash rejects CRLF (`set -o pipefail\r`). Keep shell scripts LF in
+# the working tree so sync-check hashes match a runnable canonical copy.
+# Do not strip CR only on the WSL side.
+*.sh text eol=lf
