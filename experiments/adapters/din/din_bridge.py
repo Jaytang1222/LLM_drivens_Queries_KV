@@ -28,6 +28,7 @@ from llm_client import (  # noqa: E402
     DIN_FOREIGN_KEYS,
     DIN_SCHEMA_FIELDS,
     DRAFT_IR_HINT,
+    LlmHttpError,
     LOGICAL_CATALOG,
     chat,
     extract_json,
@@ -447,6 +448,17 @@ def main():
             knowledge = LOGICAL_CATALOG
     try:
         out = run_din(args.utterance, args.mode, knowledge)
+    except LlmHttpError as e:
+        out = {
+            "status": "INFRASTRUCTURE_FAILURE",
+            "error": str(e),
+            "usage": e.usage,
+            "provenance": {
+                "method": "din-sql",
+                "error": "http_failure",
+                "http_status": e.status,
+            },
+        }
     except Exception as e:
         out = {
             "status": "FAILED",

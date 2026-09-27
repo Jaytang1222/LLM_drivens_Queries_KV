@@ -1,0 +1,53 @@
+{
+  "path": "experiments/workloads/bound_ir_advantage_hard_v2.json",
+  "evaluation_role": "kart_operating_region",
+  "n_queries": 28,
+  "layers": {
+    "tzh_rbo_trap": 8,
+    "tz_hard_intersect": 8,
+    "th_zh_uncertain": 4,
+    "topk_st_metric": 8
+  },
+  "sha256": "060d444ae3da1fa3ebba003c36b2910d53e44fe8bf46d10e62f11fa084ce8682",
+  "oracle_status": "frozen",
+  "generator": "experiments/adapters/generate_advantage_hard_v2.py",
+  "seed": "2026-09-27-advantage-hard-v2",
+  "exclude": [
+    "single-predicate T/Z/H",
+    "empty/boundary",
+    "spatial-only Top-K",
+    "holdout v2 locked test ids"
+  ],
+  "query_ids": [
+    "a2_tzh_a",
+    "a2_tzh_b",
+    "a2_tzh_c",
+    "a2_tzh_d",
+    "a2_tzh_e",
+    "a2_tzh_f",
+    "a2_tzh_g",
+    "a2_tzh_h",
+    "a2_tz_hard_a",
+    "a2_tz_hard_b",
+    "a2_tz_hard_c",
+    "a2_tz_hard_d",
+    "a2_tz_hard_e",
+    "a2_tz_hard_f",
+    "a2_tz_hard_g",
+    "a2_tz_hard_h",
+    "a2_th_unc_a",
+    "a2_th_unc_b",
+    "a2_zh_unc_a",
+    "a2_zh_unc_b",
+    "a2_topk_dtw_k3",
+    "a2_topk_dtw_k7",
+    "a2_topk_dtw_wide",
+    "a2_topk_frechet_k3",
+    "a2_topk_frechet_k7",
+    "a2_topk_frechet_wide",
+    "a2_topk_haus_k3",
+    "a2_topk_haus_k5"
+  ],
+  "oracle_path": "experiments/workloads/bound_ir_advantage_hard_v2.oracle.json",
+  "oracle_sha256": "b0b5c3e35829bed3a5b965514fbf682fa98cbed9ff850c4c80bff71effea1667"
+}

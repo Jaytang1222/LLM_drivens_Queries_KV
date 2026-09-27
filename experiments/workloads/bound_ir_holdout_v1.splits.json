@@ -1,0 +1,58 @@
+{
+  "parent": "experiments/workloads/bound_ir_holdout_v1.json",
+  "seed": 20260926,
+  "splits": {
+    "train": {
+      "path": "experiments/workloads/bound_ir_holdout_v1_train.json",
+      "n": 9,
+      "sha256": "8fd636ef6fde3a4b888d843b09ec901e4ac1bd2406b992719b4c3643e1bf035e",
+      "query_ids": [
+        "h_t_easy_1",
+        "h_t_hard_1",
+        "h_z_easy_1",
+        "h_tz_mid_1",
+        "h_tz_hard_1",
+        "h_h_easy_1",
+        "h_th_mid_1",
+        "h_tzh_hard_1",
+        "h_topk_dtw_k3_1"
+      ]
+    },
+    "val": {
+      "path": "experiments/workloads/bound_ir_holdout_v1_val.json",
+      "n": 5,
+      "sha256": "51ea98935483adac4f13b0fdfaf3f4803af932e19409e16e759c98c01b0528a6",
+      "query_ids": [
+        "h_t_easy_2",
+        "h_tz_mid_2",
+        "h_tzh_hard_2",
+        "h_topk_dtw_k5_1",
+        "h_boundary_1"
+      ]
+    },
+    "test": {
+      "path": "experiments/workloads/bound_ir_holdout_v1_test.json",
+      "n": 11,
+      "sha256": "cacd185a18ecaeee1598eb0146f11a4b0083bd52859c15593336b9049cffdb5d",
+      "query_ids": [
+        "h_t_easy_3",
+        "h_t_hard_2",
+        "h_z_easy_2",
+        "h_tz_mid_3",
+        "h_tz_hard_2",
+        "h_h_easy_2",
+        "h_th_mid_2",
+        "h_tzh_hard_3",
+        "h_topk_dtw_k10_1",
+        "h_topk_frechet_1",
+        "h_empty_1"
+      ]
+    }
+  },
+  "oracle_status": "pending_fullscan_fill",
+  "policy": {
+    "train": "may tune KART_COND_REL_GAP / cost coeffs",
+    "val": "select thresholds once",
+    "test": "evaluate once after freeze; never retune"
+  }
+}

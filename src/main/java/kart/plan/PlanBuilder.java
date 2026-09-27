@@ -107,11 +107,14 @@ public final class PlanBuilder {
   }
 
   /**
-   * Build a plan for an access subgraph (used by plan search FINISH).
-   * Empty access → {@code P_FULL}.
+   * Build a finished SafePlan-family access plan (default {@code HASH_SET} merge).
+   * Empty access → {@code P_FULL}. Incomplete search states that still need
+   * {@code CHOOSE_MERGE} must call the overload with {@code mergeImpl=null}.
    */
   public static PlanEnvelope buildForAccess(BoundIr ir, boolean useT, boolean useZ, boolean useH) {
-    return buildForAccess(ir, useT, useZ, useH, null, null);
+    int dims = (useT ? 1 : 0) + (useZ ? 1 : 0) + (useH ? 1 : 0);
+    String merge = dims >= 2 ? "HASH_SET" : null;
+    return buildForAccess(ir, useT, useZ, useH, merge, null);
   }
 
   public static PlanEnvelope buildForAccess(BoundIr ir, boolean useT, boolean useZ, boolean useH,

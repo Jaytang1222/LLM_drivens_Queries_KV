@@ -52,7 +52,12 @@ public final class ThirdPartyAudit {
 
     Map<String, Object> adapters = new LinkedHashMap<String, Object>();
     hashFile(adapters, root, "din_bridge", "experiments/adapters/din/din_bridge.py");
+    hashFile(adapters, root, "din_sql_bridge", "experiments/adapters/din/din_sql_bridge.py");
     hashFile(adapters, root, "sag_bridge", "experiments/adapters/sag/sag_bridge.py");
+    hashFile(adapters, root, "sag_mql_bridge", "experiments/adapters/sag/sag_mql_bridge.py");
+    hashFile(adapters, root, "direct_draft_bridge", "experiments/adapters/direct/direct_draft_bridge.py");
+    hashFile(adapters, root, "sql_to_draft_ir", "experiments/adapters/translate/sql_to_draft_ir.py");
+    hashFile(adapters, root, "mql_to_draft_ir", "experiments/adapters/translate/mql_to_draft_ir.py");
     hashFile(adapters, root, "llmopt_bridge", "experiments/adapters/llmopt/llmopt_bridge.py");
     hashFile(adapters, root, "llm_client", "experiments/adapters/llm_client.py");
     hashFile(adapters, root, "bao_weights", "experiments/adapters/bao/kart_plan_family_weights.json");
@@ -110,10 +115,11 @@ public final class ThirdPartyAudit {
 
   static String upstreamKey(String armId) {
     String a = armId.trim().toLowerCase();
-    if ("din-spider".equals(a) || "din-bird".equals(a)) {
+    if ("din-spider".equals(a) || "din-bird".equals(a)
+        || "din-sql-spider".equals(a) || "din-sql-bird".equals(a)) {
       return "din_sql";
     }
-    if ("sag".equals(a)) {
+    if ("sag".equals(a) || "sag-mql".equals(a) || "sag-mql-nofeedback".equals(a)) {
       return "text_to_nosql";
     }
     if ("bao".equals(a)) {

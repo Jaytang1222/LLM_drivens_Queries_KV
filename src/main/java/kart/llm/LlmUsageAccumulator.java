@@ -2,16 +2,21 @@ package kart.llm;
 
 /**
  * Aggregates LLM call counts and tokens across NL parse + plan search (NFR-3).
+ * Distinguishes successful responses from failed HTTP attempts.
  */
 public final class LlmUsageAccumulator {
 
   private int calls;
+  private int successfulRecordings;
+  private int failedAttempts;
   private long tokens;
   private long promptTokens;
   private long completionTokens;
   private long latencyMs;
   private int jsonModeFallbacks;
   private boolean anyTokenObserved;
+  private Integer lastHttpStatus;
+  private boolean anyHttpFailure;
 
   public void record(LlmResponse resp) {
     int attempts = 1;
@@ -19,6 +24,7 @@ public final class LlmUsageAccumulator {
       attempts = resp.attempts;
     }
     calls += attempts;
+    successfulRecordings++;
     if (resp != null && resp.jsonModeFallback) {
       jsonModeFallbacks++;
     }
@@ -44,14 +50,42 @@ public final class LlmUsageAccumulator {
     }
   }
 
-  /** Count a failed HTTP attempt that had no parseable response (JSON-mode fallback). */
+  /**
+   * Count a failed HTTP attempt that had no parseable success response.
+   * Prevents mis-labeling as {@code zero_llm_calls} when the provider was contacted.
+   */
   public void recordFailedAttempt(long latencyMsAdd) {
+    recordHttpFailure(null, latencyMsAdd);
+  }
+
+  public void recordHttpFailure(Integer httpStatus, long latencyMsAdd) {
+    failedAttempts++;
     calls++;
+    anyHttpFailure = true;
+    if (httpStatus != null) {
+      lastHttpStatus = httpStatus;
+    }
     latencyMs += Math.max(0L, latencyMsAdd);
   }
 
   public int calls() {
     return calls;
+  }
+
+  public int successfulRecordings() {
+    return successfulRecordings;
+  }
+
+  public int failedAttempts() {
+    return failedAttempts;
+  }
+
+  public boolean anyHttpFailure() {
+    return anyHttpFailure;
+  }
+
+  public Integer lastHttpStatus() {
+    return lastHttpStatus;
   }
 
   public long latencyMs() {

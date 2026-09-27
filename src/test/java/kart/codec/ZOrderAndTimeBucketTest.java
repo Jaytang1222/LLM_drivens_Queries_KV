@@ -77,6 +77,28 @@ class ZOrderAndTimeBucketTest {
   }
 
   @Test
+  void timeBucketsClampPreEpochToEmptyOrPartial() {
+    long epoch = 1_201_930_200_000L;
+    long bucket = 600_000L;
+    // entirely before epoch (empty_far_3 / t_large_3 style)
+    assertEquals(0, TimeBucket.bucketsCovering(
+        epoch - 86_400_000L, epoch, epoch, bucket).length);
+    assertEquals(0, TimeBucket.bucketsCovering(
+        946_684_800_000L, 946_688_400_000L, epoch, bucket).length);
+    // end exactly at epoch → empty
+    assertEquals(0, TimeBucket.bucketsCovering(
+        epoch - bucket, epoch, epoch, bucket).length);
+    // straddles epoch → clamp access start to epoch (bucket 0..)
+    long[] span = TimeBucket.bucketsCovering(epoch - bucket, epoch + bucket, epoch, bucket);
+    assertEquals(1, span.length);
+    assertEquals(0, span[0]);
+    // after epoch unchanged
+    long[] after = TimeBucket.bucketsCovering(epoch, epoch + bucket, epoch, bucket);
+    assertEquals(1, after.length);
+    assertEquals(0, after[0]);
+  }
+
+  @Test
   void fullFfPrefixEmpty() {
     assertTrue(!PrefixSuccessor.of(new byte[]{(byte) 0xFF}).isPresent());
   }

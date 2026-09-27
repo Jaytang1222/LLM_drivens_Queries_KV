@@ -127,6 +127,9 @@ public final class LlmProposalPolicy implements ProposalPolicy {
       return out;
     } catch (LlmException e) {
       lastEvent = "rule_fallback";
+      if (usage != null) {
+        usage.recordHttpFailure(e.httpStatus, 0L);
+      }
       return ruleFallback.propose(frontier, legalByStateId, cardsByStateId, budget);
     }
   }

@@ -1,0 +1,47 @@
+{
+  "workload": "experiments/workloads/bound_ir_holdout_v2.json",
+  "evaluation_role": "diagnostic_generalization_stress",
+  "n_queries": 21,
+  "n_by_split": {
+    "test": 7,
+    "train": 9,
+    "val": 5
+  },
+  "layers": {
+    "easy_single_index": 4,
+    "multi_index": 3,
+    "multi_index_uncertain": 3,
+    "topk_metric": 4,
+    "easy_hash": 1,
+    "hard_large_window": 2,
+    "empty_boundary": 2,
+    "hard_large_intersect": 2
+  },
+  "groups_by_split": {
+    "test": [
+      "h2_empty",
+      "h2_topk_hausdorff",
+      "h2_tz_hard",
+      "h2_tzh_test",
+      "h2_z_easy"
+    ],
+    "train": [
+      "h2_h_easy",
+      "h2_t_easy",
+      "h2_topk_dtw",
+      "h2_tz_mid",
+      "h2_tzh"
+    ],
+    "val": [
+      "h2_boundary",
+      "h2_t_hard",
+      "h2_th_mid",
+      "h2_topk_frechet"
+    ]
+  },
+  "hypothesis_layers_named": {
+    "multi_index": 3,
+    "multi_index_uncertain": 3
+  },
+  "caveat": "Layer counts are catalog labels only. Measure n_safe / CostCard gap on train/val with HBase before freezing conditional_llm_freeze.json."
+}

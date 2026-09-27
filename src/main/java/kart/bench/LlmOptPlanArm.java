@@ -19,8 +19,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * LLMOpt G→S bridge: Python proposes/selects plan_id; Java validates via forcePlanId.
  *
- * {@code t_plan} = Python G+S wall + Java generate→select (forcePlanId), excluding
- * Coordinator execute and excluding artifact IO (engine clocks already exclude artifacts).
+ * {@code t_plan} starts before temp BoundIR preparation and includes Python G→S
+ * plus Java generate→select (forcePlanId). Coordinator execute and artifact IO
+ * stay outside {@code t_plan}. Java search time is inside {@code t_plan}.
  */
 public final class LlmOptPlanArm implements Arm {
 
@@ -38,10 +39,12 @@ public final class LlmOptPlanArm implements Arm {
 
   @Override
   public TrialResult run(BoundIr ir, BenchContext ctx) throws Exception {
+    // System-level plan clock includes adapter input preparation (temp BoundIR).
+    long t0 = System.currentTimeMillis();
     Path tmp = Files.createTempFile(ctx.runDir, "llmopt-ir-", ".json");
     try {
       Files.write(tmp, MAPPER.writeValueAsBytes(ir));
-      long t0 = System.currentTimeMillis();
+      long prepEnd = System.currentTimeMillis();
       Path script = root.resolve("experiments/adapters/llmopt/llmopt_bridge.py");
       List<String> cmd = new ArrayList<String>();
       cmd.add(pythonBin());
@@ -105,6 +108,8 @@ public final class LlmOptPlanArm implements Arm {
       tr.extras.put("plan_start_ms", Long.valueOf(t0));
       tr.extras.put("plan_end_ms", Long.valueOf(t0 + tPlan));
       tr.extras.put("t_bridge_ms", Long.valueOf(tBridge));
+      tr.extras.put("t_adapter_prepare_ms", Long.valueOf(Math.max(0L, prepEnd - t0)));
+      tr.extras.put("t_plan_boundary", "includes_input_prepare_and_java_search");
       if (tr.t_exec_ms != null) {
         tr.t_e2e_ms = Long.valueOf(tPlan + tr.t_exec_ms.longValue());
       } else {

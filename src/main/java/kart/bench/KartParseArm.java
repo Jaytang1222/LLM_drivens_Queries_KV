@@ -6,7 +6,6 @@ import kart.dialog.Dialog;
 import kart.exec.QueryResult;
 import kart.ir.IrBinder;
 import kart.ir.IrSchemaValidator;
-import kart.llm.LlmClient;
 import kart.llm.LlmUsageAccumulator;
 import kart.llm.PromptBuilder;
 import kart.query.QueryEngine;
@@ -18,7 +17,8 @@ import java.util.List;
 
 /**
  * Native E1 arm: NL → DraftIR → BoundIR (single round, no clarify).
- * When gold ids are present, runs {@code query-ir} with RULE for Execution Accuracy.
+ * Inference is label-blind; gold reject/clarify labels are applied only via {@link ParseScore}.
+ * When gold ids are present on supported items, runs {@code query-ir} with RULE for EX.
  */
 public final class KartParseArm implements ParseArm {
 
@@ -32,11 +32,11 @@ public final class KartParseArm implements ParseArm {
   @Override
   public ParseTrialResult parse(NlItem item, BenchContext ctx) throws Exception {
     ParseTrialResult out = new ParseTrialResult();
-    out.reject_expected = item != null && item.reject_expected;
     if (item == null || item.utterance == null || item.utterance.trim().isEmpty()) {
       out.error = "empty utterance";
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
+      out.ok_ir_valid = Boolean.FALSE;
+      out.ok_ex = Boolean.FALSE;
+      ParseScore.attachGoldLabels(out, item);
       return out;
     }
     String early = ParseFairness.earlyReject(item.utterance.trim());
@@ -45,8 +45,9 @@ public final class KartParseArm implements ParseArm {
     }
     if (ctx.llm == null) {
       out.error = "LLM client required for parse arm kart";
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
+      out.ok_ir_valid = Boolean.FALSE;
+      out.ok_ex = Boolean.FALSE;
+      ParseScore.attachGoldLabels(out, item);
       return out;
     }
 
@@ -56,7 +57,6 @@ public final class KartParseArm implements ParseArm {
     IrBinder binder = new IrBinder(
         cfg.regions(), ctx.kv, ctx.layout.tableMeta, ctx.layout.shardCount,
         ctx.manifest.manifest_id, "point_similarity_v2");
-    // Engine only used for EX after bind; parse path itself does not execute.
     QueryEngine engine = ctx.newEngine(PlannerMode.RULE);
     LlmUsageAccumulator usage = engine.usageAccumulator();
     Dialog dialog = new Dialog(ctx.llm, prompts, validator, binder, engine,
@@ -80,43 +80,29 @@ public final class KartParseArm implements ParseArm {
     if (usage.jsonModeFallbacks() > 0) {
       out.extras.put("json_mode_fallbacks", Integer.valueOf(usage.jsonModeFallbacks()));
     }
+    if (usage.failedAttempts() > 0) {
+      out.extras.put("llm_failed_attempts", Integer.valueOf(usage.failedAttempts()));
+    }
+    if (usage.lastHttpStatus() != null) {
+      out.extras.put("http_status", usage.lastHttpStatus());
+    }
+    if (usage.anyHttpFailure()) {
+      out.extras.put("infrastructure_failure", Boolean.TRUE);
+    }
 
     boolean unsupported = Dialog.State.Unsupported.equals(oc.state)
         || "UNSUPPORTED_QUERY".equals(oc.status);
     boolean needClarify = "NEED_CLARIFICATION".equals(oc.status);
-    out.reject_actual = unsupported;
-    out.clarify_expected = item.clarify_expected;
-    out.clarify_actual = needClarify;
+    out.reject_actual = Boolean.valueOf(unsupported);
+    out.clarify_actual = Boolean.valueOf(needClarify);
 
-    if (item.clarify_expected) {
-      out.ok_ir_valid = needClarify;
-      out.ok_ex = needClarify;
-      out.ok = needClarify;
-      if (!needClarify) {
-        out.error = "expected NEED_CLARIFICATION but status=" + oc.status;
-      }
-      return out;
-    }
-
-    if (item.reject_expected) {
-      out.ok_ir_valid = unsupported;
-      out.ok_ex = unsupported;
-      out.ok = unsupported;
-      if (!unsupported) {
-        out.error = "expected reject but got status=" + oc.status;
-      }
-      return out;
-    }
-
-    if (unsupported || oc.bound == null) {
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
-      out.ok = false;
+    if (unsupported || needClarify || oc.bound == null) {
       out.error = oc.error != null ? oc.error : oc.status;
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
 
-    out.ok_ir_valid = true;
+    out.ok_ir_valid = Boolean.TRUE;
     out.bound = oc.bound;
     try {
       out.draft_ir_json = MAPPER.writeValueAsString(oc.bound);
@@ -124,15 +110,19 @@ public final class KartParseArm implements ParseArm {
       out.draft_ir_json = null;
     }
 
-    // Execution Accuracy: run BoundIR with RULE (IR quality, not planner quality)
     Path art = ctx.artifactDir("parse-ex", item.query_id);
     QueryEngine.RunResult rr = engine.run(oc.bound, art, false, null);
     out.queryResult = rr == null ? null : rr.result;
     String mismatch = compareGold(item, out.queryResult);
-    out.ok_ex = mismatch == null;
-    out.ok = out.ok_ex;
+    out.ok_ex = Boolean.valueOf(mismatch == null);
+    out.ok = Boolean.TRUE.equals(out.ok_ex);
     if (mismatch != null) {
       out.error = mismatch;
+    }
+    if (item.reject_expected || item.clarify_expected) {
+      ParseScore.scoreAgainstGold(out, item);
+    } else {
+      ParseScore.attachGoldLabels(out, item);
     }
     return out;
   }

@@ -81,8 +81,8 @@ public final class SummaryMd {
       sb.append("## ").append(stage).append('\n').append('\n');
       Map<String, List<Map<String, Object>>> byArm = groupByArm(e.getValue());
       if ("parse".equalsIgnoreCase(stage)) {
-        sb.append("| arm | n | supported_EX | reject_ok | clarify_ok | t_parse_p50 | t_model_p50 |\n");
-        sb.append("|---|---:|---:|---:|---:|---:|---:|\n");
+        sb.append("| arm | n | supported_EX | reject_ok | clarify_ok | early_reject | infra_fail | t_parse_p50 | t_model_p50 |\n");
+        sb.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|\n");
       } else if ("plan".equalsIgnoreCase(stage)) {
         sb.append("| arm | n | plan_ok | fail_rate | t_plan_p50 | t_plan_p95 |\n");
         sb.append("|---|---:|---:|---:|---:|---:|\n");
@@ -100,9 +100,17 @@ public final class SummaryMd {
           int rejN = 0;
           int clOk = 0;
           int clN = 0;
+          int earlyRej = 0;
+          int infraFail = 0;
           List<Long> parseTot = new ArrayList<Long>();
           List<Long> parseModel = new ArrayList<Long>();
           for (Map<String, Object> r : rows) {
+            if (Boolean.TRUE.equals(r.get("early_reject"))) {
+              earlyRej++;
+            }
+            if (Boolean.TRUE.equals(r.get("infrastructure_failure"))) {
+              infraFail++;
+            }
             String qc = String.valueOf(r.get("query_class"));
             boolean pass = Boolean.TRUE.equals(r.get("ok_ex"));
             if ("reject".equals(qc)) {
@@ -129,6 +137,8 @@ public final class SummaryMd {
               .append(" | ").append(exOk).append("/").append(exN)
               .append(" | ").append(rejOk).append("/").append(rejN)
               .append(" | ").append(clOk).append("/").append(clN)
+              .append(" | ").append(earlyRej)
+              .append(" | ").append(infraFail)
               .append(" | ").append(fmt(percentile(parseTot, 0.50)))
               .append(" | ").append(fmt(percentile(parseModel, 0.50)))
               .append(" |\n");
@@ -161,6 +171,22 @@ public final class SummaryMd {
         sb.append(" |\n");
       }
       sb.append('\n');
+      if ("parse".equalsIgnoreCase(stage)) {
+        sb.append("E1 notes: `early_reject` counts shared-gate hits (not method credit); ")
+            .append("`infra_fail` counts HTTP/quota/service failures (e.g. 402) and must not be ")
+            .append("read as model DraftIR failure. Gold reject/clarify labels score only after ")
+            .append("label-blind inference.\n\n");
+      }
+      if ("plan".equalsIgnoreCase(stage)) {
+        sb.append("E2 notes: rows with `llm_fallback=true` are a separate arm ")
+            .append("(`kart-rule-fallback`, `kart-conditional-llm-rule-fallback`, ")
+            .append("`pool-llm-rule-fallback`, `pool-conditional-llm-rule-fallback`, or ")
+            .append("`*-rule-fallback`). They are not merged into the pure requested arm. ")
+            .append("`bao` is a **Bao control-flow surrogate** ")
+            .append("(KART CostCard + hand-set family weights), not a trained Bao model. ")
+            .append("Shared-pool arms (`pool-*`) report `plan_regret_scope=shared_pool` and are ")
+            .append("not comparable to native-search `plan_regret_ms`.\n\n");
+      }
       if (!"parse".equalsIgnoreCase(stage)) {
         appendFailTaxonomy(sb, e.getValue());
       }
@@ -324,17 +350,38 @@ public final class SummaryMd {
     return Boolean.TRUE.equals(r.get("ok_oracle"));
   }
 
+  static String summaryArmKey(Map<String, Object> r) {
+    Object arm = r.get("arm");
+    if (arm == null) {
+      arm = r.get("factor");
+    }
+    if (arm == null) {
+      arm = r.get("arm_or_factor");
+    }
+    String key = String.valueOf(arm);
+    if (!isLlmFallbackRow(r) || key.contains("fallback")) {
+      return key;
+    }
+    Object requested = r.get("arm_requested");
+    String base = requested != null ? String.valueOf(requested) : key;
+    if ("kart".equals(base)) {
+      return "kart-rule-fallback";
+    }
+    return base + "-rule-fallback";
+  }
+
+  static boolean isLlmFallbackRow(Map<String, Object> r) {
+    Object v = r.get("llm_fallback");
+    if (Boolean.TRUE.equals(v)) {
+      return true;
+    }
+    return v != null && "true".equalsIgnoreCase(String.valueOf(v).trim());
+  }
+
   private static Map<String, List<Map<String, Object>>> groupByArm(List<Map<String, Object>> rows) {
     Map<String, List<Map<String, Object>>> m = new LinkedHashMap<String, List<Map<String, Object>>>();
     for (Map<String, Object> r : rows) {
-      Object arm = r.get("arm");
-      if (arm == null) {
-        arm = r.get("factor");
-      }
-      if (arm == null) {
-        arm = r.get("arm_or_factor");
-      }
-      String key = String.valueOf(arm);
+      String key = summaryArmKey(r);
       List<Map<String, Object>> list = m.get(key);
       if (list == null) {
         list = new ArrayList<Map<String, Object>>();

@@ -90,6 +90,9 @@ public final class LlmDirectPlanPlanner {
         }
       } catch (LlmException e) {
         reason = "llm_direct_error";
+        if (usage != null) {
+          usage.recordHttpFailure(e.httpStatus, 0L);
+        }
       }
     } else {
       reason = "llm_direct_no_budget";

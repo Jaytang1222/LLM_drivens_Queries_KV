@@ -1,0 +1,137 @@
+{
+  "path": "experiments/workloads/bound_ir_advantage_v2.json",
+  "oracle_path": "experiments/workloads/bound_ir_advantage_v2.oracle.json",
+  "evaluation_role": "kart_operating_region",
+  "n_queries": 58,
+  "n_raw_queries": 68,
+  "n_from_advantage_v1": 30,
+  "n_from_hard_v2": 28,
+  "n_deduplicated": 10,
+  "deduplicated_queries": [
+    {
+      "query_id": "h_s_2",
+      "duplicate_of": "h_s_small"
+    },
+    {
+      "query_id": "st_sl_2",
+      "duplicate_of": "st_sl_1"
+    },
+    {
+      "query_id": "st_ls_2",
+      "duplicate_of": "st_ls_1"
+    },
+    {
+      "query_id": "h2_tz_mid_a",
+      "duplicate_of": "st_ss_1"
+    },
+    {
+      "query_id": "h2_tzh_a",
+      "duplicate_of": "h_st_1"
+    },
+    {
+      "query_id": "h2_tzh_b",
+      "duplicate_of": "h_st_1"
+    },
+    {
+      "query_id": "h2_topk_dtw_k3",
+      "duplicate_of": "topk_st_1"
+    },
+    {
+      "query_id": "h2_topk_dtw_k5",
+      "duplicate_of": "topk_st_k5"
+    },
+    {
+      "query_id": "h2_th_mid_a",
+      "duplicate_of": "h_t_small"
+    },
+    {
+      "query_id": "h2_topk_frechet_a",
+      "duplicate_of": "topk_st_frechet_1"
+    }
+  ],
+  "deduplication": "exact_bound_ir_fingerprint_keep_first",
+  "layers": {
+    "multi_index": 1,
+    "tzh_rbo_trap": 8,
+    "tz_hard_intersect": 8,
+    "th_zh_uncertain": 4,
+    "topk_st_metric": 8
+  },
+  "families": [
+    "TH",
+    "TOPK",
+    "TZ",
+    "TZH",
+    "ZH"
+  ],
+  "sha256": "95789725d4632085138dc1db5d626763410fecbfe070aced08c4265a056fe3fb",
+  "oracle_sha256": "8ec7274602b6334885a781bf43634666882fdde3ef98b16bf6ae2d10d48864cf",
+  "oracle_status": "frozen",
+  "generator": "experiments/adapters/generate_advantage_hard_v2.py --merge",
+  "hard_generator": "experiments/adapters/generate_advantage_hard_v2.py",
+  "query_ids": [
+    "st_ss_1",
+    "st_ss_2",
+    "st_sl_1",
+    "st_ls_1",
+    "st_ll_1",
+    "h_t_small",
+    "h_t_large",
+    "h_s_small",
+    "h_st_1",
+    "topk_st_1",
+    "topk_st_2",
+    "topk_st_3",
+    "topk_st_frechet_1",
+    "topk_st_hausdorff_1",
+    "st_mid_1",
+    "h_st_2",
+    "h_st_3",
+    "h_t_mid",
+    "topk_st_k1",
+    "topk_st_k5",
+    "topk_st_frechet_k5",
+    "topk_st_hausdorff_k1",
+    "st_ll_2",
+    "st_grid_1",
+    "st_grid_2",
+    "st_grid_3",
+    "h_st_4",
+    "topk_st_k10",
+    "topk_st_2_k1",
+    "h2_tz_mid_b",
+    "a2_tzh_a",
+    "a2_tzh_b",
+    "a2_tzh_c",
+    "a2_tzh_d",
+    "a2_tzh_e",
+    "a2_tzh_f",
+    "a2_tzh_g",
+    "a2_tzh_h",
+    "a2_tz_hard_a",
+    "a2_tz_hard_b",
+    "a2_tz_hard_c",
+    "a2_tz_hard_d",
+    "a2_tz_hard_e",
+    "a2_tz_hard_f",
+    "a2_tz_hard_g",
+    "a2_tz_hard_h",
+    "a2_th_unc_a",
+    "a2_th_unc_b",
+    "a2_zh_unc_a",
+    "a2_zh_unc_b",
+    "a2_topk_dtw_k3",
+    "a2_topk_dtw_k7",
+    "a2_topk_dtw_wide",
+    "a2_topk_frechet_k3",
+    "a2_topk_frechet_k7",
+    "a2_topk_frechet_wide",
+    "a2_topk_haus_k3",
+    "a2_topk_haus_k5"
+  ],
+  "notes": [
+    "Default E2/E3 operating-region set after suite switch.",
+    "Do not retune conditional_llm_freeze on this set.",
+    "holdout v2 test remains locked one-shot confirmation (not merged)."
+  ]
+}

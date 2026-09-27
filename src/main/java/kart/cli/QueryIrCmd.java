@@ -51,6 +51,10 @@ public final class QueryIrCmd implements Callable<Integer> {
       description = "Plan+select only (E2); no Coordinator execute")
   private boolean planOnly;
 
+  @Option(names = "--force-plan",
+      description = "Force plan_id among SafePlans (e.g. P_FULL for WorldAccess align)")
+  private String forcePlanId;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
@@ -117,9 +121,11 @@ public final class QueryIrCmd implements Callable<Integer> {
       }
 
       QueryEngine engine = new QueryEngine(kv, layout, limits, stats, cfg.planner(), llm, mode);
-      QueryEngine.RunResult rr = engine.run(ir, runsRoot, planOnly);
+      QueryEngine.RunResult rr = engine.run(ir, runsRoot, planOnly, forcePlanId);
       System.out.println("policy=" + mode.wireName()
           + " plan_only=" + planOnly
+          + (forcePlanId != null && !forcePlanId.trim().isEmpty()
+              ? " force_plan=" + forcePlanId.trim() : "")
           + " t_plan_ms=" + rr.t_plan_ms
           + " t_exec_ms=" + rr.t_exec_ms
           + " regret_ms=" + rr.plan_regret_ms);

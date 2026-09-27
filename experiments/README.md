@@ -7,12 +7,46 @@ Four entries (see `spec/comparative_experiment.md` and
 cd /home/jaytang/projects/llm-kv
 ./scripts/kart.sh up && ./scripts/kart.sh rebuild
 
-./scripts/bench-parse.sh --run-id r1 --arm kart,din-spider,din-bird,sag
-./scripts/bench-plan.sh  --run-id r1 --arm bao,llmopt,kart
+# E1 formal deep table (legacy din-*/sag DraftIR-direct are diagnostic only)
+./scripts/bench-parse.sh --run-id r1 \
+  --arm kart,direct-draftir,din-sql-spider,din-sql-bird,sag-mql-nofeedback
+# Use sag-mql only with a real WorldAccess; sample JSON is not formal feedback.
+
+./scripts/bench-plan.sh  --run-id r1 --arm bao,llmopt,kart,kart-conditional-llm,cbo
 ./scripts/bench-e2e.sh   --run-id r1 --arm fullscan,rbo,cbo,kart --cache cold --trials 1
 # or
 ./scripts/bench-all.sh --run-id r1 --parse-arm kart --plan-arm kart --e2e-arm fullscan,rbo,cbo
 ```
+
+Holdout BoundIR:
+- **v2 (preferred):** group-disjoint `bound_ir_holdout_v2.json`
+  (`generate_holdout_workload_v2.py` + `split_holdout_workloads.py --version v2`).
+  Role = `diagnostic_generalization_stress`; FullScan oracles are present for the
+  split files, but the provenance lock must be checked before claiming a frozen set. The **test**
+  split is the locked confirmation set (evaluate once; not the E2/E3 suite default).
+- **v1:** leaky across splits — diagnostic only; do not use as locked test.
+Oracle SHA256: `scripts/fill-holdout-oracle.sh --version v2` (HBase READY; gated).
+E1 parse stays on `nl_ir_v1.json`. Default E2/E3 suites use the operating-region slice
+`bound_ir_advantage_v2.json` (`evaluation_role=kart_operating_region`, 58 queries):
+advantage_v1 (40 raw, from BoundIR-65 + holdout v2 train/val multi-index) ∪ hard_v2 (28
+synthesized `a2_*` TZH/TZ-hard/TH-ZH/Top-K with FullScan oracles), with 10 exact
+duplicate BoundIR fingerprints removed. BoundIR-65
+(`bound_ir_v1.json`) stays the diagnostic / regression / oracle-diff /
+WorldAccess-alignment set. Prior slice `bound_ir_advantage_v1.json` is kept as history.
+
+Local framework check (no HBase): `bash scripts/check-comparative-framework.sh`.
+Conditional LLM freeze file: `experiments/suites/conditional_llm_freeze.json`
+(set `status=frozen_for_test` only after train/val selection).
+
+E2 suites (default workload `bound_ir_advantage_v2.json`):
+- Native search: `experiments/suites/plan.yaml` (`kart`, `cbo`, `bao`, …)
+- Shared-pool selection: `experiments/suites/plan-shared-pool.yaml`
+  (`pool-cbo`, `pool-bao`, `pool-conditional-llm`, `pool-llm`) — same PlanBuilder pool;
+  report `pool_regret_ms`, do not mix with native `plan_regret_ms`.
+Regenerate hard subset: `python3 experiments/adapters/generate_advantage_hard_v2.py`
+then `bash scripts/fill-advantage-hard-oracle.sh` (HBase) and
+`python3 experiments/adapters/generate_advantage_hard_v2.py --merge`.
+Override `--workload experiments/workloads/bound_ir_v1.json` for the 65-query regression set.
 
 Useful: `--limit N`, `--trials N`, `--workload path`, `--arm a,b`, `--cache cold|warm`.
 
@@ -88,10 +122,17 @@ leaves it null with `region_server_probe_error`. Cluster version may still diffe
 
 Full disclosure: [`adapters/TRANSPLANT.md`](adapters/TRANSPLANT.md).
 
-- **Fair LLM**: one endpoint/model, `temperature=0` (`adapters/llm_client.py`); JSON-mode retries count as extra calls
-- **Fair early-reject (E1)**: same Java gate for kart / DIN / SAG before any LLM call
+- **Fair LLM**: one endpoint/model, `temperature=0` (`adapters/llm_client.py`); JSON-mode retries only on HTTP 400 and count as extra calls; 402/quota are `infrastructure_failure`, not method fails
+- **Fair DraftIR contract**: `DRAFT_IR_HINT` matches `schemas/draft-ir.schema.json` (`1.0` + `entity` + object `semantics`)
+- **Deep E1 transplants**: `din-sql-*` (logical SQL→DraftIR), `sag-mql` (logical MQL→DraftIR + optional WorldAccess); legacy `din-*`/`sag` stay diagnostic DraftIR-direct
+- **Conditional LLM (E2/E3)**: `kart-conditional-llm` — CBO candidates, LLM only on close/HIGH-uncertainty costs
+- **Holdout**: `experiments/workloads/bound_ir_holdout_v1.json` (seed 20260926); old 65 = regression
+- **Fair early-reject (E1)**: same Java gate for kart / DIN / SAG; gold reject/clarify labels score only after inference (`ParseScore`); summary splits `early_reject` vs method reject
 - **Authentic control flow**: DIN loads upstream makers/templates; SAG mirrors `runtime.py` repair loop; Bao uses `select_plan` argmin; LLMOpt keeps G→S
 - **Intentional retargets**: DraftIR / KART plan_id instead of SQL / Mongo / PG — never claimed as full upstream stacks
+- **Time domain**: `TimeBucket.bucketsCovering` clamps pre-epoch index access to empty/partial ranges (precise BoundIR filter unchanged)
+
+Oracle gate after rebuild: `./scripts/oracle-diff-65.sh <run-id>` (fullscan/rbo/cbo/kart vs frozen oracle).
 
 ## External arms
 

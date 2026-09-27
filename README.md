@@ -30,15 +30,16 @@ cd /home/jaytang/projects/llm-kv
 | `docs/supported-semantics.md` | 语义与不支持项 |
 | `docs/regions.md` | 预注册区域 |
 | `docs/environment-lock.md` | JDK / Maven / HBase / LLM |
-| `docs/comparative-experiment-readiness-2026-09-25.md` | 对比实验真实性、公平性与运行门禁 |
-| `USER_ACTIONS.md` | 人工项（密钥等） |
+| `docs/comparative-experiment-readiness-2026-09-25.md` | 对比实验当前验收入口，历史细节见 `docs/comparative-refine.md` |
+| `docs/ablation-experiment-readiness-2026-09-25.md` | 消融实验当前验收入口，历史细节见 `docs/ablation-refine.md` |
+| `experiments/README.md` | 对比和消融实验入口、workload 与结果约定 |
 
 ## Layout
 
 ```
-scripts/             5 keepers（kart.sh 统一入口）
+scripts/             环境、同步、校准、smoke 与 bench 入口
   kart.sh kart-env.sh sync-wsl-workspace.sh
-  run-tdrive-smoke.sh publish-cost-calib-pack.sh
+  bench-parse.sh bench-plan.sh bench-e2e.sh bench-all.sh bench-ablation.sh
 docs/                操作与验证
 spec/                需求/设计/PDF
 src/main/java/kart/  IR / search / cost / exec
@@ -47,3 +48,5 @@ catalog/             READY manifests（gitignore）
 experiments/         T-Drive smoke + oracle
 datasets/tdrive/     原始数据
 ```
+
+`testdata/fixture-v1/` 是 `build-fixture` 可重新生成的合成样例；单元测试在临时目录或内存中生成 fixture，对比和消融实验使用 `experiments/workloads/` 与 `tdrive_v1_ready`。

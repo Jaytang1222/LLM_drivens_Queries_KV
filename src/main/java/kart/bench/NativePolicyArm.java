@@ -41,9 +41,16 @@ public final class NativePolicyArm implements Arm {
       tr.t_plan_ms = rr.t_plan_ms;
     }
     if (engine.usageAccumulator() != null) {
-      tr.extras.put("llm_calls", engine.usageAccumulator().callsAsLongOrNull());
-      tr.extras.put("tokens_in", engine.usageAccumulator().promptTokensOrNull());
-      tr.extras.put("tokens_out", engine.usageAccumulator().completionTokensOrNull());
+      kart.llm.LlmUsageAccumulator u = engine.usageAccumulator();
+      tr.extras.put("llm_calls", u.callsAsLongOrNull());
+      tr.extras.put("tokens_in", u.promptTokensOrNull());
+      tr.extras.put("tokens_out", u.completionTokensOrNull());
+      if (u.failedAttempts() > 0) {
+        tr.extras.put("llm_failed_attempts", Integer.valueOf(u.failedAttempts()));
+      }
+      if (u.lastHttpStatus() != null) {
+        tr.extras.put("http_status", u.lastHttpStatus());
+      }
     }
     return tr;
   }

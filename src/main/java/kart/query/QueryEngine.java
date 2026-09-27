@@ -83,6 +83,9 @@ public final class QueryEngine {
     public boolean llmRequested;
     public boolean llmFallback;
     public String fallbackReason;
+    /** Failed HTTP/chat attempts observed during this plan (0/null if none). */
+    public Integer llmFailedAttempts;
+    public Integer llmHttpStatus;
     /** {@code selected.estimated_ms - min(safe.estimated_ms)}; 0 under Final Cost select. */
     public Double plan_regret_ms;
     public Double best_safe_estimated_ms;
@@ -497,6 +500,8 @@ public final class QueryEngine {
       rr.llmRequested = planned.llmRequested;
       rr.llmFallback = planned.llmFallback;
       rr.fallbackReason = planned.fallbackReason;
+      rr.llmFailedAttempts = planned.llmFailedAttempts;
+      rr.llmHttpStatus = planned.llmHttpStatus;
       rr.t_plan_ms = planned.t_plan_ms;
       rr.planStartEpochMs = planned.planStartEpochMs;
       rr.planEndEpochMs = planned.planEndEpochMs;
@@ -604,6 +609,44 @@ public final class QueryEngine {
     rr.best_safe_estimated_ms = Double.valueOf(bestMs);
   }
 
+  /**
+   * Re-point {@code selected} to an already-validated SafePlan by id without a
+   * second candidate search. Returns false when {@code planId} is not in
+   * {@code rr.safe}.
+   */
+  public static boolean reselectByPlanId(RunResult rr, String planId) {
+    if (rr == null || planId == null || planId.trim().isEmpty()) {
+      return false;
+    }
+    String want = planId.trim();
+    SafePlanHandle handle = null;
+    for (SafePlanHandle h : rr.safe) {
+      if (h != null && h.plan() != null && want.equals(h.plan().plan_id)) {
+        handle = h;
+        break;
+      }
+    }
+    if (handle == null) {
+      return false;
+    }
+    CostCard card = null;
+    for (CostCard c : rr.costCards) {
+      if (c != null && want.equals(c.plan_id)) {
+        card = c;
+        break;
+      }
+    }
+    rr.selected = handle;
+    rr.selectedCost = card;
+    if (card != null && rr.best_safe_estimated_ms != null) {
+      rr.plan_regret_ms = Double.valueOf(
+          card.estimated_ms - rr.best_safe_estimated_ms.doubleValue());
+    } else {
+      rr.plan_regret_ms = Double.valueOf(0.0);
+    }
+    return true;
+  }
+
   private static void stampPlanClock(RunResult rr, long planStart) {
     long now = System.currentTimeMillis();
     rr.t_plan_ms = Long.valueOf(Math.max(0L, now - planStart));
@@ -616,6 +659,14 @@ public final class QueryEngine {
     if (!rr.llmRequested) {
       return;
     }
+    if (usage != null) {
+      if (usage.failedAttempts() > 0) {
+        rr.llmFailedAttempts = Integer.valueOf(usage.failedAttempts());
+      }
+      if (usage.lastHttpStatus() != null) {
+        rr.llmHttpStatus = usage.lastHttpStatus();
+      }
+    }
     if (llm == null) {
       rr.llmFallback = true;
       rr.fallbackReason = "no_llm_client";
@@ -624,6 +675,11 @@ public final class QueryEngine {
     if (rr.searchLog != null && rr.searchLog.hasEvent("llm_direct_fallback")) {
       rr.llmFallback = true;
       rr.fallbackReason = "llm_direct_fallback";
+      return;
+    }
+    if (usage != null && usage.anyHttpFailure() && usage.successfulRecordings() == 0) {
+      rr.llmFallback = true;
+      rr.fallbackReason = "llm_request_failed";
       return;
     }
     if (usage == null || usage.calls() == 0) {

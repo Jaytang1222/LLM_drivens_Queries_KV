@@ -52,6 +52,12 @@ public final class TrialResult {
         t.extras.put("llm_fallback", Boolean.TRUE);
         t.extras.put("fallback_reason", rr.fallbackReason);
       }
+      if (rr.llmFailedAttempts != null) {
+        t.extras.put("llm_failed_attempts", rr.llmFailedAttempts);
+      }
+      if (rr.llmHttpStatus != null) {
+        t.extras.put("http_status", rr.llmHttpStatus);
+      }
     }
     t.extras.put("t_wall_ms", Long.valueOf(wallE2eMs));
     // E3 latency is plan+exec. Artifact IO is not part of t_e2e.

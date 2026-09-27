@@ -18,10 +18,8 @@ public final class ParseFairness {
 
   public static ParseTrialResult rejectedTrial(NlItem item, String reason) {
     ParseTrialResult out = new ParseTrialResult();
-    out.reject_expected = item != null && item.reject_expected;
-    out.reject_actual = true;
-    out.clarify_actual = false;
-    out.clarify_expected = item != null && item.clarify_expected;
+    out.reject_actual = Boolean.TRUE;
+    out.clarify_actual = Boolean.FALSE;
     out.t_parse_ms = Long.valueOf(0L);
     out.t_parse_total_ms = Long.valueOf(0L);
     out.t_parse_model_ms = Long.valueOf(0L);
@@ -29,14 +27,14 @@ public final class ParseFairness {
     out.llm_calls = Long.valueOf(0L);
     out.tokens_in = Long.valueOf(0L);
     out.tokens_out = Long.valueOf(0L);
-    if (item != null && item.reject_expected) {
-      out.ok_ir_valid = true;
-      out.ok_ex = true;
-      out.ok = true;
-    } else {
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
-      out.ok = false;
+    out.extras.put("early_reject", Boolean.TRUE);
+    out.extras.put("reject_source", "shared_early_gate");
+    if (reason != null) {
+      out.extras.put("early_reject_reason", reason);
+    }
+    // Gold labels only for scoring — do not drive inference.
+    ParseScore.scoreAgainstGold(out, item);
+    if (!Boolean.TRUE.equals(out.ok_ex) && out.error == null) {
       out.error = reason;
     }
     return out;

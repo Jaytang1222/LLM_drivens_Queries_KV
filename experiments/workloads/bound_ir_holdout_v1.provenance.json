@@ -1,0 +1,24 @@
+{
+  "path": "experiments/workloads/bound_ir_holdout_v1.json",
+  "seed": 20260926,
+  "snapshot": "tdrive_v1_ready",
+  "n_queries": 25,
+  "splits": {
+    "train": 9,
+    "val": 5,
+    "test": 11
+  },
+  "sha256": "0730e5d94251c5192bbeec01225af6493dbcdaacfd0e524e567160d267a467cf",
+  "oracle_status": "pending_fullscan_fill",
+  "generator": "experiments/adapters/generate_holdout_workload.py",
+  "evaluation_role": "diagnostic_leaky",
+  "integrity_status": "FAIL_cross_split_group_leakage",
+  "superseded_by": "experiments/workloads/bound_ir_holdout_v2.json",
+  "split_script": "experiments/adapters/split_holdout_workloads.py",
+  "oracle_fill_script": "scripts/fill-holdout-oracle.sh",
+  "notes": [
+    "v1 is diagnostic-only: catalog.group spans train/val/test (template leakage)",
+    "Use bound_ir_holdout_v2.json for group-disjoint pilot holdout",
+    "Do not treat v1 test as locked confirmatory evaluation"
+  ]
+}

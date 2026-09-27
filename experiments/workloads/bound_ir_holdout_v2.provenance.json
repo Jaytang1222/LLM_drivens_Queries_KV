@@ -1,0 +1,63 @@
+{
+  "path": "experiments/workloads/bound_ir_holdout_v2.json",
+  "holdout_version": "v2",
+  "seed": 20260926,
+  "snapshot": "tdrive_v1_ready",
+  "n_queries": 21,
+  "splits": {
+    "train": 9,
+    "val": 5,
+    "test": 7
+  },
+  "groups_by_split": {
+    "train": [
+      "h2_h_easy",
+      "h2_t_easy",
+      "h2_topk_dtw",
+      "h2_tz_mid",
+      "h2_tzh"
+    ],
+    "val": [
+      "h2_boundary",
+      "h2_t_hard",
+      "h2_th_mid",
+      "h2_topk_frechet"
+    ],
+    "test": [
+      "h2_empty",
+      "h2_topk_hausdorff",
+      "h2_tz_hard",
+      "h2_tzh_test",
+      "h2_z_easy"
+    ]
+  },
+  "sha256": "69d0d057adfe55083dafc9bc18ec28b89f0ff3164beffd1cce1e2097682bd29c",
+  "oracle_status": "frozen",
+  "evaluation_role": "diagnostic_generalization_stress",
+  "generator": "experiments/adapters/generate_holdout_workload_v2.py",
+  "integrity": "holdout_integrity.assert_holdout_integrity",
+  "supersedes_leakage_in": "experiments/workloads/bound_ir_holdout_v1.json",
+  "split_script": "experiments/adapters/split_holdout_workloads.py",
+  "oracle_fill_script": "scripts/fill-holdout-oracle.sh",
+  "notes": [
+    "Physical split via split_holdout_workloads.py --version v2",
+    "FullScan oracle SHA256 only after fill-holdout-oracle.sh --version v2"
+  ],
+  "oracle_splits": {
+    "train": {
+      "oracle_path": "experiments/workloads/bound_ir_holdout_v2_train.oracle.json",
+      "sha256": "661ff892b7121a2eab01bfae03bff36da2019bdfcff765755e2e5686e2199689",
+      "bytes": 41074
+    },
+    "val": {
+      "oracle_path": "experiments/workloads/bound_ir_holdout_v2_val.oracle.json",
+      "sha256": "b9332c35dba11945ba40ffbe1c5891ee886cb97aa7688a53dc1b036fbdf461bd",
+      "bytes": 305202
+    },
+    "test": {
+      "oracle_path": "experiments/workloads/bound_ir_holdout_v2_test.oracle.json",
+      "sha256": "234fb1974e9e70723fa49622499a8c46aeee0cf3c0f437260d8bf3765a69e7f1",
+      "bytes": 72604
+    }
+  }
+}

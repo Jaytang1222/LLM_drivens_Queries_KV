@@ -1,0 +1,220 @@
+{
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "holdout": true,
+  "holdout_version": "v2",
+  "holdout_split": "val",
+  "seed": 20260926,
+  "anchor": {
+    "vehicle_id": "8857",
+    "trajectory_id": "8857-8857_14",
+    "tid": 41360,
+    "point_count": 40,
+    "t_ms": 1202045066000,
+    "x": 470379.38867069356,
+    "y": 4442698.001095969
+  },
+  "evaluation_role": "diagnostic_generalization_stress",
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_t_hard_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201930200000,
+        "end_ms": 1202016600000
+      },
+      "spatial": null,
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_t_hard_b",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201930800000,
+        "end_ms": 1202017200000
+      },
+      "spatial": null,
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_th_mid_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202044800000,
+        "end_ms": 1202045400000
+      },
+      "spatial": null,
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_boundary_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202044800000,
+        "end_ms": 1202044800000
+      },
+      "spatial": null,
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_topk_frechet_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202043000000,
+        "end_ms": 1202044800000
+      },
+      "spatial": {
+        "min_x": 469579.38867069356,
+        "min_y": 4441898.001095969,
+        "max_x": 471179.38867069356,
+        "max_y": 4443498.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    }
+  ],
+  "catalog": {
+    "h2_t_hard_a": {
+      "family": "T",
+      "layer": "hard_large_window",
+      "split": "val",
+      "group": "h2_t_hard"
+    },
+    "h2_t_hard_b": {
+      "family": "T",
+      "layer": "hard_large_window",
+      "split": "val",
+      "group": "h2_t_hard"
+    },
+    "h2_th_mid_a": {
+      "family": "TH",
+      "layer": "multi_index",
+      "split": "val",
+      "group": "h2_th_mid"
+    },
+    "h2_boundary_a": {
+      "family": "T",
+      "layer": "empty_boundary",
+      "split": "val",
+      "group": "h2_boundary"
+    },
+    "h2_topk_frechet_a": {
+      "family": "TOPK",
+      "layer": "topk_metric",
+      "split": "val",
+      "group": "h2_topk_frechet"
+    }
+  },
+  "parent_workload": "experiments/workloads/bound_ir_holdout_v2.json",
+  "oracle_status": "frozen",
+  "notes": [
+    "Split from bound_ir_holdout_v2.json",
+    "Do not retune thresholds on test",
+    "Oracle SHA256 frozen only after fill-holdout-oracle.sh"
+  ],
+  "oracle_sha256": "b9332c35dba11945ba40ffbe1c5891ee886cb97aa7688a53dc1b036fbdf461bd"
+}

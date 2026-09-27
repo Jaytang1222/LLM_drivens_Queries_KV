@@ -1,0 +1,13 @@
+# Offline plan-only shared-pool measure for conditional LLM freeze (train or val).
+# Not a formal comparative table. Use with holdout v2 train/val workloads only.
+kind: compare
+id: plan-shared-pool-freeze-measure
+workload: experiments/workloads/bound_ir_holdout_v2_train.json
+oracle: experiments/workloads/bound_ir_holdout_v2_train.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - plan
+arms:
+  - pool-cbo

@@ -7,10 +7,19 @@ KART_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The Windows checkout is this repository; the WSL checkout follows $HOME so
 # the scripts also work when the WSL login name and home-directory basename
 # differ (as they do on the current machine).
-export KART_SRC="${KART_SRC:-/mnt/f/Projects/LLM_KV}"
+export KART_SRC="${KART_SRC:-/mnt/f/code/InventoryApp}"
 export KART_DST="${KART_DST:-${HOME}/projects/llm-kv}"
 export KART_COMPAT="${KART_COMPAT:-${HOME}/build/LLM_KV}"
-export KART_MAVEN_REPO="${KART_MAVEN_REPO:-$HOME/.m2/repository}"
+# Windows Maven settings often set localRepository to F:\maven-repository. Under WSL
+# that path is relative to the project, so javac cannot see Jackson/json-schema.
+# Prefer the mounted repo when it is present; otherwise the Linux ~/.m2 cache.
+if [[ -n "${KART_MAVEN_REPO:-}" ]]; then
+  export KART_MAVEN_REPO
+elif [[ -d /mnt/f/maven-repository/com/networknt ]]; then
+  export KART_MAVEN_REPO=/mnt/f/maven-repository
+else
+  export KART_MAVEN_REPO="$HOME/.m2/repository"
+fi
 export KART_EXPERIMENT_MANIFEST="${KART_EXPERIMENT_MANIFEST:-tdrive_v1_ready}"
 
 export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-8-openjdk-amd64}"

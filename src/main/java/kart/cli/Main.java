@@ -20,6 +20,7 @@ import picocli.CommandLine.Command;
         BuildFixtureCmd.class,
         BuildOracleCacheCmd.class,
         QueryIrCmd.class,
+        QueryDraftCmd.class,
         QueryNlCmd.class,
         ExplainCmd.class,
         FitCostCmd.class,

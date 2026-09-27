@@ -1,0 +1,35 @@
+{
+  "schema": "kart.conditional_llm_freeze/v1",
+  "status": "frozen_for_test",
+  "notes": [
+    "Frozen from holdout v2 train/val SharedCandidatePool (pool-cbo) measurement",
+    "Train/val: n_safe_min=2; all measured rows have uncertainty=HIGH so LLM triggers primarily via uncertainty",
+    "Observed CostCard rel_gap p50 is large (>>1); keep rel_gap=0.15 as the close-cost gate, not the clamped median",
+    "Do not retune after locking the holdout v2 test split"
+  ],
+  "rel_gap": 0.15,
+  "max_llm": 1,
+  "holdout_version": "v2",
+  "tune_splits": ["train", "val"],
+  "eval_split": "test",
+  "measurement": {
+    "train": {
+      "source": "experiments/results/freeze-measure-train-v2/plan.jsonl",
+      "n_rows": 9,
+      "n_safe_mean": 4.222222222222222,
+      "n_safe_min": 2,
+      "rel_gap_p50": 8.559533741443035,
+      "rel_gap_p90": 6958.449212649662,
+      "rows_with_high_uncertainty": 9
+    },
+    "val": {
+      "source": "experiments/results/freeze-measure-val-v2/plan.jsonl",
+      "n_rows": 5,
+      "n_safe_mean": 2.8,
+      "n_safe_min": 2,
+      "rel_gap_p50": 194.41840940263288,
+      "rel_gap_p90": 803.416919242511,
+      "rows_with_high_uncertainty": 5
+    }
+  }
+}

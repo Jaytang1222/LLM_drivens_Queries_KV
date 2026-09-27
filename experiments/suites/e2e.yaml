@@ -1,10 +1,13 @@
 # E3 — end-to-end from gold BoundIR
 # trials: 3 is harness/smoke. Formal first-run: --cache cold --trials 1
 # Formal warm P50/P95: --cache warm --trials 5
+# Default = operating-region slice v2 (advantage_v1 ∪ hard a2_*).
+# BoundIR-65 remains regression / oracle-diff:
+#   --workload experiments/workloads/bound_ir_v1.json
 kind: compare
 id: e2e
-workload: experiments/workloads/bound_ir_v1.json
-oracle: experiments/workloads/bound_ir_v1.oracle.json
+workload: experiments/workloads/bound_ir_advantage_v2.json
+oracle: experiments/workloads/bound_ir_advantage_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3
@@ -15,3 +18,4 @@ arms:
   - rbo
   - cbo
   - kart
+  - kart-conditional-llm

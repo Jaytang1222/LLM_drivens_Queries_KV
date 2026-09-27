@@ -1,0 +1,24 @@
+# E2 — shared SafePlan pool selection (comparative §6.10.3)
+# Separate from native-search plan.yaml. Do not mix regret scopes in one table.
+#
+# Enumeration: PlanBuilder.buildCandidates + shared validator/cost (runFixed).
+# Selectors see the same n_safe / CostCards; candidate_search=false.
+# Report pool_regret_ms (shared pool) — not arm-local beam regret.
+#
+# Default = operating-region slice v2. BoundIR-65 remains regression:
+#   --workload experiments/workloads/bound_ir_v1.json
+# Freeze thresholds stay on holdout v2 train/val (plan-shared-pool-freeze-measure.yaml).
+kind: compare
+id: plan-shared-pool
+workload: experiments/workloads/bound_ir_advantage_v2.json
+oracle: experiments/workloads/bound_ir_advantage_v2.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 3
+stages:
+  - plan
+arms:
+  - pool-cbo
+  - pool-bao
+  - pool-conditional-llm
+  - pool-llm

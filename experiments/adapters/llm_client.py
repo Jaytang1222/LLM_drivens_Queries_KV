@@ -21,6 +21,7 @@ def merge_usage(acc: dict, u: dict) -> dict:
     if not u:
         return acc
     acc["calls"] = (acc.get("calls") or 0) + (u.get("calls") or 1)
+    acc["failed_attempts"] = (acc.get("failed_attempts") or 0) + (u.get("failed_attempts") or 0)
     acc["prompt_tokens"] = (acc.get("prompt_tokens") or 0) + (u.get("prompt_tokens") or 0)
     acc["completion_tokens"] = (acc.get("completion_tokens") or 0) + (
         u.get("completion_tokens") or 0
@@ -29,6 +30,15 @@ def merge_usage(acc: dict, u: dict) -> dict:
     acc["json_mode_fallbacks"] = (acc.get("json_mode_fallbacks") or 0) + (
         1 if u.get("json_mode_fallback") else 0
     )
+    if u.get("http_status") is not None:
+        acc["http_status"] = u.get("http_status")
+        statuses = list(acc.get("http_statuses") or [])
+        for s in u.get("http_statuses") or [u.get("http_status")]:
+            if s is not None:
+                statuses.append(s)
+        acc["http_statuses"] = statuses
+    if u.get("infrastructure_failure"):
+        acc["infrastructure_failure"] = True
     acc["model"] = u.get("model") or acc.get("model")
     acc["temperature"] = u.get("temperature") if u.get("temperature") is not None else acc.get(
         "temperature"
@@ -37,13 +47,30 @@ def merge_usage(acc: dict, u: dict) -> dict:
     return acc
 
 
+class LlmHttpError(RuntimeError):
+    """HTTP failure from the shared chat gateway (includes audit usage)."""
+
+    def __init__(self, status: int, body: str, usage: dict):
+        super().__init__("HTTP %s: %s" % (status, (body or "")[:400]))
+        self.status = int(status)
+        self.body = body or ""
+        self.usage = usage or {}
+
+
+def _is_infrastructure_http(code: int) -> bool:
+    return code in (401, 402, 403, 429) or code >= 500
+
+
 def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
     """
     Shared LLM call for all Python bridges.
     json_mode: True force JSON object; False free text; None = FAIRNESS default (True).
     DIN intermediate stages must pass json_mode=False (upstream free-text completions).
-    A JSON-mode HTTP failure retries without response_format and counts as 2 calls.
+    JSON-mode retry without response_format runs only on HTTP 400 (format rejection),
+    never on 401/402/403/429/5xx.
     """
+    import urllib.error
+
     base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
     model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
@@ -73,27 +100,43 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                raw = resp.read().decode("utf-8")
+                return int(resp.getcode() or 200), json.loads(raw), raw
+        except urllib.error.HTTPError as e:
+            raw = ""
+            try:
+                raw = e.read().decode("utf-8", errors="replace") if e.fp is not None else ""
+            except Exception:
+                raw = str(e)
+            return int(e.code), None, raw
 
     t0 = time.perf_counter()
-    attempts = 1
+    http_statuses = []
+    attempts = 0
     json_fallback = False
-    try:
-        data = _post(body)
-    except Exception:
-        if not json_mode:
-            raise
+
+    code, data, raw = _post(body)
+    attempts = 1
+    http_statuses.append(code)
+
+    # Only treat HTTP 400 as a possible response_format rejection.
+    if (
+        code >= 400
+        and json_mode
+        and code == 400
+        and body.get("response_format") is not None
+    ):
         body.pop("response_format", None)
         json_fallback = True
+        code2, data2, raw2 = _post(body)
         attempts = 2
-        data = _post(body)
+        http_statuses.append(code2)
+        code, data, raw = code2, data2, raw2
+
     t_ms = int((time.perf_counter() - t0) * 1000)
-    choice = data["choices"][0]["message"]["content"]
-    usage = data.get("usage") or {}
-    return choice, {
-        "prompt_tokens": usage.get("prompt_tokens"),
-        "completion_tokens": usage.get("completion_tokens"),
+    base_usage = {
         "calls": attempts,
         "model": model,
         "temperature": temperature,
@@ -101,7 +144,25 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
         "json_mode_fallback": json_fallback,
         "t_model_ms": max(0, t_ms),
         "fairness": FAIRNESS,
+        "http_status": code,
+        "http_statuses": list(http_statuses),
     }
+
+    if code >= 400 or data is None:
+        fail_usage = dict(base_usage)
+        fail_usage["failed_attempts"] = attempts
+        fail_usage["prompt_tokens"] = 0
+        fail_usage["completion_tokens"] = 0
+        fail_usage["infrastructure_failure"] = _is_infrastructure_http(code)
+        raise LlmHttpError(code, raw or "", fail_usage)
+
+    choice = data["choices"][0]["message"]["content"]
+    usage = data.get("usage") or {}
+    out = dict(base_usage)
+    out["prompt_tokens"] = usage.get("prompt_tokens")
+    out["completion_tokens"] = usage.get("completion_tokens")
+    out["failed_attempts"] = 0
+    return choice, out
 
 
 def extract_json(text: str):
@@ -144,8 +205,13 @@ DIN_SCHEMA_FIELDS = (
 )
 DIN_FOREIGN_KEYS = "[]"
 
-# Minimal DraftIR skeleton shown to generators (shared surface)
+# Minimal DraftIR skeleton shown to generators — must match schemas/draft-ir.schema.json
 DRAFT_IR_HINT = (
-    'DraftIR JSON shape: {"ir_version":"v1","source":{"dataset_id":"tdrive_v1"},'
-    '"temporal":{"start":"...","end":"..."},"spatial":{...},"result":{"mode":"TRAJECTORY_IDS"}}'
+    'DraftIR JSON shape (ir_version MUST be "1.0"): '
+    '{"ir_version":"1.0",'
+    '"source":{"dataset_id":"tdrive_v1","entity":"trajectory"},'
+    '"semantics":{"mode":"OBSERVED_POINT","coupling":"SAME_POINT"},'
+    '"temporal":{"start":"...","end":"..."},'
+    '"spatial":{"region_name":"..."} OR {"geometry":{"type":"RECTANGLE",...}},'
+    '"result":{"mode":"TRAJECTORY_IDS"}}'
 )

@@ -21,7 +21,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from llm_client import chat, extract_json, merge_usage  # noqa: E402
+from llm_client import LlmHttpError, chat, extract_json, merge_usage  # noqa: E402
 
 PLAN_FAMILY = [
     "P_FULL",
@@ -102,6 +102,15 @@ def main():
             "usage": usage,
             "protocol": "llmopt_G_then_S",
             "provenance": PROVENANCE,
+        }
+    except LlmHttpError as e:
+        out = {
+            "status": "FAILED",
+            "error": str(e),
+            "usage": merge_usage(usage, e.usage),
+            "provenance": PROVENANCE,
+            "infrastructure_failure": True,
+            "http_status": e.status,
         }
     except Exception as e:
         out = {

@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * ParseArm that shells out to a Python adapter bridge (DIN / SAG).
  * Bridge stdout: JSON {@code {status, draft?, error?, usage?}}.
+ * Inference is label-blind; gold reject/clarify labels are applied only via {@link ParseScore}.
  */
 public final class ProcessParseArm implements ParseArm {
 
@@ -65,6 +66,62 @@ public final class ProcessParseArm implements ParseArm {
     return new ProcessParseArm("sag", cmd);
   }
 
+  /** Deep DIN: logical SQL → DraftIR (Spider stages). */
+  public static ProcessParseArm dinSqlSpider(Path root) {
+    Path script = root.resolve("experiments/adapters/din/din_sql_bridge.py");
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add(script.toString());
+    cmd.add("--mode");
+    cmd.add("spider");
+    return new ProcessParseArm("din-sql-spider", cmd);
+  }
+
+  /** Deep DIN: logical SQL → DraftIR (BIRD templates). */
+  public static ProcessParseArm dinSqlBird(Path root) {
+    Path script = root.resolve("experiments/adapters/din/din_sql_bridge.py");
+    Path knowledge = root.resolve("experiments/adapters/din/bird_knowledge.txt");
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add(script.toString());
+    cmd.add("--mode");
+    cmd.add("bird");
+    cmd.add("--knowledge");
+    cmd.add(knowledge.toString());
+    return new ProcessParseArm("din-sql-bird", cmd);
+  }
+
+  /** Deep SAG: logical MQL → DraftIR with WorldAccess feedback. */
+  public static ProcessParseArm sagMql(Path root) {
+    Path script = root.resolve("experiments/adapters/sag/sag_mql_bridge.py");
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add(script.toString());
+    cmd.add("--feedback");
+    cmd.add("on");
+    return new ProcessParseArm("sag-mql", cmd);
+  }
+
+  /** SAG MQL without execution feedback (ablation). */
+  public static ProcessParseArm sagMqlNoFeedback(Path root) {
+    Path script = root.resolve("experiments/adapters/sag/sag_mql_bridge.py");
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add(script.toString());
+    cmd.add("--feedback");
+    cmd.add("off");
+    return new ProcessParseArm("sag-mql-nofeedback", cmd);
+  }
+
+  /** Same-model direct DraftIR baseline. */
+  public static ProcessParseArm directDraftIr(Path root) {
+    Path script = root.resolve("experiments/adapters/direct/direct_draft_bridge.py");
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add(script.toString());
+    return new ProcessParseArm("direct-draftir", cmd);
+  }
+
   private static String pythonBin() {
     String env = System.getenv("KART_PYTHON");
     return env != null && !env.isEmpty() ? env : "python3";
@@ -78,11 +135,11 @@ public final class ProcessParseArm implements ParseArm {
   @Override
   public ParseTrialResult parse(NlItem item, BenchContext ctx) throws Exception {
     ParseTrialResult out = new ParseTrialResult();
-    out.reject_expected = item != null && item.reject_expected;
     if (item == null || item.utterance == null || item.utterance.trim().isEmpty()) {
       out.error = "empty utterance";
       out.ok_ex = Boolean.FALSE;
       out.ok_ir_valid = Boolean.FALSE;
+      ParseScore.attachGoldLabels(out, item);
       return out;
     }
     String early = ParseFairness.earlyReject(item.utterance.trim());
@@ -122,8 +179,8 @@ public final class ProcessParseArm implements ParseArm {
       out.t_parse_model_ms = Long.valueOf(0L);
       out.t_adapter_startup_ms = Long.valueOf(procMs);
       out.error = "bridge timeout";
-      out.ok_ex = Boolean.FALSE;
-      out.ok_ir_valid = Boolean.FALSE;
+      out.extras.put("infrastructure_failure", Boolean.TRUE);
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
     String stdout = new String(bos.toByteArray(), StandardCharsets.UTF_8).trim();
@@ -135,8 +192,7 @@ public final class ProcessParseArm implements ParseArm {
       out.t_parse_ms = Long.valueOf(procMs);
       out.t_parse_total_ms = Long.valueOf(procMs);
       out.error = "bridge bad JSON: " + e.getMessage() + " raw=" + truncate(stdout, 400);
-      out.ok_ex = Boolean.FALSE;
-      out.ok_ir_valid = Boolean.FALSE;
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
     long modelMs = 0L;
@@ -163,6 +219,15 @@ public final class ProcessParseArm implements ParseArm {
       if (u.has("json_mode_fallbacks")) {
         out.extras.put("json_mode_fallbacks", Long.valueOf(u.get("json_mode_fallbacks").asLong()));
       }
+      if (u.has("failed_attempts")) {
+        out.extras.put("llm_failed_attempts", Long.valueOf(u.get("failed_attempts").asLong()));
+      }
+      if (u.has("http_status")) {
+        out.extras.put("http_status", Integer.valueOf(u.get("http_status").asInt()));
+      }
+      if (u.has("infrastructure_failure") && u.get("infrastructure_failure").asBoolean()) {
+        out.extras.put("infrastructure_failure", Boolean.TRUE);
+      }
     }
     if (root.has("timing") && root.get("timing").has("t_model_ms")) {
       modelMs = root.get("timing").get("t_model_ms").asLong();
@@ -174,73 +239,41 @@ public final class ProcessParseArm implements ParseArm {
     String status = root.path("status").asText("");
     boolean unsupported = "UNSUPPORTED_QUERY".equals(status);
     boolean needClarify = "NEED_CLARIFICATION".equals(status);
-    out.reject_actual = unsupported;
-    out.clarify_expected = item.clarify_expected;
-    out.clarify_actual = needClarify;
+    out.reject_actual = Boolean.valueOf(unsupported);
+    out.clarify_actual = Boolean.valueOf(needClarify);
 
     long bindStart = System.currentTimeMillis();
-    // Bind (to BoundIR) is part of t_parse_total; EX execution is not.
-    if (item.clarify_expected) {
-      // Binder may still be needed if the model emitted a draft.
-      if (!needClarify && root.has("draft")) {
-        try {
-          DraftIr draft = DraftIr.fromJson(root.get("draft").toString());
-          AppConfig cfg = AppConfig.load(ctx.root);
-          IrBinder binder = new IrBinder(
-              cfg.regions(), ctx.kv, ctx.layout.tableMeta, ctx.layout.shardCount,
-              ctx.manifest.manifest_id, "point_similarity_v2");
-          IrBinder.BindResult br = binder.bind(draft, System.currentTimeMillis());
-          if (IrBinder.STATUS_NEED_CLARIFICATION.equals(br.status)) {
-            needClarify = true;
-            out.clarify_actual = true;
-          }
-        } catch (Exception ignore) {
-          //
-        }
+
+    if ("INFRASTRUCTURE_FAILURE".equals(status)) {
+      out.extras.put("infrastructure_failure", Boolean.TRUE);
+      stampParseTimes(out, t0, procMs, modelMs, bindStart);
+      out.error = root.path("error").asText("INFRASTRUCTURE_FAILURE");
+      ParseScore.scoreAgainstGold(out, item);
+      return out;
+    }
+    if ("FAILED".equals(status)) {
+      // May be infra (legacy) or adapter crash — mark infra when HTTP status present.
+      if (out.extras.containsKey("http_status")
+          || Boolean.TRUE.equals(out.extras.get("infrastructure_failure"))) {
+        out.extras.put("infrastructure_failure", Boolean.TRUE);
       }
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = needClarify;
-      out.ok_ex = needClarify;
-      out.ok = needClarify;
-      if (!needClarify) {
-        out.error = "expected NEED_CLARIFICATION but status=" + status;
-      }
+      out.error = root.path("error").asText("FAILED");
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
 
-    if (item.reject_expected) {
+    if (unsupported || needClarify) {
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = unsupported;
-      out.ok_ex = unsupported;
-      out.ok = unsupported;
-      if (!unsupported) {
-        out.error = "expected reject but status=" + status;
-      }
+      out.error = root.path("error").asText(status);
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
 
-    if (unsupported) {
-      stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
-      out.ok = false;
-      out.error = root.path("error").asText("unsupported");
-      return out;
-    }
-    if (needClarify) {
-      stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
-      out.ok = false;
-      out.error = root.path("error").asText("NEED_CLARIFICATION");
-      return out;
-    }
     if (!"OK".equals(status) || !root.has("draft")) {
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
-      out.ok = false;
       out.error = root.path("error").asText("status=" + status);
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
 
@@ -251,9 +284,8 @@ public final class ProcessParseArm implements ParseArm {
     try {
       if (!validator.validateDraftIr(draftJson).isEmpty()) {
         stampParseTimes(out, t0, procMs, modelMs, bindStart);
-        out.ok_ir_valid = false;
-        out.ok_ex = false;
         out.error = "DraftIR schema invalid: " + validator.validateDraftIr(draftJson);
+        ParseScore.scoreAgainstGold(out, item);
         return out;
       }
     } catch (Exception e) {
@@ -266,29 +298,26 @@ public final class ProcessParseArm implements ParseArm {
         ctx.manifest.manifest_id, "point_similarity_v2");
     IrBinder.BindResult br = binder.bind(draft, System.currentTimeMillis());
     if (IrBinder.STATUS_NEED_CLARIFICATION.equals(br.status)) {
-      out.clarify_actual = true;
+      out.clarify_actual = Boolean.TRUE;
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
       out.error = br.error != null ? br.error : "NEED_CLARIFICATION";
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
     if (IrBinder.STATUS_UNSUPPORTED_QUERY.equals(br.status)) {
-      out.reject_actual = true;
+      out.reject_actual = Boolean.TRUE;
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = Boolean.valueOf(item.reject_expected);
       out.error = br.error;
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
     if (!IrBinder.STATUS_OK.equals(br.status) || br.bound == null) {
       stampParseTimes(out, t0, procMs, modelMs, bindStart);
-      out.ok_ir_valid = false;
-      out.ok_ex = false;
       out.error = br.error != null ? br.error : br.status;
+      ParseScore.scoreAgainstGold(out, item);
       return out;
     }
-    out.ok_ir_valid = true;
+    out.ok_ir_valid = Boolean.TRUE;
     out.bound = br.bound;
     stampParseTimes(out, t0, procMs, modelMs, bindStart);
 
@@ -297,10 +326,16 @@ public final class ProcessParseArm implements ParseArm {
     QueryEngine.RunResult rr = engine.run(br.bound, art, false, null);
     out.queryResult = rr == null ? null : rr.result;
     String mismatch = KartParseArm.compareGold(item, out.queryResult);
-    out.ok_ex = mismatch == null;
-    out.ok = out.ok_ex;
+    out.ok_ex = Boolean.valueOf(mismatch == null);
+    out.ok = Boolean.TRUE.equals(out.ok_ex);
     if (mismatch != null) {
       out.error = mismatch;
+    }
+    // Gold reject/clarify expected on a successful bind+EX path still scores via gold.
+    if (item.reject_expected || item.clarify_expected) {
+      ParseScore.scoreAgainstGold(out, item);
+    } else {
+      ParseScore.attachGoldLabels(out, item);
     }
     return out;
   }

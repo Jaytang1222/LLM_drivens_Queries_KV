@@ -69,7 +69,8 @@ public final class OpenAiCompatibleClient implements LlmClient {
       Posted posted = post(baseUrl + "/chat/completions", payload, o.timeoutMs, apiKey);
       int attempts = 1;
       boolean jsonFallback = false;
-      if (posted.code >= 400 && o.jsonObjectFormat && jsonModeSupported && body.has("response_format")) {
+      // JSON-mode retry only on HTTP 400 (format rejection) — never on 401/402/403/429/5xx.
+      if (posted.code == 400 && o.jsonObjectFormat && jsonModeSupported && body.has("response_format")) {
         jsonFallback = true;
         attempts = 2;
         body.remove("response_format");
@@ -79,7 +80,8 @@ public final class OpenAiCompatibleClient implements LlmClient {
         posted = retry;
       }
       if (posted.code >= 400) {
-        throw new LlmException("HTTP " + posted.code + ": " + posted.raw);
+        throw new LlmException("HTTP " + posted.code + ": " + posted.raw,
+            Integer.valueOf(posted.code));
       }
 
       JsonNode root = MAPPER.readTree(posted.raw);

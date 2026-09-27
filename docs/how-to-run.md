@@ -9,7 +9,7 @@ Windows 改代码后必须同步再跑实验：
 ```
 
 路径：**Live LLM → BoundIR → BeamSearch → HBase（T-Drive / `tdrive_v1_ready`）** 为生产/验收主路径。  
-单元/性质测试仍可使用 `MemoryBackend` + fixture（不替代 HBase smoke）。对比实验 `bench-*.sh` 见 `spec/comparative_experiment.md`；运行前必须先读 [`comparative-experiment-readiness-2026-09-25.md`](comparative-experiment-readiness-2026-09-25.md)，其中列出了公平性门禁和当前已知限制。
+单元/性质测试仍可使用 `MemoryBackend` + fixture（不替代 HBase smoke）；`testdata/fixture-v1/` 是 `build-fixture` 命令可按需重新生成的样例。对比实验 `bench-*.sh` 见 `spec/comparative_experiment.md`；运行前先读 [`comparative-experiment-readiness-2026-09-25.md`](comparative-experiment-readiness-2026-09-25.md)。消融当前验收与旧冻结批次的边界见 [`ablation-experiment-readiness-2026-09-25.md`](ablation-experiment-readiness-2026-09-25.md)。
 
 ## 主流程
 

@@ -27,16 +27,31 @@ public final class ArmRegistry {
 
     register(new BaoPlanArm(root));
     register(new LlmOptPlanArm(root));
+    register(ConditionalLlmArm.fromRoot(root));
+    register(SharedPoolPlanArm.cbo(root));
+    register(SharedPoolPlanArm.bao(root));
+    register(SharedPoolPlanArm.conditionalLlm(root));
+    register(SharedPoolPlanArm.llm(root));
 
     // Keep unsupported stubs for din/sag as Arm (plan stage shouldn't use them)
     register(new UnsupportedArm("din-spider", "use parse stage"));
     register(new UnsupportedArm("din-bird", "use parse stage"));
+    register(new UnsupportedArm("din-sql-spider", "use parse stage"));
+    register(new UnsupportedArm("din-sql-bird", "use parse stage"));
     register(new UnsupportedArm("sag", "use parse stage"));
+    register(new UnsupportedArm("sag-mql", "use parse stage"));
+    register(new UnsupportedArm("sag-mql-nofeedback", "use parse stage"));
+    register(new UnsupportedArm("direct-draftir", "use parse stage"));
 
     registerParse(new KartParseArm());
     registerParse(ProcessParseArm.dinSpider(root));
     registerParse(ProcessParseArm.dinBird(root));
+    registerParse(ProcessParseArm.dinSqlSpider(root));
+    registerParse(ProcessParseArm.dinSqlBird(root));
     registerParse(ProcessParseArm.sag(root));
+    registerParse(ProcessParseArm.sagMql(root));
+    registerParse(ProcessParseArm.sagMqlNoFeedback(root));
+    registerParse(ProcessParseArm.directDraftIr(root));
   }
 
   /** @deprecated use {@link #ArmRegistry(Path)} */

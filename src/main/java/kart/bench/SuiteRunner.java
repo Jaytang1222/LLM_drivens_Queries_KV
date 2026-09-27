@@ -37,6 +37,25 @@ public final class SuiteRunner {
   /** Formal BoundIR cardinality for {@code bound_ir_v1.json} (spec / audit gate). */
   public static final int FORMAL_BOUND_IR_COUNT = 65;
 
+  /** E1/E2/E3 arm rotation: {@code shift = (trial-1 + queryIndex) % nArm}. */
+  static int armShift(int trial1Based, int queryIndex, int nArm) {
+    if (nArm <= 0) {
+      return 0;
+    }
+    int t = Math.max(1, trial1Based) - 1;
+    int q = Math.max(0, queryIndex);
+    return (t + q) % nArm;
+  }
+
+  static int armIndex(int position, int shift, int nArm) {
+    if (nArm <= 0) {
+      return 0;
+    }
+    int pos = Math.max(0, position);
+    int sh = Math.max(0, shift);
+    return (pos + sh) % nArm;
+  }
+
   public static final class Options {
     public Path root;
     public Path suitePath;
@@ -140,7 +159,8 @@ public final class SuiteRunner {
     boolean needLlm = hasParse;
     for (RunCell c : cells) {
       if ("llm".equals(c.armId) || "llm_direct".equals(c.armId)
-          || "kart".equals(c.armId) || "llmopt".equals(c.armId)) {
+          || "kart".equals(c.armId) || "llmopt".equals(c.armId)
+          || "kart-conditional-llm".equals(c.armId)) {
         needLlm = true;
         break;
       }
@@ -193,28 +213,51 @@ public final class SuiteRunner {
       TrialWriter e2eWriter = null;
       TrialWriter ablationWriter = null;
       try {
-        for (RunCell cell : cells) {
-          if (cell.unsafe && !opt.allowUnsafe) {
-            System.out.println("BENCH skip unsafe cell " + cell.label);
-            continue;
+        boolean suiteHasParse = false;
+        for (String stage : suite.stages) {
+          if ("parse".equalsIgnoreCase(stage)) {
+            suiteHasParse = true;
+            break;
           }
-          AppConfig.PlannerConfig planner = PlannerOverlay.apply(basePlanner, cell.overrides, opt.root);
-          for (String stage : suite.stages) {
-            if ("parse".equalsIgnoreCase(stage)) {
-              ParseArm parm = registry.resolveParse(cell.armId);
-              if (parm == null) {
-                System.err.println("BENCH unknown parse arm: " + cell.armId);
-                continue;
-              }
-              BenchContext ctx = newCtx(opt, suite, stage, true, suite.require_oracle,
-                  resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell);
-              for (NlItem item : nlItems) {
-                for (int trial = 1; trial <= trialCount; trial++) {
+        }
+        List<RunCell> parseCells = new ArrayList<RunCell>();
+        List<ParseArm> parseArms = new ArrayList<ParseArm>();
+        List<BenchContext> parseCtxs = new ArrayList<BenchContext>();
+        if (suiteHasParse) {
+          for (RunCell cell : cells) {
+            if (cell.unsafe && !opt.allowUnsafe) {
+              System.out.println("BENCH skip unsafe cell " + cell.label);
+              continue;
+            }
+            ParseArm parm = registry.resolveParse(cell.armId);
+            if (parm == null) {
+              System.err.println("BENCH unknown parse arm: " + cell.armId);
+              continue;
+            }
+            AppConfig.PlannerConfig planner = PlannerOverlay.apply(basePlanner, cell.overrides, opt.root);
+            parseCells.add(cell);
+            parseArms.add(parm);
+            parseCtxs.add(newCtx(opt, suite, "parse", true, suite.require_oracle,
+                resultDir, manifest, layout, stats, planner, kv, llm, oracle, queries, cell));
+          }
+        }
+        int nParse = parseCells.size();
+        for (int trial = 1; trial <= trialCount && nParse > 0; trial++) {
+          for (int qi = 0; qi < nlItems.size(); qi++) {
+            NlItem item = nlItems.get(qi);
+            int shift = armShift(trial, qi, nParse);
+            for (int pos = 0; pos < nParse; pos++) {
+              int ai = armIndex(pos, shift, nParse);
+              RunCell cell = parseCells.get(ai);
+              ParseArm parm = parseArms.get(ai);
+              BenchContext ctx = parseCtxs.get(ai);
                   Map<String, Object> row = new LinkedHashMap<String, Object>();
                   row.put("run_id", opt.runId);
                   row.put("query_id", item.query_id);
                   row.put("arm", cell.label);
                   row.put("trial", Integer.valueOf(trial));
+                  row.put("arm_position", Integer.valueOf(pos));
+                  row.put("arm_order_shift", Integer.valueOf(shift));
                   row.put("cache", opt.cache == null ? "cold" : opt.cache);
 
                   ParseTrialResult tr;
@@ -249,6 +292,12 @@ public final class SuiteRunner {
                   String qClass = item.clarify_expected ? "clarify"
                       : (item.reject_expected ? "reject" : "supported");
                   row.put("query_class", qClass);
+                  if (Boolean.TRUE.equals(tr.extras.get("infrastructure_failure"))) {
+                    row.put("fail_class", "infrastructure");
+                  } else if (Boolean.TRUE.equals(tr.extras.get("early_reject"))) {
+                    row.put("fail_class", Boolean.TRUE.equals(tr.ok_ex) ? "ok" : "method");
+                    row.put("reject_source", "shared_early_gate");
+                  }
                   if (tr.extras != null) {
                     for (Map.Entry<String, Object> extra : tr.extras.entrySet()) {
                       if (extra.getKey() != null && extra.getValue() != null
@@ -267,12 +316,11 @@ public final class SuiteRunner {
                     parseWriter.write(row);
                   }
                   allTrials.add(row);
-                  System.out.println("BENCH parse cell=" + cell.label + " q=" + item.query_id
+                  System.out.println("BENCH parse cell=" + cell.label
+                      + " arm_position=" + pos
+                      + " q=" + item.query_id
                       + " ok_ex=" + tr.ok_ex + " t_parse_ms=" + tr.t_parse_ms
                       + (tr.error != null ? (" err=" + tr.error) : ""));
-                }
-              }
-              continue;
             }
           }
         }
@@ -325,9 +373,9 @@ public final class SuiteRunner {
             for (int w = 0; w < cacheProtocol.warmupPasses; w++) {
               for (int qi = 0; qi < queries.size(); qi++) {
                 BoundIr ir = queries.get(qi);
-                int shift = nArm == 0 ? 0 : (w + qi) % nArm;
+                int shift = armShift(w + 1, qi, nArm);
                 for (int pos = 0; pos < nArm; pos++) {
-                  int ai = (pos + shift) % nArm;
+                  int ai = armIndex(pos, shift, nArm);
                   try {
                     arms.get(ai).run(ir, warmCtxs.get(ai));
                   } catch (Exception ignore) {
@@ -340,9 +388,9 @@ public final class SuiteRunner {
           for (int trial = 1; trial <= trialCount; trial++) {
             for (int qi = 0; qi < queries.size(); qi++) {
               BoundIr ir = queries.get(qi);
-              int shift = nArm == 0 ? 0 : (trial - 1 + qi) % nArm;
+              int shift = armShift(trial, qi, nArm);
               for (int pos = 0; pos < nArm; pos++) {
-                int ai = (pos + shift) % nArm;
+                int ai = armIndex(pos, shift, nArm);
                 RunCell cell = runnable.get(ai);
                 Map<String, Object> row = new LinkedHashMap<String, Object>();
                 row.put("run_id", opt.runId);
@@ -394,15 +442,9 @@ public final class SuiteRunner {
                     }
                   }
                   if (Boolean.TRUE.equals(tr.extras.get("llm_fallback"))
-                      && ("kart".equals(cell.armId) || "llm".equals(cell.armId)
-                      || "llm_direct".equals(cell.armId))) {
+                      && splitsOnLlmFallback(cell.armId)) {
                     row.put("arm_requested", cell.label);
-                    if (isAblation(suite)) {
-                      row.put("arm", cell.label + "-rule-fallback");
-                    } else {
-                      row.put("arm", "kart".equals(cell.armId)
-                          ? "kart-rule-fallback" : (cell.armId + "-rule-fallback"));
-                    }
+                    row.put("arm", fallbackArmName(cell.armId, cell.label, isAblation(suite)));
                   }
                 }
                 ensureLlmSchema(row);
@@ -1057,6 +1099,26 @@ public final class SuiteRunner {
         row.put("empty_boundary", "interior");
       }
     }
+  }
+
+  /** LLM rows that fell back to a rule/CBO plan must not share the pure-LLM arm name. */
+  static boolean splitsOnLlmFallback(String armId) {
+    return "kart".equals(armId)
+        || "llm".equals(armId)
+        || "llm_direct".equals(armId)
+        || "kart-conditional-llm".equals(armId)
+        || "pool-llm".equals(armId)
+        || "pool-conditional-llm".equals(armId);
+  }
+
+  static String fallbackArmName(String armId, String label, boolean ablation) {
+    if (ablation) {
+      return (label == null || label.isEmpty() ? armId : label) + "-rule-fallback";
+    }
+    if ("kart".equals(armId)) {
+      return "kart-rule-fallback";
+    }
+    return armId + "-rule-fallback";
   }
 
   static boolean isUncalibratedOverride(Map<String, Object> overrides) {

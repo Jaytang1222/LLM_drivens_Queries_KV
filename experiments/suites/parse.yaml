@@ -1,5 +1,8 @@
-# E1 — LLM → IR
-# Default trials=3 is smoke. Formal single-round table: --trials 1
+# E1 — LLM → IR (deep transplants + baselines)
+# Keep legacy din-*/sag as diagnostic DraftIR-direct arms.
+# Formal deep table without real WorldAccess:
+#   --arm kart,direct-draftir,din-sql-spider,din-sql-bird,sag-mql-nofeedback
+# Enable sag-mql only after a snapshot-aligned HBase/Mongo WorldAccess is verified.
 kind: compare
 id: parse
 workload: experiments/workloads/nl_ir_v1.json
@@ -11,6 +14,13 @@ stages:
   - parse
 arms:
   - kart
-  - din-spider
-  - din-bird
-  - sag
+  - direct-draftir
+  - din-sql-spider
+  - din-sql-bird
+  - sag-mql-nofeedback
+  # requires real WorldAccess (not sample JSON):
+  # - sag-mql
+  # diagnostic DraftIR-direct (legacy):
+  # - din-spider
+  # - din-bird
+  # - sag

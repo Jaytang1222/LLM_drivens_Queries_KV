@@ -1,9 +1,24 @@
 # E2 — plan generate→select
-# plan_ok is availability, not Oracle quality. Default trials=3 is smoke.
+# Formal arms include conditional LLM; bao remains CostCard surrogate (not trained Bao).
+#
+# Default = operating-region slice v2 (advantage_v1 ∪ hard a2_*).
+# BoundIR-65 remains regression / oracle-diff / WorldAccess alignment:
+#   --workload experiments/workloads/bound_ir_v1.json
+# Prior slice (no hard expansion): bound_ir_advantage_v1.json
+# Holdout v2 (group-disjoint; after scripts/fill-holdout-oracle.sh --version v2):
+#   --workload experiments/workloads/bound_ir_holdout_v2_train.json
+#   --workload experiments/workloads/bound_ir_holdout_v2_val.json
+#   --workload experiments/workloads/bound_ir_holdout_v2_test.json  # evaluate once
+# Never retune KART_COND_* on the locked test split.
+# v1 holdout is leaky (cross-split groups) — diagnostic only.
+# This suite is native-search (each arm builds its own candidates).
+# Shared-pool selection is a SEPARATE suite: experiments/suites/plan-shared-pool.yaml
+#   arms: pool-cbo, pool-bao, pool-conditional-llm
+# Do not mix native plan_regret_ms with pool_regret_ms in one main table.
 kind: compare
 id: plan
-workload: experiments/workloads/bound_ir_v1.json
-oracle: experiments/workloads/bound_ir_v1.oracle.json
+workload: experiments/workloads/bound_ir_advantage_v2.json
+oracle: experiments/workloads/bound_ir_advantage_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: false
 trials: 3
@@ -11,5 +26,7 @@ stages:
   - plan
 arms:
   - kart
+  - kart-conditional-llm
+  - cbo
   - bao
   - llmopt

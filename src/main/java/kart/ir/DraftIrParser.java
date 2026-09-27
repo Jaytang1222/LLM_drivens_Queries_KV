@@ -92,6 +92,9 @@ public final class DraftIrParser {
         out.error = null;
         return out;
       } catch (LlmException e) {
+        if (usage != null) {
+          usage.recordHttpFailure(e.httpStatus, 0L);
+        }
         out.status = STATUS_INVALID_IR;
         out.error = "LLM unavailable: " + e.getMessage();
         return out;

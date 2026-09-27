@@ -26,7 +26,14 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from llm_client import DRAFT_IR_HINT, LOGICAL_CATALOG, chat, extract_json, merge_usage  # noqa: E402
+from llm_client import (  # noqa: E402
+    DRAFT_IR_HINT,
+    LlmHttpError,
+    LOGICAL_CATALOG,
+    chat,
+    extract_json,
+    merge_usage,
+)
 
 UPSTREAM = "experiments/third_party/text-to-nosql/src/tend/solver/sag/runtime.py"
 
@@ -234,6 +241,17 @@ def main():
     args = ap.parse_args()
     try:
         out = run_sag(args.utterance)
+    except LlmHttpError as e:
+        out = {
+            "status": "INFRASTRUCTURE_FAILURE",
+            "error": str(e),
+            "usage": e.usage,
+            "provenance": {
+                "method": "sag",
+                "error": "http_failure",
+                "http_status": e.status,
+            },
+        }
     except Exception as e:
         out = {
             "status": "FAILED",

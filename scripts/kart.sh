@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Unified KART operator entry — run inside WSL only.
-# Keepers: kart.sh, kart-env.sh, sync-wsl-workspace.sh, run-tdrive-smoke.sh, publish-cost-calib-pack.sh
+# Shared operator entry; benchmark scripts live alongside this file.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
@@ -699,7 +699,7 @@ Also: doctor | probe | check | rebuild | test | run <cli-args>
       demo-failures | hbase-evidence | truststore
 Bench: scripts/bench-parse.sh | bench-plan.sh | bench-e2e.sh | bench-all.sh
       (internal) bench-compare.sh | bench-ablation.sh | bench-param.sh
-Keepers (5): kart.sh kart-env.sh sync-wsl-workspace.sh run-tdrive-smoke.sh publish-cost-calib-pack.sh
+Operator scripts: kart.sh kart-env.sh sync-wsl-workspace.sh run-tdrive-smoke.sh publish-cost-calib-pack.sh
 See docs/how-to-run.md / experiments/README.md
 EOF
     ;;
