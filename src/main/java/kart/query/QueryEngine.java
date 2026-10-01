@@ -91,6 +91,31 @@ public final class QueryEngine {
     public Double best_safe_estimated_ms;
     public PlannerMode plannerMode;
     public boolean planOnly;
+    /** Features used for Final cost / exec estimates; reusable by {@link #executeSelected}. */
+    public CostFeatures selectedFeatures;
+    /** Fixed-plan prepare mode: {@code full} or {@code safety_only}. */
+    public String prepareMode;
+    public Long t_fixed_compile_ms;
+    public Long t_fixed_safety_ms;
+    public Long t_fixed_features_ms;
+    public Long t_fixed_region_locate_ms;
+    public Long t_fixed_cost_ms;
+    public Long t_fixed_prepare_ms;
+    public Integer region_locate_calls;
+    public Integer region_locate_cache_hits;
+    public Integer n_scan_tasks;
+    /** refine_3 PlanValidator sub-stage timings (copied from ValidationReport). */
+    public kart.validation.ValidatorTiming validatorTiming;
+  }
+
+  /**
+   * How far {@link #runFixed} should go after compile+validate.
+   * {@link PrepareMode#SAFETY_ONLY} skips Final feature extract / cost card
+   * (diagnostics leave the answer-critical path; exec may use Fast extract).
+   */
+  public enum PrepareMode {
+    FULL,
+    SAFETY_ONLY
   }
 
   private final KvBackend kv;
@@ -383,13 +408,22 @@ public final class QueryEngine {
    */
   public RunResult runFixed(BoundIr ir, Path runsRoot, boolean planOnly,
                             PlanEnvelope envelope) throws IOException {
+    return runFixed(ir, runsRoot, planOnly, envelope, PrepareMode.FULL);
+  }
+
+  public RunResult runFixed(BoundIr ir, Path runsRoot, boolean planOnly,
+                            PlanEnvelope envelope, PrepareMode prepareMode) throws IOException {
+    PrepareMode mode = prepareMode == null ? PrepareMode.FULL : prepareMode;
     RunResult rr = new RunResult();
     rr.ir = ir;
     rr.plannerMode = plannerMode;
     rr.planOnly = planOnly;
+    rr.prepareMode = mode == PrepareMode.SAFETY_ONLY ? "safety_only" : "full";
+    long wall0 = System.nanoTime();
     long planStart = System.currentTimeMillis();
     if (ir == null || envelope == null) {
       stampPlanClock(rr, planStart);
+      rr.t_fixed_prepare_ms = Long.valueOf(nanosToMs(System.nanoTime() - wall0));
       QueryResult fail = new QueryResult();
       fail.status = "NO_SAFE_PLAN";
       fail.error = "fixed plan or BoundIR is null";
@@ -399,14 +433,17 @@ public final class QueryEngine {
     rr.candidates.add(envelope);
     QueryCompiler compiler = new QueryCompiler(layout);
     PhysicalPlan physical;
+    long tCompile0 = System.nanoTime();
     try {
       physical = compiler.compile(envelope, ir);
     } catch (RuntimeException e) {
+      rr.t_fixed_compile_ms = Long.valueOf(nanosToMs(System.nanoTime() - tCompile0));
       ValidationReport report = new ValidationReport();
       report.fail("Compile", e.getMessage() == null ? "compile failed" : e.getMessage());
       rr.rejections.add(new SearchResult.Rejection(envelope.plan_id, envelope.signature(), report));
       rr.rejectionReports.add(report);
       stampPlanClock(rr, planStart);
+      rr.t_fixed_prepare_ms = Long.valueOf(nanosToMs(System.nanoTime() - wall0));
       QueryResult fail = new QueryResult();
       fail.status = "NO_SAFE_PLAN";
       fail.error = "fixed plan compile failed";
@@ -414,13 +451,22 @@ public final class QueryEngine {
       rr.result = fail;
       return rr;
     }
+    rr.t_fixed_compile_ms = Long.valueOf(nanosToMs(System.nanoTime() - tCompile0));
+    rr.n_scan_tasks = Integer.valueOf(
+        physical != null && physical.scanTasks != null ? physical.scanTasks.size() : 0);
+
+    long tSafety0 = System.nanoTime();
     ValidationReport report = new ValidationReport();
+    report.timing = new kart.validation.ValidatorTiming();
     Optional<SafePlanHandle> checked = new PlanValidator(layout).validate(
         envelope, ir, physical, report);
+    rr.t_fixed_safety_ms = Long.valueOf(nanosToMs(System.nanoTime() - tSafety0));
+    rr.validatorTiming = report.timing;
     if (!checked.isPresent()) {
       rr.rejections.add(new SearchResult.Rejection(envelope.plan_id, envelope.signature(), report));
       rr.rejectionReports.add(report);
       stampPlanClock(rr, planStart);
+      rr.t_fixed_prepare_ms = Long.valueOf(nanosToMs(System.nanoTime() - wall0));
       QueryResult failV = new QueryResult();
       failV.status = "NO_SAFE_PLAN";
       failV.error = "fixed plan rejected by validator";
@@ -431,15 +477,40 @@ public final class QueryEngine {
     SafePlanHandle selected = checked.get();
     rr.safe.add(selected);
     rr.selected = selected;
-    CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
-        planner.cost != null && planner.cost.soft_memory_bytes > 0
-            ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
-    CostFeatures features = extractor.extractFinal(selected.physicalPlan(), selected.plan(), ir);
-    rr.selectedCost = costModel.estimateFinal(features);
-    rr.costCards.add(rr.selectedCost);
-    rr.best_safe_estimated_ms = Double.valueOf(rr.selectedCost.estimated_ms);
-    rr.plan_regret_ms = Double.valueOf(0.0);
+
+    CostFeatures features = null;
+    if (mode == PrepareMode.FULL) {
+      CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
+          planner.cost != null && planner.cost.soft_memory_bytes > 0
+              ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
+      CostFeaturesExtractor.ExtractTiming timing = new CostFeaturesExtractor.ExtractTiming();
+      long tFeat0 = System.nanoTime();
+      features = extractor.extractFinal(selected.physicalPlan(), selected.plan(), ir, timing);
+      rr.t_fixed_features_ms = Long.valueOf(nanosToMs(System.nanoTime() - tFeat0));
+      rr.t_fixed_region_locate_ms = Long.valueOf(Math.max(0L, timing.regionLocateMs));
+      rr.region_locate_calls = Integer.valueOf(timing.locateCalls);
+      rr.region_locate_cache_hits = Integer.valueOf(timing.locateCacheHits);
+      if (timing.nScanTasks > 0) {
+        rr.n_scan_tasks = Integer.valueOf(timing.nScanTasks);
+      }
+      long tCost0 = System.nanoTime();
+      rr.selectedCost = costModel.estimateFinal(features);
+      rr.t_fixed_cost_ms = Long.valueOf(nanosToMs(System.nanoTime() - tCost0));
+      rr.costCards.add(rr.selectedCost);
+      rr.best_safe_estimated_ms = Double.valueOf(rr.selectedCost.estimated_ms);
+      rr.plan_regret_ms = Double.valueOf(0.0);
+      rr.selectedFeatures = features;
+    } else {
+      // Safety-only: keep SafePlanHandle; defer / skip Final cost card.
+      rr.t_fixed_features_ms = Long.valueOf(0L);
+      rr.t_fixed_region_locate_ms = Long.valueOf(0L);
+      rr.t_fixed_cost_ms = Long.valueOf(0L);
+      rr.region_locate_calls = Integer.valueOf(0);
+      rr.region_locate_cache_hits = Integer.valueOf(0);
+      rr.plan_regret_ms = Double.valueOf(0.0);
+    }
     stampPlanClock(rr, planStart);
+    rr.t_fixed_prepare_ms = Long.valueOf(nanosToMs(System.nanoTime() - wall0));
 
     if (planOnly) {
       QueryResult planned = new QueryResult();
@@ -455,6 +526,13 @@ public final class QueryEngine {
       return rr;
     }
 
+    if (features == null) {
+      CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
+          planner.cost != null && planner.cost.soft_memory_bytes > 0
+              ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
+      features = extractor.extractFast(selected.plan(), ir);
+      rr.selectedFeatures = features;
+    }
     long execStart = System.currentTimeMillis();
     Coordinator coord = new Coordinator(kv, ir, layout, limits, regionMapping);
     coord.applyCostEstimates(features);
@@ -471,6 +549,10 @@ public final class QueryEngine {
           selected.coverageCertificates(), rr.rejectionReports, features, rr);
     }
     return rr;
+  }
+
+  private static long nanosToMs(long nanos) {
+    return Math.max(0L, nanos / 1_000_000L);
   }
 
   /**
@@ -493,6 +575,18 @@ public final class QueryEngine {
       rr.rejectionReports = planned.rejectionReports;
       rr.selected = planned.selected;
       rr.selectedCost = planned.selectedCost;
+      rr.selectedFeatures = planned.selectedFeatures;
+      rr.prepareMode = planned.prepareMode;
+      rr.t_fixed_compile_ms = planned.t_fixed_compile_ms;
+      rr.t_fixed_safety_ms = planned.t_fixed_safety_ms;
+      rr.t_fixed_features_ms = planned.t_fixed_features_ms;
+      rr.t_fixed_region_locate_ms = planned.t_fixed_region_locate_ms;
+      rr.t_fixed_cost_ms = planned.t_fixed_cost_ms;
+      rr.t_fixed_prepare_ms = planned.t_fixed_prepare_ms;
+      rr.region_locate_calls = planned.region_locate_calls;
+      rr.region_locate_cache_hits = planned.region_locate_cache_hits;
+      rr.n_scan_tasks = planned.n_scan_tasks;
+      rr.validatorTiming = planned.validatorTiming;
       rr.searchLog = planned.searchLog;
       rr.searchStopReason = planned.searchStopReason;
       rr.best_safe_estimated_ms = planned.best_safe_estimated_ms;
@@ -517,8 +611,24 @@ public final class QueryEngine {
     CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
         planner.cost != null && planner.cost.soft_memory_bytes > 0
             ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
-    CostFeatures features = extractor.extractFinal(
-        rr.selected.physicalPlan(), rr.selected.plan(), ir);
+    CostFeatures features = rr.selectedFeatures;
+    if (features == null) {
+      // Prefer Fast extract for deferred safety_only prepares: Final locate is
+      // already paid during Coordinator scan affinity, not needed twice.
+      if ("safety_only".equals(rr.prepareMode)) {
+        features = extractor.extractFast(rr.selected.plan(), ir);
+      } else {
+        CostFeaturesExtractor.ExtractTiming timing = new CostFeaturesExtractor.ExtractTiming();
+        long tFeat0 = System.nanoTime();
+        features = extractor.extractFinal(
+            rr.selected.physicalPlan(), rr.selected.plan(), ir, timing);
+        rr.t_fixed_features_ms = Long.valueOf(nanosToMs(System.nanoTime() - tFeat0));
+        rr.t_fixed_region_locate_ms = Long.valueOf(Math.max(0L, timing.regionLocateMs));
+        rr.region_locate_calls = Integer.valueOf(timing.locateCalls);
+        rr.region_locate_cache_hits = Integer.valueOf(timing.locateCacheHits);
+      }
+      rr.selectedFeatures = features;
+    }
     long execStart = System.currentTimeMillis();
     Coordinator coord = new Coordinator(kv, ir, layout, limits, regionMapping);
     coord.applyCostEstimates(features);

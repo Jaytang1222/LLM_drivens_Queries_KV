@@ -1,0 +1,17 @@
+OUT_ROOT=experiments/refine_5/refine5-20261001-201514
+STAMP=20261001-201514
+experiments/refine_5/refine5-20261001-201514/ais_e2e.jsonl
+experiments/refine_5/refine5-20261001-201514/decision_synthetic_eval.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_alone_t1.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_alone_t2.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_alone_t3.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_par_t1.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_par_t2.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_T_par_t3.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_alone_t1.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_alone_t2.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_alone_t3.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_par_t1.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_par_t2.jsonl
+experiments/refine_5/refine5-20261001-201514/iso_P_TZ_par_t3.jsonl
+experiments/refine_5/refine5-20261001-201514/td_e2e.jsonl

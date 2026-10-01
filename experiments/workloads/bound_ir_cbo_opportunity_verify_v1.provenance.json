@@ -1,0 +1,82 @@
+{
+  "path": "experiments/workloads/bound_ir_cbo_opportunity_verify_v1.json",
+  "oracle_path": "experiments/workloads/bound_ir_cbo_opportunity_verify_v1.oracle.json",
+  "seed": "2026-09-28-cbo-opportunity-verify-v1",
+  "generator": "generate_cbo_opportunity_verify_v1.py/v1",
+  "hybrid_extra_plan_ms_provisional": 900.0,
+  "development_cases_isolated": [
+    "a2_topk_dtw_wide",
+    "a2_tz_hard_a",
+    "a2_tz_hard_d",
+    "topk_st_3"
+  ],
+  "blocked_template_groups": [
+    "a2_topk",
+    "a2_tz_hard",
+    "topk_st"
+  ],
+  "vacancies": [
+    {
+      "category": "large_opportunity",
+      "requested": 2,
+      "filled": 0,
+      "reason": "no non-dev stable savings >= 900.0 ms in census; max stable was 285.0"
+    },
+    {
+      "category": "cost_misestimate",
+      "requested": 2,
+      "filled": 0,
+      "reason": "insufficient non-dev stable cost-misestimate cases after template isolation"
+    }
+  ],
+  "n_queries": 4,
+  "categories": {
+    "large_opportunity": 0,
+    "cost_misestimate": 0,
+    "semantic_boundary": 2,
+    "normal_control": 2
+  },
+  "selected": [
+    {
+      "query_id": "cov_sema_st_ss_1",
+      "category": "semantic_boundary",
+      "source_query_id": "st_ss_1",
+      "fingerprint": "5010c7959a2cfb2c1e8cd3f37cb395745df270972598ade7368e9f7e07fc51c7",
+      "template_group": "st_ss",
+      "reason": "legal BoundIR boundary/control semantics with oracle"
+    },
+    {
+      "query_id": "cov_sema_st_ss_2",
+      "category": "semantic_boundary",
+      "source_query_id": "st_ss_2",
+      "fingerprint": "2db452edfc09ff9d79d922e855a72dd42961dc202f8c89212d6b93e5898f910a",
+      "template_group": "st_ss",
+      "reason": "legal BoundIR boundary/control semantics with oracle"
+    },
+    {
+      "query_id": "cov_norm_a2_th_unc_a",
+      "category": "normal_control",
+      "source_query_id": "a2_th_unc_a",
+      "fingerprint": "8a42d24859f85a296aa6efa87bfa95db25c20c32c9a48cd75527672d121cf294",
+      "template_group": "a2_th_unc",
+      "reason": "census: no_faster_safe_plan; CBO already adequate"
+    },
+    {
+      "query_id": "cov_norm_a2_th_unc_b",
+      "category": "normal_control",
+      "source_query_id": "a2_th_unc_b",
+      "fingerprint": "628d671e83302ce8b798d5ffc39e2063ca9b235aa8794ef32066e7a58da0d62a",
+      "template_group": "a2_th_unc",
+      "reason": "census: no_faster_safe_plan; CBO already adequate"
+    }
+  ],
+  "holdout_excluded": true,
+  "sha256": {
+    "workload": "89aecc75d987b4214cd32f7722c5b6cf0ce4879e40514ba343e6205b037c347e",
+    "oracle": "9cca28ce5fe921ff1c2db4877eb4966b684e0b3de0899718d9338b2d4a546cdc",
+    "screen_log": "b9bc78ffa269534d99324ca24f4eda367ad81517e1436b7fca55e9fa8c1e8819",
+    "advantage_v2": "95789725d4632085138dc1db5d626763410fecbfe070aced08c4265a056fe3fb",
+    "advantage_v2_oracle": "8ec7274602b6334885a781bf43634666882fdde3ef98b16bf6ae2d10d48864cf",
+    "census_corrected": "40eb8107bab30216595c31affc3f2b342067066cf1fc20129a6c902141c34a47"
+  }
+}

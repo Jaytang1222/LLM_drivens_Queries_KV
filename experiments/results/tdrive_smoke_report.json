@@ -1,0 +1,223 @@
+{
+  "manifest_id" : "tdrive_v1_ready",
+  "passed" : 24,
+  "failed" : 0,
+  "total" : 24,
+  "results" : [ {
+    "query_id" : "t_small_1",
+    "selected_plan" : "P_T",
+    "candidate_chunks" : 1304,
+    "scan_ranges" : 4,
+    "elapsed_ms" : 3461,
+    "oracle_count" : 1301,
+    "result_count" : 1301,
+    "pass" : true
+  }, {
+    "query_id" : "t_small_2",
+    "selected_plan" : "P_T",
+    "candidate_chunks" : 1404,
+    "scan_ranges" : 8,
+    "elapsed_ms" : 1466,
+    "oracle_count" : 1403,
+    "result_count" : 1403,
+    "pass" : true
+  }, {
+    "query_id" : "t_large_1",
+    "selected_plan" : "P_T",
+    "candidate_chunks" : 10250,
+    "scan_ranges" : 576,
+    "elapsed_ms" : 8082,
+    "oracle_count" : 10030,
+    "result_count" : 10030,
+    "pass" : true
+  }, {
+    "query_id" : "t_large_2",
+    "selected_plan" : "P_T",
+    "candidate_chunks" : 19004,
+    "scan_ranges" : 1168,
+    "elapsed_ms" : 12854,
+    "oracle_count" : 18406,
+    "result_count" : 18406,
+    "pass" : true
+  }, {
+    "query_id" : "s_small_1",
+    "selected_plan" : "P_Z",
+    "candidate_chunks" : 908,
+    "scan_ranges" : 16,
+    "elapsed_ms" : 153,
+    "oracle_count" : 92,
+    "result_count" : 92,
+    "pass" : true
+  }, {
+    "query_id" : "s_small_2",
+    "selected_plan" : "P_Z",
+    "candidate_chunks" : 794,
+    "scan_ranges" : 8,
+    "elapsed_ms" : 57,
+    "oracle_count" : 33,
+    "result_count" : 33,
+    "pass" : true
+  }, {
+    "query_id" : "s_large_1",
+    "selected_plan" : "P_Z",
+    "candidate_chunks" : 36237,
+    "scan_ranges" : 256,
+    "elapsed_ms" : 31965,
+    "oracle_count" : 33269,
+    "result_count" : 33269,
+    "pass" : true
+  }, {
+    "query_id" : "s_large_2",
+    "selected_plan" : "P_Z",
+    "candidate_chunks" : 46576,
+    "scan_ranges" : 256,
+    "elapsed_ms" : 41193,
+    "oracle_count" : 44898,
+    "result_count" : 44898,
+    "pass" : true
+  }, {
+    "query_id" : "st_ss_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1304,
+    "scan_ranges" : 20,
+    "elapsed_ms" : 31,
+    "oracle_count" : 1,
+    "result_count" : 1,
+    "pass" : true
+  }, {
+    "query_id" : "st_ss_2",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1404,
+    "scan_ranges" : 24,
+    "elapsed_ms" : 25,
+    "oracle_count" : 1,
+    "result_count" : 1,
+    "pass" : true
+  }, {
+    "query_id" : "st_sl_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 36237,
+    "scan_ranges" : 260,
+    "elapsed_ms" : 7716,
+    "oracle_count" : 703,
+    "result_count" : 703,
+    "pass" : true
+  }, {
+    "query_id" : "st_ls_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 10250,
+    "scan_ranges" : 592,
+    "elapsed_ms" : 429,
+    "oracle_count" : 16,
+    "result_count" : 16,
+    "pass" : true
+  }, {
+    "query_id" : "st_ll_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 19004,
+    "scan_ranges" : 1184,
+    "elapsed_ms" : 2605,
+    "oracle_count" : 2230,
+    "result_count" : 2230,
+    "pass" : true
+  }, {
+    "query_id" : "h_eq_1",
+    "selected_plan" : "P_H",
+    "candidate_chunks" : 24,
+    "scan_ranges" : 4,
+    "elapsed_ms" : 38,
+    "oracle_count" : 24,
+    "result_count" : 24,
+    "pass" : true
+  }, {
+    "query_id" : "h_t_small",
+    "selected_plan" : "P_TH",
+    "candidate_chunks" : 1304,
+    "scan_ranges" : 8,
+    "elapsed_ms" : 14,
+    "oracle_count" : 1,
+    "result_count" : 1,
+    "pass" : true
+  }, {
+    "query_id" : "h_t_large",
+    "selected_plan" : "P_TH",
+    "candidate_chunks" : 10250,
+    "scan_ranges" : 580,
+    "elapsed_ms" : 412,
+    "oracle_count" : 7,
+    "result_count" : 7,
+    "pass" : true
+  }, {
+    "query_id" : "h_s_small",
+    "selected_plan" : "P_ZH",
+    "candidate_chunks" : 918,
+    "scan_ranges" : 20,
+    "elapsed_ms" : 29,
+    "oracle_count" : 13,
+    "result_count" : 13,
+    "pass" : true
+  }, {
+    "query_id" : "h_st_1",
+    "selected_plan" : "P_FULL",
+    "candidate_chunks" : 48650,
+    "scan_ranges" : 4,
+    "elapsed_ms" : 28821,
+    "oracle_count" : 1,
+    "result_count" : 1,
+    "pass" : true
+  }, {
+    "query_id" : "topk_st_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1477,
+    "scan_ranges" : 28,
+    "elapsed_ms" : 49,
+    "oracle_count" : 2,
+    "result_count" : 2,
+    "pass" : true
+  }, {
+    "query_id" : "topk_st_2",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1527,
+    "scan_ranges" : 32,
+    "elapsed_ms" : 47,
+    "oracle_count" : 5,
+    "result_count" : 5,
+    "pass" : true
+  }, {
+    "query_id" : "topk_st_3",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1587,
+    "scan_ranges" : 124,
+    "elapsed_ms" : 310,
+    "oracle_count" : 3,
+    "result_count" : 3,
+    "pass" : true
+  }, {
+    "query_id" : "topk_s_1",
+    "selected_plan" : "P_Z",
+    "candidate_chunks" : 918,
+    "scan_ranges" : 16,
+    "elapsed_ms" : 239,
+    "oracle_count" : 3,
+    "result_count" : 3,
+    "pass" : true
+  }, {
+    "query_id" : "topk_st_frechet_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1477,
+    "scan_ranges" : 28,
+    "elapsed_ms" : 28,
+    "oracle_count" : 2,
+    "result_count" : 2,
+    "pass" : true
+  }, {
+    "query_id" : "topk_st_hausdorff_1",
+    "selected_plan" : "P_TZ",
+    "candidate_chunks" : 1477,
+    "scan_ranges" : 28,
+    "elapsed_ms" : 25,
+    "oracle_count" : 2,
+    "result_count" : 2,
+    "pass" : true
+  } ]
+}

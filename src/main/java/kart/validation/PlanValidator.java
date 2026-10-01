@@ -82,24 +82,50 @@ public final class PlanValidator {
   }
 
   /**
+   * Coverage lookup algorithm: default {@code indexed} (decode-once + prefix-max
+   * index). Set {@code KART_VALIDATOR_COVERAGE=legacy} for old O(M×N) scan.
+   */
+  static boolean useIndexedCoverage() {
+    String raw = System.getenv("KART_VALIDATOR_COVERAGE");
+    if (raw == null || raw.trim().isEmpty()) {
+      return true;
+    }
+    String v = raw.trim().toLowerCase();
+    return !(v.equals("legacy") || v.equals("scan") || v.equals("old"));
+  }
+
+  /**
    * Runs all checks in order, filling the report. Returns a SafePlanHandle
    * only if every check passed.
    */
   public Optional<SafePlanHandle> validate(PlanEnvelope env, BoundIr ir,
                                            PhysicalPlan phys, ValidationReport report) {
+    ValidatorTiming timing = report.timing != null ? report.timing : new ValidatorTiming();
+    report.timing = timing;
+    timing.coverageAlgo = useIndexedCoverage() ? "indexed" : "legacy";
+
+    long t0 = System.nanoTime();
     boolean ok = structureCheck(env, report);
+    timing.t_structure_ms += Math.max(0L, (System.nanoTime() - t0) / 1_000_000L);
+
     if (ok) {
+      long t1 = System.nanoTime();
       ok = semanticCheck(env, ir, report);
+      timing.t_semantic_ms += Math.max(0L, (System.nanoTime() - t1) / 1_000_000L);
     }
     if (ok) {
       if (skipCoverageCheck) {
         report.pass("CoverageCheck", "SKIPPED_UNSAFE");
       } else {
+        long t2 = System.nanoTime();
         ok = coverageCheck(env, ir, phys, report);
+        timing.t_coverage_ms += Math.max(0L, (System.nanoTime() - t2) / 1_000_000L);
       }
     }
     if (ok) {
+      long t3 = System.nanoTime();
       ok = physicalSafetyCheck(env, phys, report);
+      timing.t_physical_safety_ms += Math.max(0L, (System.nanoTime() - t3) / 1_000_000L);
     }
     if (!ok) {
       return Optional.empty();
@@ -336,6 +362,8 @@ public final class PlanValidator {
 
   boolean coverageCheck(PlanEnvelope env, BoundIr ir, PhysicalPlan phys, ValidationReport report) {
     final String C = "CoverageCheck";
+    ValidatorTiming timing = report != null ? report.timing : null;
+    boolean indexed = useIndexedCoverage();
     String queryHash = phys != null && phys.queryHash != null ? phys.queryHash : env.query_id;
     String manifestId = phys != null && phys.manifestId != null ? phys.manifestId : env.manifest_id;
     String layoutHash = phys != null && phys.layoutHash != null
@@ -357,12 +385,13 @@ public final class PlanValidator {
       cert.compiler_version = compilerVersion;
       cert.index_id = indexIdFor(n.op);
       cert.predicate_binding = predicateBinding(n);
+      long tCert0 = System.nanoTime();
       for (ScanTask t : tasks) {
         cert.emitted_physical_ranges.add(t.table + " shard=" + t.shard
             + " [" + t.startHex + "," + t.stopHex + ")");
-        if (!cert.required_shards.contains(Integer.valueOf(t.shard))) {
-          // shards filled from required set below
-        }
+      }
+      if (timing != null) {
+        timing.t_coverage_cert_ms += Math.max(0L, (System.nanoTime() - tCert0) / 1_000_000L);
       }
 
       if (tasks.isEmpty() && n.op != Op.FULL_SCAN_CHUNKS) {
@@ -376,6 +405,21 @@ public final class PlanValidator {
         report.fail(C, "access node " + n.id + " (" + n.op + ") has no scan tasks");
         return false;
       }
+
+      List<RangeCoverageIndex.DecodedRange> decoded = null;
+      RangeCoverageIndex index = null;
+      if (indexed) {
+        decoded = RangeCoverageIndex.decodeAll(tasks, timing);
+        for (RangeCoverageIndex.DecodedRange dr : decoded) {
+          if (dr != null && !dr.ok()) {
+            cert.unresolved_obligations.add("bad_range:" + dr.error);
+            report.addCertificate(cert);
+            report.fail(C, "invalid scan range for node " + n.id + ": " + dr.error);
+            return false;
+          }
+        }
+      }
+
       switch (n.op) {
         case TIME_RANGE_SCAN: {
           if (ir.temporal == null) {
@@ -400,20 +444,37 @@ public final class PlanValidator {
             report.fail(C, "TIME partition window outside IR temporal for node " + n.id);
             return false;
           }
+          if (indexed) {
+            index = RangeCoverageIndex.buildForTable(decoded, layout.tableTime, timing);
+          }
           long[] buckets = TimeBucket.bucketsCovering(
               winStart, winEnd, layout.epochMs, layout.bucketMs);
+          long tProbe0 = System.nanoTime();
           for (int shard = 0; shard < layout.shardCount; shard++) {
             cert.required_shards.add(Integer.valueOf(shard));
             for (long b : buckets) {
               cert.required_bucket_or_cell_cover.add("time:shard=" + shard + ":bucket=" + b);
               byte[] probe = RowKeyCodec.encodeTime(shard, b, 0, 0);
-              if (!coveredBy(probe, tasks, layout.tableTime)) {
+              if (timing != null) {
+                timing.coverage_probe_count++;
+              }
+              boolean hit = indexed
+                  ? index.covers(probe)
+                  : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableTime, timing);
+              if (!hit) {
+                if (timing != null) {
+                  timing.t_coverage_probe_ms +=
+                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                }
                 cert.unresolved_obligations.add("time:shard=" + shard + ":bucket=" + b);
                 report.addCertificate(cert);
                 report.fail(C, "time bucket " + b + " shard " + shard + " not covered by node " + n.id);
                 return false;
               }
             }
+          }
+          if (timing != null) {
+            timing.t_coverage_probe_ms += Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
           }
           break;
         }
@@ -449,10 +510,14 @@ public final class PlanValidator {
             report.fail(C, "Z partition rect outside IR spatial for node " + n.id);
             return false;
           }
+          if (indexed) {
+            index = RangeCoverageIndex.buildForTable(decoded, layout.tableZorder, timing);
+          }
           Rect d = layout.domain;
           ZOrder.CellRect cells = ZOrder.metersToCells(
               minX, minY, maxX, maxY,
               d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
+          long tProbe0 = System.nanoTime();
           for (int cx = cells.cxMin; cx <= cells.cxMax; cx++) {
             for (int cy = cells.cyMin; cy <= cells.cyMax; cy++) {
               long z = ZOrder.interleave(cx, cy, layout.zorderLevel);
@@ -462,7 +527,17 @@ public final class PlanValidator {
                 }
                 cert.required_bucket_or_cell_cover.add("z:shard=" + shard + ":cell=" + z);
                 byte[] probe = RowKeyCodec.encodeZorder(shard, z, 0, 0);
-                if (!coveredBy(probe, tasks, layout.tableZorder)) {
+                if (timing != null) {
+                  timing.coverage_probe_count++;
+                }
+                boolean hit = indexed
+                    ? index.covers(probe)
+                    : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableZorder, timing);
+                if (!hit) {
+                  if (timing != null) {
+                    timing.t_coverage_probe_ms +=
+                        Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                  }
                   cert.unresolved_obligations.add("z:shard=" + shard + ":cell=" + z);
                   report.addCertificate(cert);
                   report.fail(C, "z-cell " + z + " shard " + shard + " not covered by node " + n.id);
@@ -470,6 +545,9 @@ public final class PlanValidator {
                 }
               }
             }
+          }
+          if (timing != null) {
+            timing.t_coverage_probe_ms += Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
           }
           break;
         }
@@ -483,6 +561,9 @@ public final class PlanValidator {
             report.fail(C, e.getMessage());
             return false;
           }
+          if (decoded == null) {
+            decoded = RangeCoverageIndex.decodeAll(tasks, timing);
+          }
           byte[] hash = VehicleHash.hash128(p.value);
           for (int shard = 0; shard < layout.shardCount; shard++) {
             cert.required_shards.add(Integer.valueOf(shard));
@@ -490,9 +571,9 @@ public final class PlanValidator {
             byte[] expectedPrefix = Arrays.copyOf(
                 RowKeyCodec.encodeHash(shard, RowKeyCodec.HASH_FIELD_VEHICLE, hash, 0, 0), 18);
             boolean found = false;
-            for (ScanTask t : tasks) {
-              if (layout.tableHash.equals(t.table) && t.shard == shard
-                  && Arrays.equals(t.startBytes(), expectedPrefix)) {
+            for (RangeCoverageIndex.DecodedRange dr : decoded) {
+              if (dr.ok() && layout.tableHash.equals(dr.table) && dr.shard == shard
+                  && Arrays.equals(dr.start, expectedPrefix)) {
                 found = true;
                 break;
               }
@@ -507,16 +588,33 @@ public final class PlanValidator {
           break;
         }
         case FULL_SCAN_CHUNKS: {
+          if (indexed) {
+            index = RangeCoverageIndex.buildForTable(decoded, layout.tableRaw, timing);
+          }
+          long tProbe0 = System.nanoTime();
           for (int shard = 0; shard < layout.shardCount; shard++) {
             cert.required_shards.add(Integer.valueOf(shard));
             cert.required_bucket_or_cell_cover.add("full:shard=" + shard);
             byte[] probe = Bytes.u8(shard);
-            if (!coveredBy(probe, tasks, layout.tableRaw)) {
+            if (timing != null) {
+              timing.coverage_probe_count++;
+            }
+            boolean hit = indexed
+                ? index.covers(probe)
+                : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableRaw, timing);
+            if (!hit) {
+              if (timing != null) {
+                timing.t_coverage_probe_ms +=
+                    Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+              }
               cert.unresolved_obligations.add("full:shard=" + shard);
               report.addCertificate(cert);
               report.fail(C, "full scan missing shard " + shard + " node " + n.id);
               return false;
             }
+          }
+          if (timing != null) {
+            timing.t_coverage_probe_ms += Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
           }
           break;
         }
@@ -530,7 +628,8 @@ public final class PlanValidator {
       }
       report.addCertificate(cert);
     }
-    report.pass(C, "all access nodes covered; certificates=" + report.certificates().size());
+    report.pass(C, "all access nodes covered; certificates=" + report.certificates().size()
+        + "; algo=" + (indexed ? "indexed" : "legacy"));
     return true;
   }
 
@@ -561,44 +660,36 @@ public final class PlanValidator {
     return ref == null ? n.id : String.valueOf(ref);
   }
 
-  private static boolean coveredBy(byte[] probe, List<ScanTask> tasks, String table) {
-    for (ScanTask t : tasks) {
-      if (!table.equals(t.table)) {
-        continue;
-      }
-      byte[] start = t.startBytes();
-      byte[] stop = t.stopBytes();
-      if (Bytes.compareUnsigned(start, probe) <= 0 && Bytes.compareUnsigned(probe, stop) < 0) {
-        return true;
-      }
-    }
-    return false;
+  /** @deprecated use {@link RangeCoverageIndex}; kept for tests. */
+  static boolean coveredBy(byte[] probe, List<ScanTask> tasks, String table) {
+    return RangeCoverageIndex.coveredByLegacy(probe, tasks, table, null);
   }
 
   // ---------------------------------------------------------- physical safety
 
   boolean physicalSafetyCheck(PlanEnvelope env, PhysicalPlan phys, ValidationReport report) {
     final String C = "PhysicalSafetyCheck";
+    ValidatorTiming timing = report != null ? report.timing : null;
     if (phys.scanTasks.size() > MAX_SCAN_TASKS) {
       report.fail(C, "too many scan tasks: " + phys.scanTasks.size());
       return false;
     }
-    for (ScanTask t : phys.scanTasks) {
+    // Decode once for physical checks (B1); do not mutate ScanTask.
+    List<RangeCoverageIndex.DecodedRange> decoded =
+        RangeCoverageIndex.decodeAll(phys.scanTasks, timing);
+    for (RangeCoverageIndex.DecodedRange dr : decoded) {
+      ScanTask t = dr.task;
       if (t.truncated) {
         report.fail(C, "scan task truncated=true (node " + t.sourceNodeId + ")");
         return false;
       }
-      byte[] start = t.startBytes();
-      byte[] stop = t.stopBytes();
-      if (start == null || stop == null || start.length == 0 || stop.length == 0) {
-        report.fail(C, "scan task with empty start/stop (node " + t.sourceNodeId + ")");
+      if (!dr.ok()) {
+        report.fail(C, "scan task decode/bounds failed (node " + t.sourceNodeId
+            + "): " + dr.error);
         return false;
       }
-      if (Bytes.compareUnsigned(start, stop) >= 0) {
-        report.fail(C, "scan start >= stop for node " + t.sourceNodeId
-            + " start=" + t.startHex + " stop=" + t.stopHex);
-        return false;
-      }
+      byte[] start = dr.start;
+      byte[] stop = dr.stop;
       if ((start[0] & 0xFF) != t.shard) {
         report.fail(C, "scan start first byte " + (start[0] & 0xFF)
             + " != shard " + t.shard + " (node " + t.sourceNodeId + ")");

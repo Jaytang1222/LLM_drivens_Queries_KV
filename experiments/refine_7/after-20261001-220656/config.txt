@@ -1,0 +1,4 @@
+mode=after
+trials=1
+model=qwen2.5:1.5b-instruct
+protocol=v11

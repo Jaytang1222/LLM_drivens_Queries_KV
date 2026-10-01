@@ -1,0 +1,14 @@
+# Plan-only smoke for cbo_llm_compact_v3 latency package (dev cases; not formal).
+kind: compare
+id: plan-cbo-llm-latency-pack-dev
+workload: experiments/workloads/bound_ir_cbo_opportunity_dev_smoke_v1.json
+oracle: experiments/workloads/bound_ir_cbo_opportunity_dev_smoke_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - cbo-llm-proposal
+  - cbo-llm-proposal-cached

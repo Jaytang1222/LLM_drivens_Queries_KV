@@ -1,0 +1,119 @@
+{
+  "status": "small_e2_completed_single_trial",
+  "seed": "cbo-opportunity-mechanism-v2-seed-1",
+  "evaluation_role": "small_mechanism_verification_preselected_by_cbo_bao_and_safety_probe_only",
+  "selection_rule": "first eligible rows in the predeclared candidate ordering within fixed quotas; no KART outcomes used",
+  "selection_quota": {
+    "cbo_candidate_miss": 8,
+    "bao_tzh_full_risk": 3,
+    "normal_control": 1
+  },
+  "selected_query_ids": [
+    "mechv2_003",
+    "mechv2_004",
+    "mechv2_005",
+    "mechv2_006",
+    "mechv2_007",
+    "mechv2_008",
+    "mechv2_009",
+    "mechv2_010",
+    "mechv2_014",
+    "mechv2_015",
+    "mechv2_016",
+    "mechv2_control_01"
+  ],
+  "selected_categories": {
+    "mechv2_003": "cbo_candidate_miss",
+    "mechv2_004": "cbo_candidate_miss",
+    "mechv2_005": "cbo_candidate_miss",
+    "mechv2_006": "cbo_candidate_miss",
+    "mechv2_007": "cbo_candidate_miss",
+    "mechv2_008": "cbo_candidate_miss",
+    "mechv2_009": "cbo_candidate_miss",
+    "mechv2_010": "cbo_candidate_miss",
+    "mechv2_014": "bao_tzh_full_risk",
+    "mechv2_015": "bao_tzh_full_risk",
+    "mechv2_016": "bao_tzh_full_risk",
+    "mechv2_control_01": "normal_control"
+  },
+  "n_selected": 12,
+  "screen_keep_count": 23,
+  "screen_row_count": 23,
+  "inputs": {
+    "experiments/workloads/bound_ir_cbo_opportunity_candidates_v2.screen_log.json": "59a3f8e97df2e86a631711d764e4ebe160a135ec32080a23b7dfc2567810e1bb",
+    "experiments/workloads/bound_ir_cbo_opportunity_candidates_v2.candidates.json": "30ed093c97b8331b130fe90b2a67bf6a0e539d16a70ed2d19ceb4d1d6255e5e5",
+    "experiments/workloads/bound_ir_cbo_opportunity_candidates_v2.provenance.json": "59bc21c5a7763348b456d96ecc9239a00fe8d12f308ecb24cfa634cad03bc549"
+  },
+  "workload_sha256": "d5ea1c6068fc03270ca28ca8b3af2d350ccc9ebc4352a3d471808ffa71d30321",
+  "limitations": [
+    "same existing T-Drive snapshot",
+    "small mechanism set, not overall win-rate evidence",
+    "plan-stage screen does not establish execution-time gain",
+    "oracle not yet generated at freeze time"
+  ],
+  "oracle": {
+    "path": "experiments/workloads/bound_ir_cbo_opportunity_verify_v2.oracle.json",
+    "sha256": "b2c8342ff5d4632d1d2aae55a455aefb61b1d9c10dcc24dd6d57a10c4851b8fa",
+    "source": "fresh FullScan build-oracle-cache --evaluate-workload on tdrive_v1_ready",
+    "answer_count": 12,
+    "non_empty": 12
+  },
+  "suite": {
+    "path": "experiments/suites/plan-cbo-opportunity-verify-v2.yaml",
+    "sha256": "174c1e3bea3c10576c7dde30b23acd76589e6f0b4e8c6d7c50c5e0c2be77c2fe",
+    "stage": "plan",
+    "arms": [
+      "cbo",
+      "bao",
+      "kart",
+      "cbo-llm-proposal"
+    ],
+    "trials": 1,
+    "require_oracle": true
+  },
+  "provenance_sha256_excludes_self": true,
+  "e2_result": {
+    "path": "experiments/results/opportunity-verify-v2-e2-20260928",
+    "plan_jsonl_sha256": "1a385488b052a148c329011c11f4646d688e37b3d88c2139908588390562186d",
+    "summary_sha256": "db2413b0bcc0230b134a32533c17ace388edf3591ff6838c78e94d6dc085b704",
+    "row_count": 48,
+    "query_count": 12,
+    "oracle_fail": 0,
+    "plan_not_ok": 0,
+    "summary_arm_labels": {
+      "cbo": 12,
+      "bao": 12,
+      "kart-rule-fallback": 12,
+      "cbo-llm-proposal-rule-fallback": 12
+    },
+    "selected_plan_counts": {
+      "cbo": {
+        "P_H": 4,
+        "P_T": 1,
+        "P_TZ": 7
+      },
+      "bao": {
+        "P_FULL": 4,
+        "P_TZ": 8
+      },
+      "kart": {
+        "P_FULL": 12
+      },
+      "cbo-llm-proposal": {
+        "P_H": 4,
+        "P_T": 1,
+        "P_TZ": 7
+      }
+    },
+    "llm_calls": {
+      "kart": 12,
+      "cbo-llm-proposal": 12
+    },
+    "cbo_mixed_same_selected_plan_count": 12,
+    "tokens_missing_count": 12,
+    "stage": "plan_only_no_E3_execution",
+    "formal_benchmark": false,
+    "workload_sha256": "d5ea1c6068fc03270ca28ca8b3af2d350ccc9ebc4352a3d471808ffa71d30321",
+    "oracle_sha256": "b2c8342ff5d4632d1d2aae55a455aefb61b1d9c10dcc24dd6d57a10c4851b8fa"
+  }
+}

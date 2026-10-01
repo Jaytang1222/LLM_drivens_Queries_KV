@@ -15,6 +15,7 @@ import kart.plan.PlanEnvelope;
 import kart.plan.PlanNode;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,17 +49,57 @@ public final class CostFeaturesExtractor {
     this.softMemoryBytes = softMemoryBytes > 0 ? softMemoryBytes : (512L * 1024L * 1024L);
   }
 
+  /** Mutable counters for one extractFinal call (region locate sub-interval). */
+  public static final class ExtractTiming {
+    public long regionLocateMs;
+    public int locateCalls;
+    public int locateCacheHits;
+    public int nScanTasks;
+  }
+
   /** Final: use exact scan ranges from compiled PhysicalPlan + live RS locate. */
   public CostFeatures extractFinal(PhysicalPlan phys, PlanEnvelope plan, BoundIr ir) {
+    return extractFinal(phys, plan, ir, null);
+  }
+
+  /**
+   * Final extract with optional timing. Region locate uses a per-call cache so
+   * duplicate (table,startRow) pairs inside one extract are not re-located.
+   */
+  public CostFeatures extractFinal(PhysicalPlan phys, PlanEnvelope plan, BoundIr ir,
+                                   ExtractTiming timing) {
     CostFeatures f = base(plan);
+    Map<String, String> locateCache = new HashMap<String, String>();
+    int calls = 0;
+    int hits = 0;
+    long locateNanos = 0L;
     if (phys != null && phys.scanTasks != null) {
       f.scanRanges = phys.scanTasks.size();
+      if (timing != null) {
+        timing.nScanTasks = phys.scanTasks.size();
+      }
       for (ScanTask t : phys.scanTasks) {
         String rs = null;
-        try {
-          rs = regionMapping.locate(t.table, t.startBytes());
-        } catch (RuntimeException ignored) {
-          rs = null;
+        String cacheKey = locateCacheKey(t.table, t.startHex);
+        if (cacheKey != null && locateCache.containsKey(cacheKey)) {
+          hits++;
+          calls++;
+          rs = locateCache.get(cacheKey);
+          if (rs != null && rs.isEmpty()) {
+            rs = null;
+          }
+        } else {
+          long t0 = System.nanoTime();
+          try {
+            rs = regionMapping.locate(t.table, t.startBytes());
+          } catch (RuntimeException ignored) {
+            rs = null;
+          }
+          locateNanos += Math.max(0L, System.nanoTime() - t0);
+          calls++;
+          if (cacheKey != null) {
+            locateCache.put(cacheKey, rs == null ? "" : rs);
+          }
         }
         if (rs == null || rs.isEmpty()) {
           rs = "shard:" + t.shard;
@@ -71,8 +112,20 @@ public final class CostFeaturesExtractor {
       f.scanRanges = estimateScanRanges(plan, ir);
       f.missingStats = true;
     }
+    if (timing != null) {
+      timing.regionLocateMs = Math.max(0L, locateNanos / 1_000_000L);
+      timing.locateCalls = calls;
+      timing.locateCacheHits = hits;
+    }
     fillFromStatsAndPlan(f, plan, ir, phys);
     return f;
+  }
+
+  private static String locateCacheKey(String table, String startHex) {
+    if (table == null) {
+      return null;
+    }
+    return table + "|" + (startHex == null ? "" : startHex);
   }
 
   /**

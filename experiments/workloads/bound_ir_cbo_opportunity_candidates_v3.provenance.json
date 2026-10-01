@@ -1,0 +1,34 @@
+{
+  "evaluation_role": "wide_joint_opportunity_discovery",
+  "seed": "2026-09-29-cbo-opportunity-wide-joint-v3",
+  "generator": "generate_cbo_opportunity_wide_joint_v3.py/v1",
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "candidate_count": 18,
+  "category_counts": {
+    "joint_topk_st": 10,
+    "joint_tz_topk": 2,
+    "wide_tz": 5,
+    "wide_tzh": 1
+  },
+  "blocked_files": {
+    "bound_ir_advantage_v2.json": 58,
+    "bound_ir_v1.json": 65,
+    "bound_ir_holdout_v2_test.json": 7,
+    "bound_ir_cbo_llm_pilot_v1.json": 5,
+    "bound_ir_cbo_llm_pilot_v1.candidates.json": 24,
+    "bound_ir_cbo_opportunity_dev_smoke_v1.json": 6,
+    "bound_ir_cbo_opportunity_verify_v1.json": 4,
+    "bound_ir_cbo_opportunity_verify_v2.json": 12,
+    "bound_ir_cbo_opportunity_candidates_v2.json": 23,
+    "bound_ir_cbo_opportunity_candidates_v2.candidates.json": 23
+  },
+  "source_sha256": {
+    "bound_ir_advantage_v2.json": "95789725d4632085138dc1db5d626763410fecbfe070aced08c4265a056fe3fb"
+  },
+  "note": "Oracle must be filled independently via FullScan before census exec labels.",
+  "sha256": {
+    "bound_ir_cbo_opportunity_candidates_v3.candidates.json": "ff184335a1ce2956a4a3c8e205a80d25f04a5d5b073686162749b5b055202c94",
+    "bound_ir_cbo_opportunity_candidates_v3.json": "c16105fd19c10bf3f9b2e3ce63e727e7a555be555617bbbbcea04faf5bd71b15"
+  }
+}

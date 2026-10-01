@@ -1,0 +1,18 @@
+# E2 — CBO opportunity mechanism verify (BoundIR plan only).
+# Development diagnostic; do not merge into advantage_v2 mains.
+kind: compare
+id: plan-cbo-opportunity-verify-v1
+workload: experiments/workloads/bound_ir_cbo_opportunity_verify_v1.json
+oracle: experiments/workloads/bound_ir_cbo_opportunity_verify_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - plan
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - bao
+  - kart
+  - cbo-llm-proposal

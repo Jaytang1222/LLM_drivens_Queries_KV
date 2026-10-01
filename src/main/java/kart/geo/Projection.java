@@ -7,20 +7,37 @@ import org.locationtech.proj4j.CoordinateTransformFactory;
 import org.locationtech.proj4j.ProjCoordinate;
 
 /**
- * WGS84 (EPSG:4326) ↔ UTM 50N (EPSG:32650) via Proj4J.
+ * WGS84 (EPSG:4326) ↔ projected CRS via Proj4J.
+ * Default remains UTM 50N (EPSG:32650) for T-Drive / Beijing.
  */
 public final class Projection {
 
+  public static final String DEFAULT_CRS = "EPSG:32650";
+  /** UTM zone 34N — suitable for Aegean / Greek AIS (~lon 23°E). */
+  public static final String AIS_CRS = "EPSG:32634";
+
+  private final String crs;
   private final CoordinateTransform toUtm;
   private final CoordinateTransform toWgs;
 
   public Projection() {
+    this(DEFAULT_CRS);
+  }
+
+  public Projection(String projectedCrs) {
+    String crsName = projectedCrs == null || projectedCrs.trim().isEmpty()
+        ? DEFAULT_CRS : projectedCrs.trim();
+    this.crs = crsName;
     CRSFactory crsFactory = new CRSFactory();
     CoordinateReferenceSystem wgs84 = crsFactory.createFromName("EPSG:4326");
-    CoordinateReferenceSystem utm50n = crsFactory.createFromName("EPSG:32650");
+    CoordinateReferenceSystem projected = crsFactory.createFromName(crsName);
     CoordinateTransformFactory ctf = new CoordinateTransformFactory();
-    this.toUtm = ctf.createTransform(wgs84, utm50n);
-    this.toWgs = ctf.createTransform(utm50n, wgs84);
+    this.toUtm = ctf.createTransform(wgs84, projected);
+    this.toWgs = ctf.createTransform(projected, wgs84);
+  }
+
+  public String crs() {
+    return crs;
   }
 
   public static final class LonLat {

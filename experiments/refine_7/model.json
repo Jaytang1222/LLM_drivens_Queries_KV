@@ -1,0 +1,26 @@
+{
+  "version": "online_pair_nnls_v1",
+  "coefficients": [
+    0.0,
+    1123.5456787817848,
+    129.57320051446985
+  ],
+  "margin_ms": 378.70982227103104,
+  "training_queries": 56,
+  "pairs": 259,
+  "excluded_query_ids": [
+    "a2_topk_dtw_wide",
+    "a2_tz_hard_a",
+    "a2_tz_hard_d",
+    "ais_st_control_small",
+    "ais_st_control_tiny",
+    "ais_st_port_focus",
+    "ais_topk_dtw_2week",
+    "ais_topk_frechet_wide",
+    "topk_st_3"
+  ],
+  "oof_mae_ms": 857.1526550533565,
+  "margin_definition": "query-group OOF upper residual p90, development empirical only",
+  "feature_source": "FastCost execution-before catalog estimates",
+  "features_sha256": "164de858d2675e5a4d0b900ccd1d48b25b55b983fde12fcff733a3f16a47ceb1"
+}

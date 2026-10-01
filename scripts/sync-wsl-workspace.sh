@@ -114,6 +114,18 @@ if ! test -d "$DST"; then
   exit 1
 fi
 
+# Server / same-tree mode: KART_SRC == KART_DST (no Windows→WSL copy).
+SRC_ABS="$(cd "$SRC" && pwd)"
+DST_ABS="$(cd "$DST" && pwd)"
+if [[ "$SRC_ABS" == "$DST_ABS" ]]; then
+  kart_ensure_compat_symlink
+  if [[ -d "$DST/scripts" ]]; then
+    find "$DST/scripts" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
+  fi
+  echo "synced: skipped (KART_SRC == KART_DST: $DST_ABS)"
+  exit 0
+fi
+
 kart_ensure_compat_symlink
 
 STAMP_DIR="$SRC"

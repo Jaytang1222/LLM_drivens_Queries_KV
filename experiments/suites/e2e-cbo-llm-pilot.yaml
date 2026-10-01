@@ -1,0 +1,18 @@
+# E3 pilot — CBO＋LLM proposal mechanism (warm diagnostic).
+# Cache OFF. For cache miss/hit study use e2e-cbo-llm-pilot-cache.yaml.
+kind: compare
+id: e2e-cbo-llm-pilot
+workload: experiments/workloads/bound_ir_cbo_llm_pilot_v1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_pilot_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - bao
+  - kart
+  - cbo-llm-proposal

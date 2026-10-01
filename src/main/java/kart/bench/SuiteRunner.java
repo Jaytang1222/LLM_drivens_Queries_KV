@@ -160,7 +160,10 @@ public final class SuiteRunner {
     for (RunCell c : cells) {
       if ("llm".equals(c.armId) || "llm_direct".equals(c.armId)
           || "kart".equals(c.armId) || "llmopt".equals(c.armId)
-          || "kart-conditional-llm".equals(c.armId)) {
+          || "cbo-llm-proposal".equals(c.armId)
+          || "cbo-llm-proposal-cached".equals(c.armId)
+          || "kart-conditional-llm".equals(c.armId)
+          || "fixed-plan".equals(c.armId)) {
         needLlm = true;
         break;
       }
@@ -431,6 +434,17 @@ public final class SuiteRunner {
                     ? null : Integer.valueOf(tr.run.rejections.size()));
                 row.put("n_cost_cards", tr.run == null || tr.run.costCards == null
                     ? null : Integer.valueOf(tr.run.costCards.size()));
+                if (planOnly && tr.run != null && tr.run.safe != null) {
+                  java.util.List<String> safeIds = new java.util.ArrayList<String>();
+                  for (kart.validation.SafePlanHandle handle : tr.run.safe) {
+                    if (handle != null && handle.plan() != null
+                        && handle.plan().plan_id != null && !safeIds.contains(handle.plan().plan_id)) {
+                      safeIds.add(handle.plan().plan_id);
+                    }
+                  }
+                  java.util.Collections.sort(safeIds);
+                  row.put("safe_plan_ids", safeIds);
+                }
                 enrichTrace(row, tr);
                 if (tr.extras != null) {
                   for (Map.Entry<String, Object> extra : tr.extras.entrySet()) {

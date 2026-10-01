@@ -1,0 +1,35 @@
+export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-8-openjdk-amd64}"
+export PATH="$JAVA_HOME/bin:$PATH"
+export ZK_HOME="$HOME/zookeeper"
+export HBASE_HOME="$HOME/hbase"
+export KART_DST="$HOME/projects/llm-kv"
+export KART_SRC="$KART_DST"
+export KART_COMPAT="$HOME/build/LLM_KV"
+export KART_MAVEN_REPO="$HOME/.m2/repository"
+export KART_EXPERIMENT_MANIFEST=tdrive_v1_ready
+mkdir -p "$(dirname "$KART_COMPAT")"
+[[ -e "$KART_COMPAT" ]] || ln -sfn "$KART_DST" "$KART_COMPAT"
+
+# Ensure .env is auto-loaded for LLM experiments when present
+if [[ -f "$HOME/projects/llm-kv/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$HOME/projects/llm-kv/.env"
+  set +a
+fi
+
+# Egress via laptop Clash HTTP reverse-forward (scripts/ssh-llm-http-egress-tunnel.ps1).
+# Prefer HTTP CONNECT proxy over SOCKS for Java HttpURLConnection stability.
+export KART_HTTP_PROXY="${KART_HTTP_PROXY:-http://127.0.0.1:17890}"
+export ALL_PROXY="$KART_HTTP_PROXY"
+export HTTPS_PROXY="$KART_HTTP_PROXY"
+export HTTP_PROXY="$KART_HTTP_PROXY"
+export https_proxy="$KART_HTTP_PROXY"
+export http_proxy="$KART_HTTP_PROXY"
+export no_proxy="127.0.0.1,localhost"
+export NO_PROXY="127.0.0.1,localhost"
+# Strip any prior SOCKS JVM flags; set HTTP(S) proxy for OpenAiCompatibleClient.
+_jto="${JAVA_TOOL_OPTIONS:-}"
+_jto="$(printf '%s' "$_jto" | sed -E 's/-DsocksProxyHost=[^ ]*//g; s/-DsocksProxyPort=[^ ]*//g; s/-Dhttps.proxyHost=[^ ]*//g; s/-Dhttps.proxyPort=[^ ]*//g; s/-Dhttp.proxyHost=[^ ]*//g; s/-Dhttp.proxyPort=[^ ]*//g; s/  +/ /g; s/^ //; s/ $//')"
+_jto="${_jto:+$_jto }-Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=17890 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=17890"
+export JAVA_TOOL_OPTIONS="$_jto"

@@ -30,6 +30,8 @@ public final class ValidationReport {
 
   private final List<Finding> findings = new ArrayList<Finding>();
   private final List<CoverageCertificate> certificates = new ArrayList<CoverageCertificate>();
+  /** Optional refine_3 validator sub-stage timings. */
+  public ValidatorTiming timing;
 
   public void pass(String check, String message) {
     findings.add(new Finding(check, true, message));

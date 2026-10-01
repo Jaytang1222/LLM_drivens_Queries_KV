@@ -21,6 +21,18 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
   @Option(names = "--catalog", defaultValue = "catalog")
   private Path catalogDir;
 
+  @Option(names = "--format", defaultValue = "tdrive",
+      description = "Input format: tdrive (part-*) or ais (trajectories.txt)")
+  private String format;
+
+  @Option(names = "--crs", defaultValue = "EPSG:32650",
+      description = "Projected CRS (AIS: EPSG:32634)")
+  private String crs;
+
+  @Option(names = "--table-prefix",
+      description = "HBase table suffix prefix (e.g. ais_v1 → traj_raw_ais_v1). Empty = legacy v1 names.")
+  private String tablePrefix;
+
   @Option(names = "--xmin")
   private Double xmin;
   @Option(names = "--xmax")
@@ -45,11 +57,17 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
     opt.catalogDir = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
     opt.hbaseSiteXml = root.resolve("config/hbase/hbase-site.xml");
     opt.epochMs = epochMs;
+    opt.format = format;
+    opt.crs = crs;
+    opt.tablePrefix = tablePrefix;
     if (xmin != null && xmax != null && ymin != null && ymax != null) {
       opt.domain = new Rect(xmin, ymin, xmax, ymax);
     }
 
-    System.out.println("Building snapshot " + manifestId + " from " + opt.dataDir + " [HBase]");
+    System.out.println("Building snapshot " + manifestId + " from " + opt.dataDir
+        + " format=" + format + " crs=" + crs
+        + " tablePrefix=" + (tablePrefix == null ? "<legacy>" : tablePrefix)
+        + " [HBase]");
     SnapshotBuilder.BuildResult r = new SnapshotBuilder().build(opt);
     if (r.failureReason != null) {
       System.err.println("FAILED: " + r.failureReason);

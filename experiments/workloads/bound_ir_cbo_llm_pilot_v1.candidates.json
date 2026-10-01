@@ -1,0 +1,1072 @@
+{
+  "seed": "2026-09-28-cbo-llm-pilot-v1",
+  "generator": "generate_cbo_llm_pilot_v1.py/v1",
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "n_candidates": 24,
+  "note": "Offline screen before freezing. Do not select by new LLM arm outcomes.",
+  "candidates": [
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_01",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202044860000,
+          "end_ms": 1202045460000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "st_ss_1",
+      "fingerprint": "5d137803dafb278fc998a2f48afd20d803db07005baedc34a47375a170b91b47"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_02",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202044920000,
+          "end_ms": 1202045520000
+        },
+        "spatial": {
+          "min_x": 445877.0483485528,
+          "min_y": 4413589.2857707525,
+          "max_x": 494881.72899283434,
+          "max_y": 4471806.716421186,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "st_sl_1",
+      "fingerprint": "ab42311a777cd3c005910ba0b6ebe5760d8e86f4d91f966ce9546fd9e2ab8d35"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_03",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201930380000,
+          "end_ms": 1202016780000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "st_ls_1",
+      "fingerprint": "95d2603f095c620a02bf7a52f4165b473f294fae6dd7798b3883c543ba4e8dc2"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_04",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202043240000,
+          "end_ms": 1202218106000
+        },
+        "spatial": {
+          "min_x": 458128.2185096232,
+          "min_y": 4428143.643433361,
+          "max_x": 482630.5588317639,
+          "max_y": 4457252.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "st_ll_1",
+      "fingerprint": "e2023ab1a0fb0fddc4ac99c2226c8ba7ecc7b96d250539c51985ec8231603756"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_05",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202043300000,
+          "end_ms": 1202046900000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "h_st_1",
+      "fingerprint": "c0e310bf81856e3d33f3ed2efdf04296415d3a260a873e9694398c95d302364a"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_06",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202000160000,
+          "end_ms": 1202218226000
+        },
+        "spatial": {
+          "min_x": 457228.2185096232,
+          "min_y": 4427243.643433361,
+          "max_x": 483530.5588317639,
+          "max_y": 4458152.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_a",
+      "fingerprint": "843f6a6d28d9df90d8bff687debebe85356c8f4ecd594103eeb737faf9a336e5"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_07",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201870620000,
+          "end_ms": 1202221886000
+        },
+        "spatial": {
+          "min_x": 456628.2185096232,
+          "min_y": 4426643.643433361,
+          "max_x": 484130.5588317639,
+          "max_y": 4458752.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_b",
+      "fingerprint": "c9eff60d0129fc2b56432a88c355e941502690957f4217847110f6e19d239714"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_08",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201946280000,
+          "end_ms": 1202225546000
+        },
+        "spatial": {
+          "min_x": 457428.2185096232,
+          "min_y": 4427443.643433361,
+          "max_x": 483330.5588317639,
+          "max_y": 4457952.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_c",
+      "fingerprint": "d3922de5c30e1b385a6991441746f03a6afd8a00432cbc85ff5d13581f2ebea0"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_09",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201957740000,
+          "end_ms": 1202217806000
+        },
+        "spatial": {
+          "min_x": 455928.2185096232,
+          "min_y": 4425943.643433361,
+          "max_x": 484830.5588317639,
+          "max_y": 4459452.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_d",
+      "fingerprint": "d0e6c75de29614ea8d9f700d59a173d71801c5fc91c8e3d37f37bf09ab2c5d41"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_10",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202023800000,
+          "end_ms": 1202067600000
+        },
+        "spatial": {
+          "min_x": 444877.0483485528,
+          "min_y": 4412589.2857707525,
+          "max_x": 495881.72899283434,
+          "max_y": 4472806.716421186,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_e",
+      "fingerprint": "d63c497071ee2c844edff0aa9ed6ff802f51933e92342b1257f86e64e7a93f91"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_cbo_miss_11",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201980660000,
+          "end_ms": 1202110860000
+        },
+        "spatial": {
+          "min_x": 444077.0483485528,
+          "min_y": 4411789.2857707525,
+          "max_x": 496681.72899283434,
+          "max_y": 4473606.716421186,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "cbo_candidate_miss",
+      "reason": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "source_query_id": "a2_tz_hard_f",
+      "fingerprint": "efccafacda2fe39cdf16d6f747e16f0cc23113c8ce800be69f68199510eae490"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_01",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202043270000,
+          "end_ms": 1202046870000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "h_st_1",
+      "fingerprint": "6891cd0303b760ff03697c9908d6a1da5005dc2f4a289bfa9fb88208b5e3a0c0"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_02",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202039760000,
+          "end_ms": 1202050560000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "h_st_2",
+      "fingerprint": "95e7e56aa93b40386698909e067939ccfa233ffc295ca30c2bee8897d48186d6"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_03",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202045250000,
+          "end_ms": 1202048850000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "h_st_3",
+      "fingerprint": "d35eb3233597730f251634154ddcf0a56d1dcf1c2e5e90df6e91511bd0ca9be9"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_04",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202036340000,
+          "end_ms": 1202050740000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "h_st_4",
+      "fingerprint": "ca7c093d3b643c073d68089fb57906a24a2d988d9a182bb35f5f6529ba5a6091"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_05",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202036430000,
+          "end_ms": 1202054430000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_a",
+      "fingerprint": "3d78b0ffd97f8d02eff192cc07c1ee6b1e8e7bfc12a326682814c7b667cf2a16"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_06",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202047320000,
+          "end_ms": 1202058120000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_b",
+      "fingerprint": "21442994ce65d2a13800a2a63808341e232d7f0d6b73db373407c25638c541b0"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_07",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202039610000,
+          "end_ms": 1202051610000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_c",
+      "fingerprint": "f69ba556cbcb5565a7a5dd01ce6ba8124a989a98b3411c0e0f2932618e441c37"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_08",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202040300000,
+          "end_ms": 1202051100000
+        },
+        "spatial": {
+          "min_x": 462228.68657405133,
+          "min_y": 4433165.386498405,
+          "max_x": 478530.0907673358,
+          "max_y": 4452230.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_d",
+      "fingerprint": "a26ec49f1b85dd1b5a932f5ba34b9c158769a5dff820f10e1c9e8c3bcb6da460"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_09",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202042190000,
+          "end_ms": 1202052990000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_e",
+      "fingerprint": "fdbb36cf4527a970f686509dd51ac67be733143b673e9e30ac89d4b7cdff73e3"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_10",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202045880000,
+          "end_ms": 1202049480000
+        },
+        "spatial": {
+          "min_x": 461828.68657405133,
+          "min_y": 4432765.386498405,
+          "max_x": 478930.0907673358,
+          "max_y": 4452630.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_f",
+      "fingerprint": "cc61805f2e71ad6027f3e21955320a2d810ec54885710135a687f30ce684cb78"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_11",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202026170000,
+          "end_ms": 1202054970000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_g",
+      "fingerprint": "7985b7b521747bd7d81c2788c4aa9149cfdf292bc66d896130161e310cec55c9"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_bao_tzh_12",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202037660000,
+          "end_ms": 1202058660000
+        },
+        "spatial": {
+          "min_x": 462528.68657405133,
+          "min_y": 4433465.386498405,
+          "max_x": 478230.0907673358,
+          "max_y": 4451930.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "bao_tzh_full_risk",
+      "reason": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "source_query_id": "a2_tzh_h",
+      "fingerprint": "6856b38b4169f279800084fcc0bcd82a223f59af29c6b9500c198dfb49eb3ce9"
+    },
+    {
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "pilot_control_01",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202045700000,
+          "end_ms": 1202046300000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "category": "normal_control",
+      "reason": "Small TZ control; CBO should already have a safe index plan; whitelist may be empty or redundant",
+      "source_query_id": "st_ss_1",
+      "fingerprint": "cf49c7e5b0e19a87a1520e1a78f4dfa58ce2afff346f2a8a198749b9b9a7eb1b"
+    }
+  ]
+}

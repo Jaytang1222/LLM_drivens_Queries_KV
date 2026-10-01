@@ -1,0 +1,14 @@
+# Plan-only: measure hybrid LLM planning overhead vs CBO (no 1.5s wall).
+# Four census opportunity queries with search_miss_with_exec_gain; not a win-rate sample.
+kind: compare
+id: plan-cbo-llm-overhead-v1
+workload: experiments/workloads/bound_ir_cbo_llm_overhead_v1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_overhead_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - cbo-llm-proposal

@@ -1,0 +1,3603 @@
+{
+  "development_diagnostic": true,
+  "summary_version": "opportunity_census_corrected/v1",
+  "run_id": "opportunity-dev-v1",
+  "source_meta": {
+    "cache": "warm",
+    "max_wall_minutes": 180,
+    "hybrid_extra_plan_ms_provisional": 900,
+    "git": {
+      "commit": "6ef179445512336b2f41259aa331589476dd1d74",
+      "dirty": true
+    }
+  },
+  "n_queries_in_search": 79,
+  "n_queries_with_repeat_pairs": 60,
+  "n_missing_oracle_queries": 19,
+  "missing_oracle_query_ids": [
+    "pilot_bao_tzh_03",
+    "pilot_bao_tzh_04",
+    "pilot_bao_tzh_05",
+    "pilot_bao_tzh_06",
+    "pilot_bao_tzh_07",
+    "pilot_bao_tzh_08",
+    "pilot_bao_tzh_09",
+    "pilot_bao_tzh_10",
+    "pilot_bao_tzh_11",
+    "pilot_bao_tzh_12",
+    "pilot_cbo_miss_03",
+    "pilot_cbo_miss_04",
+    "pilot_cbo_miss_05",
+    "pilot_cbo_miss_06",
+    "pilot_cbo_miss_07",
+    "pilot_cbo_miss_08",
+    "pilot_cbo_miss_09",
+    "pilot_cbo_miss_10",
+    "pilot_cbo_miss_11"
+  ],
+  "n_fullscan_unmeasured_rows": 79,
+  "n_true_censor_rows": 0,
+  "note_fullscan": "fullscan_not_selected_budget_skip counted as fullscan_unmeasured, not whole-query censored",
+  "note_stable": "stable gain requires 3 repeat phases all saving>0; coarse excluded",
+  "note_net_gain": "LLM not run; provisional 900ms hybrid overhead is not measured net_gain",
+  "label_counts": {
+    "no_faster_safe_plan": 56,
+    "search_miss_with_exec_gain": 4,
+    "candidate_fast_but_overhead_dominates": 4,
+    "missing_oracle": 19
+  },
+  "n_stable_search_or_selection_miss": 4,
+  "stable_opportunities": [
+    {
+      "query_id": "a2_tz_hard_d",
+      "plan_id": "P_T",
+      "miss_class": "candidate_miss",
+      "saving_median_ms": 285.0,
+      "saving_min_ms": 181.0,
+      "savings_ms": [
+        181.0,
+        484.0,
+        285.0
+      ]
+    },
+    {
+      "query_id": "a2_topk_dtw_wide",
+      "plan_id": "P_T",
+      "miss_class": "candidate_miss",
+      "saving_median_ms": 237.0,
+      "saving_min_ms": 211.0,
+      "savings_ms": [
+        237.0,
+        237.0,
+        211.0
+      ]
+    },
+    {
+      "query_id": "topk_st_3",
+      "plan_id": "P_T",
+      "miss_class": "candidate_miss",
+      "saving_median_ms": 211.0,
+      "saving_min_ms": 210.0,
+      "savings_ms": [
+        211.0,
+        221.0,
+        210.0
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_a",
+      "plan_id": "P_T",
+      "miss_class": "candidate_miss",
+      "saving_median_ms": 197.0,
+      "saving_min_ms": 78.0,
+      "savings_ms": [
+        197.0,
+        78.0,
+        306.0
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "a2_th_unc_a",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -2586.0,
+            -2684.0,
+            -2542.0
+          ],
+          "saving_median_ms": -2586.0,
+          "saving_min_ms": -2684.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 2604,
+              "saving_ms": -2586.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 2704,
+              "saving_ms": -2684.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 2561,
+              "saving_ms": -2542.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_th_unc_b",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -7052.0,
+            -7086.0,
+            -7005.0
+          ],
+          "saving_median_ms": -7052.0,
+          "saving_min_ms": -7086.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 7071,
+              "saving_ms": -7052.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 7107,
+              "saving_ms": -7086.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 7026,
+              "saving_ms": -7005.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_dtw_k3",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -26.0,
+            -25.0,
+            -25.0
+          ],
+          "saving_median_ms": -25.0,
+          "saving_min_ms": -26.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 31,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -26.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 32,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -25.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 34,
+              "cand_t_exec_ms": 59,
+              "saving_ms": -25.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_dtw_k7",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":7,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":7,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -75.0,
+            -23.0,
+            -51.0
+          ],
+          "saving_median_ms": -51.0,
+          "saving_min_ms": -75.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 84,
+              "cand_t_exec_ms": 159,
+              "saving_ms": -75.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 119,
+              "cand_t_exec_ms": 142,
+              "saving_ms": -23.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 92,
+              "cand_t_exec_ms": 143,
+              "saving_ms": -51.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_dtw_wide",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            237.0,
+            237.0,
+            211.0
+          ],
+          "saving_median_ms": 237.0,
+          "saving_min_ms": 211.0,
+          "stable_faster": true,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 364,
+              "cand_t_exec_ms": 127,
+              "saving_ms": 237.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 369,
+              "cand_t_exec_ms": 132,
+              "saving_ms": 237.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 358,
+              "cand_t_exec_ms": 147,
+              "saving_ms": 211.0
+            }
+          ]
+        }
+      ],
+      "best_stable": {
+        "plan_id": "P_T",
+        "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+        "miss_class": "candidate_miss",
+        "in_cbo_safe_set": false,
+        "n_paired": 3,
+        "n_fail_or_missing": 0,
+        "savings_ms": [
+          237.0,
+          237.0,
+          211.0
+        ],
+        "saving_median_ms": 237.0,
+        "saving_min_ms": 211.0,
+        "stable_faster": true,
+        "pairs": [
+          {
+            "phase": "repeat_t1",
+            "cbo_t_exec_ms": 364,
+            "cand_t_exec_ms": 127,
+            "saving_ms": 237.0
+          },
+          {
+            "phase": "repeat_t2",
+            "cbo_t_exec_ms": 369,
+            "cand_t_exec_ms": 132,
+            "saving_ms": 237.0
+          },
+          {
+            "phase": "repeat_t3",
+            "cbo_t_exec_ms": 358,
+            "cand_t_exec_ms": 147,
+            "saving_ms": 211.0
+          }
+        ]
+      },
+      "has_valid_pairs": true,
+      "labels": [
+        "search_miss_with_exec_gain",
+        "candidate_fast_but_overhead_dominates"
+      ]
+    },
+    {
+      "query_id": "a2_topk_frechet_k3",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -36.0,
+            -34.0,
+            -33.0
+          ],
+          "saving_median_ms": -34.0,
+          "saving_min_ms": -36.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 32,
+              "cand_t_exec_ms": 68,
+              "saving_ms": -36.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 31,
+              "cand_t_exec_ms": 65,
+              "saving_ms": -34.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 32,
+              "cand_t_exec_ms": 65,
+              "saving_ms": -33.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_frechet_k7",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":7,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":7,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -23.0,
+            -41.0,
+            -34.0
+          ],
+          "saving_median_ms": -34.0,
+          "saving_min_ms": -41.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 57,
+              "cand_t_exec_ms": 80,
+              "saving_ms": -23.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 47,
+              "cand_t_exec_ms": 88,
+              "saving_ms": -41.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 45,
+              "cand_t_exec_ms": 79,
+              "saving_ms": -34.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_frechet_wide",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -90.0,
+            -54.0,
+            -69.0
+          ],
+          "saving_median_ms": -69.0,
+          "saving_min_ms": -90.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 106,
+              "cand_t_exec_ms": 196,
+              "saving_ms": -90.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 121,
+              "cand_t_exec_ms": 175,
+              "saving_ms": -54.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 116,
+              "cand_t_exec_ms": 185,
+              "saving_ms": -69.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_haus_k3",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -44.0,
+            -34.0,
+            -41.0
+          ],
+          "saving_median_ms": -41.0,
+          "saving_min_ms": -44.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 36,
+              "cand_t_exec_ms": 80,
+              "saving_ms": -44.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 32,
+              "cand_t_exec_ms": 66,
+              "saving_ms": -34.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 30,
+              "cand_t_exec_ms": 71,
+              "saving_ms": -41.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_topk_haus_k5",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -34.0,
+            -41.0,
+            -41.0
+          ],
+          "saving_median_ms": -41.0,
+          "saving_min_ms": -41.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 82,
+              "cand_t_exec_ms": 116,
+              "saving_ms": -34.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 73,
+              "cand_t_exec_ms": 114,
+              "saving_ms": -41.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 77,
+              "cand_t_exec_ms": 118,
+              "saving_ms": -41.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_a",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            197.0,
+            78.0,
+            306.0
+          ],
+          "saving_median_ms": 197.0,
+          "saving_min_ms": 78.0,
+          "stable_faster": true,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 4077,
+              "cand_t_exec_ms": 3880,
+              "saving_ms": 197.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 4055,
+              "cand_t_exec_ms": 3977,
+              "saving_ms": 78.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 4099,
+              "cand_t_exec_ms": 3793,
+              "saving_ms": 306.0
+            }
+          ]
+        }
+      ],
+      "best_stable": {
+        "plan_id": "P_T",
+        "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+        "miss_class": "candidate_miss",
+        "in_cbo_safe_set": false,
+        "n_paired": 3,
+        "n_fail_or_missing": 0,
+        "savings_ms": [
+          197.0,
+          78.0,
+          306.0
+        ],
+        "saving_median_ms": 197.0,
+        "saving_min_ms": 78.0,
+        "stable_faster": true,
+        "pairs": [
+          {
+            "phase": "repeat_t1",
+            "cbo_t_exec_ms": 4077,
+            "cand_t_exec_ms": 3880,
+            "saving_ms": 197.0
+          },
+          {
+            "phase": "repeat_t2",
+            "cbo_t_exec_ms": 4055,
+            "cand_t_exec_ms": 3977,
+            "saving_ms": 78.0
+          },
+          {
+            "phase": "repeat_t3",
+            "cbo_t_exec_ms": 4099,
+            "cand_t_exec_ms": 3793,
+            "saving_ms": 306.0
+          }
+        ]
+      },
+      "has_valid_pairs": true,
+      "labels": [
+        "search_miss_with_exec_gain",
+        "candidate_fast_but_overhead_dominates"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_b",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -117.0,
+            -61.0,
+            -288.0
+          ],
+          "saving_median_ms": -117.0,
+          "saving_min_ms": -288.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 5223,
+              "cand_t_exec_ms": 5340,
+              "saving_ms": -117.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 5265,
+              "cand_t_exec_ms": 5326,
+              "saving_ms": -61.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 5211,
+              "cand_t_exec_ms": 5499,
+              "saving_ms": -288.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_c",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -177.0,
+            -127.0,
+            -187.0
+          ],
+          "saving_median_ms": -177.0,
+          "saving_min_ms": -187.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 4247,
+              "cand_t_exec_ms": 4424,
+              "saving_ms": -177.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 4235,
+              "cand_t_exec_ms": 4362,
+              "saving_ms": -127.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 4242,
+              "cand_t_exec_ms": 4429,
+              "saving_ms": -187.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_d",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            181.0,
+            484.0,
+            285.0
+          ],
+          "saving_median_ms": 285.0,
+          "saving_min_ms": 181.0,
+          "stable_faster": true,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 4941,
+              "cand_t_exec_ms": 4760,
+              "saving_ms": 181.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 5508,
+              "cand_t_exec_ms": 5024,
+              "saving_ms": 484.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 5368,
+              "cand_t_exec_ms": 5083,
+              "saving_ms": 285.0
+            }
+          ]
+        }
+      ],
+      "best_stable": {
+        "plan_id": "P_T",
+        "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+        "miss_class": "candidate_miss",
+        "in_cbo_safe_set": false,
+        "n_paired": 3,
+        "n_fail_or_missing": 0,
+        "savings_ms": [
+          181.0,
+          484.0,
+          285.0
+        ],
+        "saving_median_ms": 285.0,
+        "saving_min_ms": 181.0,
+        "stable_faster": true,
+        "pairs": [
+          {
+            "phase": "repeat_t1",
+            "cbo_t_exec_ms": 4941,
+            "cand_t_exec_ms": 4760,
+            "saving_ms": 181.0
+          },
+          {
+            "phase": "repeat_t2",
+            "cbo_t_exec_ms": 5508,
+            "cand_t_exec_ms": 5024,
+            "saving_ms": 484.0
+          },
+          {
+            "phase": "repeat_t3",
+            "cbo_t_exec_ms": 5368,
+            "cand_t_exec_ms": 5083,
+            "saving_ms": 285.0
+          }
+        ]
+      },
+      "has_valid_pairs": true,
+      "labels": [
+        "search_miss_with_exec_gain",
+        "candidate_fast_but_overhead_dominates"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_e",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -7692.0,
+            -8078.0,
+            -8523.0
+          ],
+          "saving_median_ms": -8078.0,
+          "saving_min_ms": -8523.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 3162,
+              "cand_t_exec_ms": 10854,
+              "saving_ms": -7692.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 3116,
+              "cand_t_exec_ms": 11194,
+              "saving_ms": -8078.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 3225,
+              "cand_t_exec_ms": 11748,
+              "saving_ms": -8523.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_f",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -8093.0,
+            -8557.0,
+            -8447.0
+          ],
+          "saving_median_ms": -8447.0,
+          "saving_min_ms": -8557.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 8683,
+              "cand_t_exec_ms": 16776,
+              "saving_ms": -8093.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 8329,
+              "cand_t_exec_ms": 16886,
+              "saving_ms": -8557.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 7992,
+              "cand_t_exec_ms": 16439,
+              "saving_ms": -8447.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_g",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -166.0,
+            -168.0,
+            -216.0
+          ],
+          "saving_median_ms": -168.0,
+          "saving_min_ms": -216.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 570,
+              "cand_t_exec_ms": 736,
+              "saving_ms": -166.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 599,
+              "cand_t_exec_ms": 767,
+              "saving_ms": -168.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 571,
+              "cand_t_exec_ms": 787,
+              "saving_ms": -216.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tz_hard_h",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -210.0,
+            -214.0,
+            -215.0
+          ],
+          "saving_median_ms": -214.0,
+          "saving_min_ms": -215.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 707,
+              "cand_t_exec_ms": 917,
+              "saving_ms": -210.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 704,
+              "cand_t_exec_ms": 918,
+              "saving_ms": -214.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 706,
+              "cand_t_exec_ms": 921,
+              "saving_ms": -215.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_a",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -2132.0,
+            -2104.0,
+            -2206.0
+          ],
+          "saving_median_ms": -2132.0,
+          "saving_min_ms": -2206.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 2152,
+              "saving_ms": -2132.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 2126,
+              "saving_ms": -2104.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 2225,
+              "saving_ms": -2206.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_b",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1527.0,
+            -1538.0,
+            -1496.0
+          ],
+          "saving_median_ms": -1527.0,
+          "saving_min_ms": -1538.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 1545,
+              "saving_ms": -1527.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 1559,
+              "saving_ms": -1538.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1516,
+              "saving_ms": -1496.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_c",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1778.0,
+            -1829.0,
+            -1793.0
+          ],
+          "saving_median_ms": -1793.0,
+          "saving_min_ms": -1829.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 1800,
+              "saving_ms": -1778.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 1850,
+              "saving_ms": -1829.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1813,
+              "saving_ms": -1793.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_d",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1758.0,
+            -1669.0,
+            -1851.0
+          ],
+          "saving_median_ms": -1758.0,
+          "saving_min_ms": -1851.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1777,
+              "saving_ms": -1758.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 25,
+              "cand_t_exec_ms": 1694,
+              "saving_ms": -1669.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 1872,
+              "saving_ms": -1851.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_e",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1643.0,
+            -1701.0,
+            -1550.0
+          ],
+          "saving_median_ms": -1643.0,
+          "saving_min_ms": -1701.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1662,
+              "saving_ms": -1643.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 1723,
+              "saving_ms": -1701.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1569,
+              "saving_ms": -1550.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_f",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1159.0,
+            -1129.0,
+            -1109.0
+          ],
+          "saving_median_ms": -1129.0,
+          "saving_min_ms": -1159.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1178,
+              "saving_ms": -1159.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1148,
+              "saving_ms": -1129.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1128,
+              "saving_ms": -1109.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_g",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -3145.0,
+            -3127.0,
+            -3143.0
+          ],
+          "saving_median_ms": -3143.0,
+          "saving_min_ms": -3145.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 3167,
+              "saving_ms": -3145.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 3149,
+              "saving_ms": -3127.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 3165,
+              "saving_ms": -3143.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_tzh_h",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -2381.0,
+            -2329.0,
+            -2438.0
+          ],
+          "saving_median_ms": -2381.0,
+          "saving_min_ms": -2438.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 2402,
+              "saving_ms": -2381.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 2349,
+              "saving_ms": -2329.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 2459,
+              "saving_ms": -2438.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_zh_unc_a",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -877.0,
+            -874.0,
+            -840.0
+          ],
+          "saving_median_ms": -874.0,
+          "saving_min_ms": -877.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 896,
+              "saving_ms": -877.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 897,
+              "saving_ms": -874.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 861,
+              "saving_ms": -840.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "a2_zh_unc_b",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1072.0,
+            -1041.0,
+            -1055.0
+          ],
+          "saving_median_ms": -1055.0,
+          "saving_min_ms": -1072.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1092,
+              "saving_ms": -1072.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 1063,
+              "saving_ms": -1041.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1075,
+              "saving_ms": -1055.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h2_tz_mid_b",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -48.0,
+            -25.0,
+            -19.0
+          ],
+          "saving_median_ms": -25.0,
+          "saving_min_ms": -48.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 67,
+              "saving_ms": -48.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 40,
+              "saving_ms": -25.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 16,
+              "cand_t_exec_ms": 35,
+              "saving_ms": -19.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_s_small",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -556.0,
+            -590.0,
+            -587.0
+          ],
+          "saving_median_ms": -587.0,
+          "saving_min_ms": -590.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 576,
+              "saving_ms": -556.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 611,
+              "saving_ms": -590.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 610,
+              "saving_ms": -587.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_st_1",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1052.0,
+            -1087.0,
+            -1027.0
+          ],
+          "saving_median_ms": -1052.0,
+          "saving_min_ms": -1087.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1071,
+              "saving_ms": -1052.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1106,
+              "saving_ms": -1087.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1046,
+              "saving_ms": -1027.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_st_3",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1056.0,
+            -1030.0,
+            -1037.0
+          ],
+          "saving_median_ms": -1037.0,
+          "saving_min_ms": -1056.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1076,
+              "saving_ms": -1056.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 1050,
+              "saving_ms": -1030.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1056,
+              "saving_ms": -1037.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_st_4",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1792.0,
+            -1827.0,
+            -1887.0
+          ],
+          "saving_median_ms": -1827.0,
+          "saving_min_ms": -1887.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 47,
+              "cand_t_exec_ms": 1839,
+              "saving_ms": -1792.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 1848,
+              "saving_ms": -1827.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1906,
+              "saving_ms": -1887.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_t_large",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -7093.0,
+            -7192.0,
+            -6795.0
+          ],
+          "saving_median_ms": -7093.0,
+          "saving_min_ms": -7192.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 7111,
+              "saving_ms": -7093.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 7213,
+              "saving_ms": -7192.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 6813,
+              "saving_ms": -6795.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_t_mid",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1902.0,
+            -2015.0,
+            -2004.0
+          ],
+          "saving_median_ms": -2004.0,
+          "saving_min_ms": -2015.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 1923,
+              "saving_ms": -1902.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 2038,
+              "saving_ms": -2015.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 2027,
+              "saving_ms": -2004.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "h_t_small",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -830.0,
+            -834.0,
+            -842.0
+          ],
+          "saving_median_ms": -834.0,
+          "saving_min_ms": -842.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 852,
+              "saving_ms": -830.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 852,
+              "saving_ms": -834.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 861,
+              "saving_ms": -842.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_01",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1034.0,
+            -1048.0,
+            -1047.0
+          ],
+          "saving_median_ms": -1047.0,
+          "saving_min_ms": -1048.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 17,
+              "cand_t_exec_ms": 1051,
+              "saving_ms": -1034.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 17,
+              "cand_t_exec_ms": 1065,
+              "saving_ms": -1048.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 1065,
+              "saving_ms": -1047.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_02",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -1595.0,
+            -1569.0,
+            -1533.0
+          ],
+          "saving_median_ms": -1569.0,
+          "saving_min_ms": -1595.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1614,
+              "saving_ms": -1595.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 1587,
+              "saving_ms": -1569.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 1552,
+              "saving_ms": -1533.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_03",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_04",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_05",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_06",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_07",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_08",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_09",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_10",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_11",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_bao_tzh_12",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_01",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -29.0,
+            -25.0,
+            -26.0
+          ],
+          "saving_median_ms": -26.0,
+          "saving_min_ms": -29.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 44,
+              "saving_ms": -29.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 16,
+              "cand_t_exec_ms": 41,
+              "saving_ms": -25.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 16,
+              "cand_t_exec_ms": 42,
+              "saving_ms": -26.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_02",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -7658.0,
+            -8055.0,
+            -7802.0
+          ],
+          "saving_median_ms": -7802.0,
+          "saving_min_ms": -8055.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 509,
+              "cand_t_exec_ms": 8167,
+              "saving_ms": -7658.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 499,
+              "cand_t_exec_ms": 8554,
+              "saving_ms": -8055.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 498,
+              "cand_t_exec_ms": 8300,
+              "saving_ms": -7802.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_03",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_04",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_05",
+      "cbo_selected_plan_id": "P_H",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(EQUALITY_LOOKUP(;{\"predicate_ref\":\"/predicates/0\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\",\"/predicates/0\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_06",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_07",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_08",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_09",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_10",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_cbo_miss_11",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 0,
+          "n_fail_or_missing": 3,
+          "savings_ms": [],
+          "saving_median_ms": null,
+          "saving_min_ms": null,
+          "stable_faster": false,
+          "pairs": []
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": false,
+      "labels": [
+        "missing_oracle"
+      ]
+    },
+    {
+      "query_id": "pilot_control_01",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -37.0,
+            -23.0,
+            -23.0
+          ],
+          "saving_median_ms": -23.0,
+          "saving_min_ms": -37.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 52,
+              "saving_ms": -37.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 38,
+              "saving_ms": -23.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 14,
+              "cand_t_exec_ms": 37,
+              "saving_ms": -23.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_grid_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -18.0,
+            -20.0,
+            -32.0
+          ],
+          "saving_median_ms": -20.0,
+          "saving_min_ms": -32.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 33,
+              "saving_ms": -18.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 38,
+              "saving_ms": -20.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 14,
+              "cand_t_exec_ms": 46,
+              "saving_ms": -32.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_grid_2",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -31.0,
+            -21.0,
+            -24.0
+          ],
+          "saving_median_ms": -24.0,
+          "saving_min_ms": -31.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 17,
+              "cand_t_exec_ms": 48,
+              "saving_ms": -31.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 16,
+              "cand_t_exec_ms": 37,
+              "saving_ms": -21.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 15,
+              "cand_t_exec_ms": 39,
+              "saving_ms": -24.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_grid_3",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -30.0,
+            -12.0,
+            -21.0
+          ],
+          "saving_median_ms": -21.0,
+          "saving_min_ms": -30.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 16,
+              "cand_t_exec_ms": 46,
+              "saving_ms": -30.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 33,
+              "saving_ms": -12.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 17,
+              "cand_t_exec_ms": 38,
+              "saving_ms": -21.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_ll_2",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            110.0,
+            -26.0,
+            -71.0
+          ],
+          "saving_median_ms": -26.0,
+          "saving_min_ms": -71.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 3487,
+              "cand_t_exec_ms": 3377,
+              "saving_ms": 110.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 3385,
+              "cand_t_exec_ms": 3411,
+              "saving_ms": -26.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 3520,
+              "cand_t_exec_ms": 3591,
+              "saving_ms": -71.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_ls_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -190.0,
+            -154.0,
+            -212.0
+          ],
+          "saving_median_ms": -190.0,
+          "saving_min_ms": -212.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 427,
+              "cand_t_exec_ms": 617,
+              "saving_ms": -190.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 431,
+              "cand_t_exec_ms": 585,
+              "saving_ms": -154.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 475,
+              "cand_t_exec_ms": 687,
+              "saving_ms": -212.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_mid_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -47.0,
+            -44.0,
+            -40.0
+          ],
+          "saving_median_ms": -44.0,
+          "saving_min_ms": -47.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 41,
+              "cand_t_exec_ms": 88,
+              "saving_ms": -47.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 46,
+              "cand_t_exec_ms": 90,
+              "saving_ms": -44.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 50,
+              "cand_t_exec_ms": 90,
+              "saving_ms": -40.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_sl_1",
+      "cbo_selected_plan_id": "P_T",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_Z",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -8043.0,
+            -8016.0,
+            -7596.0
+          ],
+          "saving_median_ms": -8016.0,
+          "saving_min_ms": -8043.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 513,
+              "cand_t_exec_ms": 8556,
+              "saving_ms": -8043.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 507,
+              "cand_t_exec_ms": 8523,
+              "saving_ms": -8016.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 523,
+              "cand_t_exec_ms": 8119,
+              "saving_ms": -7596.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_ss_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -39.0,
+            -24.0,
+            -60.0
+          ],
+          "saving_median_ms": -39.0,
+          "saving_min_ms": -60.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 52,
+              "cand_t_exec_ms": 91,
+              "saving_ms": -39.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 43,
+              "cand_t_exec_ms": 67,
+              "saving_ms": -24.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 52,
+              "cand_t_exec_ms": 112,
+              "saving_ms": -60.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "st_ss_2",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "RETURN_TRAJECTORY_IDS(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -32.0,
+            -29.0,
+            -27.0
+          ],
+          "saving_median_ms": -29.0,
+          "saving_min_ms": -32.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 26,
+              "cand_t_exec_ms": 58,
+              "saving_ms": -32.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 24,
+              "cand_t_exec_ms": 53,
+              "saving_ms": -29.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 50,
+              "saving_ms": -27.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -34.0,
+            -30.0,
+            -28.0
+          ],
+          "saving_median_ms": -30.0,
+          "saving_min_ms": -34.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -34.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 49,
+              "saving_ms": -30.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 48,
+              "saving_ms": -28.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_2",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -18.0,
+            -20.0,
+            -19.0
+          ],
+          "saving_median_ms": -19.0,
+          "saving_min_ms": -20.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 34,
+              "cand_t_exec_ms": 52,
+              "saving_ms": -18.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 34,
+              "cand_t_exec_ms": 54,
+              "saving_ms": -20.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 33,
+              "cand_t_exec_ms": 52,
+              "saving_ms": -19.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_2_k1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -33.0,
+            -32.0,
+            -29.0
+          ],
+          "saving_median_ms": -32.0,
+          "saving_min_ms": -33.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 33,
+              "cand_t_exec_ms": 66,
+              "saving_ms": -33.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 30,
+              "cand_t_exec_ms": 62,
+              "saving_ms": -32.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 28,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -29.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_3",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            211.0,
+            221.0,
+            210.0
+          ],
+          "saving_median_ms": 211.0,
+          "saving_min_ms": 210.0,
+          "stable_faster": true,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 273,
+              "cand_t_exec_ms": 62,
+              "saving_ms": 211.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 279,
+              "cand_t_exec_ms": 58,
+              "saving_ms": 221.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 271,
+              "cand_t_exec_ms": 61,
+              "saving_ms": 210.0
+            }
+          ]
+        }
+      ],
+      "best_stable": {
+        "plan_id": "P_T",
+        "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+        "miss_class": "candidate_miss",
+        "in_cbo_safe_set": false,
+        "n_paired": 3,
+        "n_fail_or_missing": 0,
+        "savings_ms": [
+          211.0,
+          221.0,
+          210.0
+        ],
+        "saving_median_ms": 211.0,
+        "saving_min_ms": 210.0,
+        "stable_faster": true,
+        "pairs": [
+          {
+            "phase": "repeat_t1",
+            "cbo_t_exec_ms": 273,
+            "cand_t_exec_ms": 62,
+            "saving_ms": 211.0
+          },
+          {
+            "phase": "repeat_t2",
+            "cbo_t_exec_ms": 279,
+            "cand_t_exec_ms": 58,
+            "saving_ms": 221.0
+          },
+          {
+            "phase": "repeat_t3",
+            "cbo_t_exec_ms": 271,
+            "cand_t_exec_ms": 61,
+            "saving_ms": 210.0
+          }
+        ]
+      },
+      "has_valid_pairs": true,
+      "labels": [
+        "search_miss_with_exec_gain",
+        "candidate_fast_but_overhead_dominates"
+      ]
+    },
+    {
+      "query_id": "topk_st_frechet_1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":3,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -29.0,
+            -34.0,
+            -28.0
+          ],
+          "saving_median_ms": -29.0,
+          "saving_min_ms": -34.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 22,
+              "cand_t_exec_ms": 51,
+              "saving_ms": -29.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 53,
+              "saving_ms": -34.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 46,
+              "saving_ms": -28.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_frechet_k5",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"FRECHET\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -33.0,
+            -33.0,
+            -36.0
+          ],
+          "saving_median_ms": -33.0,
+          "saving_min_ms": -36.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 53,
+              "saving_ms": -33.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 20,
+              "cand_t_exec_ms": 53,
+              "saving_ms": -33.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -36.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_hausdorff_k1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"HAUSDORFF\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -29.0,
+            -30.0,
+            -28.0
+          ],
+          "saving_median_ms": -29.0,
+          "saving_min_ms": -30.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 48,
+              "saving_ms": -29.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 48,
+              "saving_ms": -30.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 17,
+              "cand_t_exec_ms": 45,
+              "saving_ms": -28.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_k1",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":1,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -28.0,
+            -28.0,
+            -37.0
+          ],
+          "saving_median_ms": -28.0,
+          "saving_min_ms": -37.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 21,
+              "cand_t_exec_ms": 49,
+              "saving_ms": -28.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 30,
+              "cand_t_exec_ms": 58,
+              "saving_ms": -28.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 24,
+              "cand_t_exec_ms": 61,
+              "saving_ms": -37.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_k10",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":10,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":10,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -27.0,
+            -33.0,
+            -38.0
+          ],
+          "saving_median_ms": -33.0,
+          "saving_min_ms": -38.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 45,
+              "saving_ms": -27.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 52,
+              "saving_ms": -33.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 19,
+              "cand_t_exec_ms": 57,
+              "saving_ms": -38.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    },
+    {
+      "query_id": "topk_st_k5",
+      "cbo_selected_plan_id": "P_TZ",
+      "cbo_plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(INTERSECT(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"}),ZORDER_RANGE_SCAN(;{\"predicate_ref\":\"/spatial\"});{\"merge\":\"HASH_SET\",\"provisional_merge\":false});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+      "candidates": [
+        {
+          "plan_id": "P_T",
+          "plan_signature": "TOP_K(SIMILARITY(BATCH_GET_TRAJECTORY(EXCLUDE_REFERENCE(PROJECT_TRAJECTORY_IDS(EXACT_ST_FILTER(FETCH_TRAJECTORY_CHUNK(DEDUPLICATE(TIME_RANGE_SCAN(;{\"predicate_ref\":\"/temporal\"});{});{});{\"predicate_refs\":[\"/temporal\",\"/spatial\"]});{});{\"reference_tid\":41360});{});{\"local_distance\":\"EUCLIDEAN\",\"metric\":\"DTW\",\"normalization\":\"NONE\",\"reference_tid\":41360,\"scope\":\"FULL_TRAJECTORY\"});{\"k\":5,\"tie_breaker\":\"TID_ASC\"})",
+          "miss_class": "candidate_miss",
+          "in_cbo_safe_set": false,
+          "n_paired": 3,
+          "n_fail_or_missing": 0,
+          "savings_ms": [
+            -31.0,
+            -33.0,
+            -27.0
+          ],
+          "saving_median_ms": -31.0,
+          "saving_min_ms": -33.0,
+          "stable_faster": false,
+          "pairs": [
+            {
+              "phase": "repeat_t1",
+              "cbo_t_exec_ms": 18,
+              "cand_t_exec_ms": 49,
+              "saving_ms": -31.0
+            },
+            {
+              "phase": "repeat_t2",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 56,
+              "saving_ms": -33.0
+            },
+            {
+              "phase": "repeat_t3",
+              "cbo_t_exec_ms": 23,
+              "cand_t_exec_ms": 50,
+              "saving_ms": -27.0
+            }
+          ]
+        }
+      ],
+      "best_stable": null,
+      "has_valid_pairs": true,
+      "labels": [
+        "no_faster_safe_plan"
+      ]
+    }
+  ],
+  "search_rows": 642,
+  "measurement_rows": 1037
+}

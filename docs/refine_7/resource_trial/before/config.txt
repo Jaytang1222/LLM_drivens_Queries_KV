@@ -1,0 +1,4 @@
+mode=before
+trials=3
+model=qwen2.5:1.5b-instruct
+protocol=v10

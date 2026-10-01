@@ -1,0 +1,18 @@
+# E2 pilot — CBO＋LLM proposal mechanism (5-query diagnostic).
+# Does NOT change default plan.yaml. Cache OFF for main pilot.
+kind: compare
+id: plan-cbo-llm-pilot
+workload: experiments/workloads/bound_ir_cbo_llm_pilot_v1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_pilot_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 3
+stages:
+  - plan
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - bao
+  - kart
+  - cbo-llm-proposal

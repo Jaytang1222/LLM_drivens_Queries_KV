@@ -1,0 +1,45 @@
+{
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "workload_id": "bound_ir_cbo_llm_overhead_v1",
+  "evaluation_role": "dev_llm_vs_cbo_plan_overhead_only",
+  "note": "Four census search_miss_with_exec_gain queries; measure hybrid LLM t_plan overhead vs CBO after removing 1.5s wall.",
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_d",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201957200000,
+        "end_ms": 1202217266000
+      },
+      "spatial": {
+        "min_x": 455928.2185096232,
+        "min_y": 4425943.643433361,
+        "max_x": 484830.5588317639,
+        "max_y": 4459452.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    }
+  ],
+  "id": "bound_ir_cbo_llm_overhead_min1"
+}

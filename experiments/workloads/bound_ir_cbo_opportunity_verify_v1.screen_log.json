@@ -1,0 +1,43 @@
+{
+  "seed": "2026-09-28-cbo-opportunity-verify-v1",
+  "rows": [
+    {
+      "query_id": "st_ss_1",
+      "keep": true,
+      "category": "semantic_boundary",
+      "reason": "legal BoundIR boundary/control semantics with oracle"
+    },
+    {
+      "query_id": "st_ss_2",
+      "keep": true,
+      "category": "semantic_boundary",
+      "reason": "legal BoundIR boundary/control semantics with oracle"
+    },
+    {
+      "query_id": "a2_th_unc_a",
+      "keep": true,
+      "category": "normal_control",
+      "reason": "census: no_faster_safe_plan; CBO already adequate"
+    },
+    {
+      "query_id": "a2_th_unc_b",
+      "keep": true,
+      "category": "normal_control",
+      "reason": "census: no_faster_safe_plan; CBO already adequate"
+    }
+  ],
+  "vacancies": [
+    {
+      "category": "large_opportunity",
+      "requested": 2,
+      "filled": 0,
+      "reason": "no non-dev stable savings >= 900.0 ms in census; max stable was 285.0"
+    },
+    {
+      "category": "cost_misestimate",
+      "requested": 2,
+      "filled": 0,
+      "reason": "insufficient non-dev stable cost-misestimate cases after template isolation"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "path": "experiments/workloads/bound_ir_cbo_llm_pilot_v1.json",
+  "oracle_path": "experiments/workloads/bound_ir_cbo_llm_pilot_v1.oracle.json",
+  "evaluation_role": "cbo_llm_mechanism_diagnostic",
+  "seed": "2026-09-28-cbo-llm-pilot-v1",
+  "generator": "generate_cbo_llm_pilot_v1.py/v1",
+  "n_queries": 5,
+  "selection_disclosure": {
+    "requested": {
+      "cbo_candidate_miss": 2,
+      "bao_tzh_full_risk": 2,
+      "normal_control": 1
+    },
+    "actual": {
+      "cbo_candidate_miss": 2,
+      "bao_tzh_full_risk": 2,
+      "normal_control": 1
+    },
+    "shortfalls": []
+  },
+  "screen_log": "experiments/workloads/bound_ir_cbo_llm_pilot_v1.screen_log.json",
+  "screen_sha256": "66301ea073796f9f97a7d09486c3f41886dbec27dd893c7febb05748fdbfdebe",
+  "candidate_pool_sha256": "54795979f5a50c813fdcf90634ba7be22899e0162acd35ceb87b9471dcadee6c",
+  "sha256": "a7375fdd3a57940cfd9ec28f94c159911c9bac14ffe75e801d640a0ca73d15d8",
+  "oracle_sha256": "ce111dc0d755fb755fb501cdfda9a90e6d834268839a3bbbe6014234416a3263",
+  "oracle_status": "frozen",
+  "oracle_missing_query_ids": [],
+  "notes": [
+    "Mechanism diagnostic set only; not a paper-level performance sample.",
+    "Selected without running cbo-llm-proposal outcomes."
+  ]
+}

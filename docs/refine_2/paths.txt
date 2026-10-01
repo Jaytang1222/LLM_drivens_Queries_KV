@@ -1,0 +1,6 @@
+PREPARE_FULL=refine2-prepare-full-20261001-171119
+TD_E2E=refine2-td-e2e-20261001-171119
+AIS_E2E=refine2-ais-e2e-20261001-171119
+OUT_ROOT=experiments/refine_2/refine2-20261001-171119
+MODEL=qwen2.5:1.5b-instruct
+PREPARE_MODE_E2E=safety_only

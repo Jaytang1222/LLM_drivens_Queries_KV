@@ -1,0 +1,1948 @@
+{
+  "seed": "cbo-opportunity-mechanism-v2-seed-1",
+  "plan_jsonl": "experiments/results/opportunity-candidates-v2-screen-20260928/plan.jsonl",
+  "screen_mode": "live_full_safe_set_validated",
+  "n_rows": 23,
+  "n_keep": 23,
+  "rows": [
+    {
+      "query_id": "mechv2_003",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_003",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201930380000,
+          "end_ms": 1202016780000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_004",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_004",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202043240000,
+          "end_ms": 1202218106000
+        },
+        "spatial": {
+          "min_x": 458128.2185096232,
+          "min_y": 4428143.643433361,
+          "max_x": 482630.5588317639,
+          "max_y": 4457252.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_005",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_005",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202043300000,
+          "end_ms": 1202046900000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ,P_TH,P_ZH",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_006",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_006",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202000160000,
+          "end_ms": 1202218226000
+        },
+        "spatial": {
+          "min_x": 457228.2185096232,
+          "min_y": 4427243.643433361,
+          "max_x": 483530.5588317639,
+          "max_y": 4458152.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_007",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_007",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201870620000,
+          "end_ms": 1202221886000
+        },
+        "spatial": {
+          "min_x": 456628.2185096232,
+          "min_y": 4426643.643433361,
+          "max_x": 484130.5588317639,
+          "max_y": 4458752.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_008",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_008",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201946280000,
+          "end_ms": 1202225546000
+        },
+        "spatial": {
+          "min_x": 457428.2185096232,
+          "min_y": 4427443.643433361,
+          "max_x": 483330.5588317639,
+          "max_y": 4457952.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_009",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_009",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201957740000,
+          "end_ms": 1202217806000
+        },
+        "spatial": {
+          "min_x": 455928.2185096232,
+          "min_y": 4425943.643433361,
+          "max_x": 484830.5588317639,
+          "max_y": 4459452.358758577,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_T,P_Z,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_010",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_010",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202023800000,
+          "end_ms": 1202067600000
+        },
+        "spatial": {
+          "min_x": 444877.0483485528,
+          "min_y": 4412589.2857707525,
+          "max_x": 495881.72899283434,
+          "max_y": 4472806.716421186,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_T",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_T"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_Z",
+        "P_TZ",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_Z,P_TZ,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_011",
+      "category": "cbo_candidate_miss",
+      "reason_in": "TZ/TZH template; expect constructable SORT_MERGE not always in CBO safe set",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_011",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1201980660000,
+          "end_ms": 1202110860000
+        },
+        "spatial": {
+          "min_x": 444077.0483485528,
+          "min_y": 4411789.2857707525,
+          "max_x": 496681.72899283434,
+          "max_y": 4473606.716421186,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_T",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_T"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_Z",
+        "P_TZ",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "validated_non_full_not_in_complete_cbo_safe_set; offline novel=P_Z,P_TZ,P_TZ_SORT_MERGE",
+      "labels": [
+        "candidate_miss",
+        "latency_unverified"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_014",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_014",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202045250000,
+          "end_ms": 1202048850000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_015",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_015",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202036340000,
+          "end_ms": 1202050740000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_016",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_016",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202036430000,
+          "end_ms": 1202054430000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_017",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_017",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202047320000,
+          "end_ms": 1202058120000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_018",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_018",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202039610000,
+          "end_ms": 1202051610000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_019",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_019",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202040300000,
+          "end_ms": 1202051100000
+        },
+        "spatial": {
+          "min_x": 462228.68657405133,
+          "min_y": 4433165.386498405,
+          "max_x": 478530.0907673358,
+          "max_y": 4452230.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_020",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_020",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202042190000,
+          "end_ms": 1202052990000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_021",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_021",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202045880000,
+          "end_ms": 1202049480000
+        },
+        "spatial": {
+          "min_x": 461828.68657405133,
+          "min_y": 4432765.386498405,
+          "max_x": 478930.0907673358,
+          "max_y": 4452630.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_022",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_022",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202026170000,
+          "end_ms": 1202054970000
+        },
+        "spatial": {
+          "min_x": 463028.68657405133,
+          "min_y": 4433965.386498405,
+          "max_x": 477730.0907673358,
+          "max_y": 4451430.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_023",
+      "category": "bao_tzh_full_risk",
+      "reason_in": "TZH template where Bao surrogate often selects P_FULL; index plans exist",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_023",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202037660000,
+          "end_ms": 1202058660000
+        },
+        "spatial": {
+          "min_x": 462528.68657405133,
+          "min_y": 4433465.386498405,
+          "max_x": 478230.0907673358,
+          "max_y": 4451930.615693534,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [
+          {
+            "field": "vehicle_id",
+            "op": "EQ",
+            "value": "8857"
+          }
+        ],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_H",
+      "bao_plan_id": "P_FULL",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_H",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_FULL",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_H"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_H",
+        "P_T",
+        "P_TH",
+        "P_TH_SORT_MERGE",
+        "P_TZ",
+        "P_TZH",
+        "P_TZH_SORT_MERGE",
+        "P_TZ_SORT_MERGE",
+        "P_Z",
+        "P_ZH",
+        "P_ZH_SORT_MERGE"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_TH",
+        "P_ZH",
+        "P_TZH",
+        "P_TZ_SORT_MERGE",
+        "P_TH_SORT_MERGE",
+        "P_ZH_SORT_MERGE",
+        "P_TZH_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "bao_selected_P_FULL_with_index_constructable",
+      "labels": [
+        "bao_full_tzh"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_control_01",
+      "category": "normal_control",
+      "reason_in": "small TZ control shifted by fixed 21 minutes from st_ss_1",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_control_01",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202046060000,
+          "end_ms": 1202046660000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "cbo_has_index_plan_control",
+      "labels": [
+        "control"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_control_02",
+      "category": "normal_control",
+      "reason_in": "small TZ control shifted by fixed 27 minutes from st_ss_1",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_control_02",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202046420000,
+          "end_ms": 1202047020000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "cbo_has_index_plan_control",
+      "labels": [
+        "control"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_control_03",
+      "category": "normal_control",
+      "reason_in": "small TZ control shifted by fixed 33 minutes from st_ss_1",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_control_03",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202046780000,
+          "end_ms": 1202047380000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "cbo_has_index_plan_control",
+      "labels": [
+        "control"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    },
+    {
+      "query_id": "mechv2_control_04",
+      "category": "normal_control",
+      "reason_in": "small TZ control shifted by fixed 39 minutes from st_ss_1",
+      "query": {
+        "ir_version": "1.0",
+        "query_id": "mechv2_control_04",
+        "source": {
+          "dataset_id": "tdrive_v1",
+          "entity": "trajectory"
+        },
+        "temporal": {
+          "start_ms": 1202047140000,
+          "end_ms": 1202047740000
+        },
+        "spatial": {
+          "min_x": 469979.38867069356,
+          "min_y": 4442298.001095969,
+          "max_x": 470779.38867069356,
+          "max_y": 4443098.001095969,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {
+          "mode": "OBSERVED_POINT",
+          "coupling": "SAME_POINT"
+        },
+        "similarity": null,
+        "result": {
+          "mode": "TRAJECTORY_IDS",
+          "k": null,
+          "tie_breaker": "TID_ASC"
+        },
+        "snapshot": {
+          "manifest_id": "tdrive_v1_ready",
+          "semantics_version": "point_dtw_v1"
+        }
+      },
+      "cbo_plan_id": "P_TZ",
+      "bao_plan_id": "P_TZ",
+      "constructable": [
+        "P_T",
+        "P_Z",
+        "P_TZ",
+        "P_FULL",
+        "P_TZ_SORT_MERGE"
+      ],
+      "cbo_safe_plan_ids": [
+        "P_FULL",
+        "P_TZ"
+      ],
+      "validated_plan_ids": [
+        "P_FULL",
+        "P_T",
+        "P_TZ",
+        "P_TZ_SORT_MERGE",
+        "P_Z"
+      ],
+      "novel_vs_cbo_selected": [
+        "P_T",
+        "P_Z",
+        "P_TZ_SORT_MERGE"
+      ],
+      "keep": true,
+      "keep_reason": "cbo_has_index_plan_control",
+      "labels": [
+        "control"
+      ],
+      "note": "Novel means validated by pilot-safety-probe and absent from the complete CBO safe set"
+    }
+  ]
+}

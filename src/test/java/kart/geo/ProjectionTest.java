@@ -41,4 +41,17 @@ class ProjectionTest {
       assertEquals(p[1], b.lat, 1e-6);
     }
   }
+
+  @Test
+  void aisCrsProjectsGreekLonLatIntoUtm34() {
+    Projection ais = new Projection(Projection.AIS_CRS);
+    assertEquals(Projection.AIS_CRS, ais.crs());
+    Projection.Meters m = ais.toUtm(23.55, 37.95);
+    // UTM 34N: false easting 500km; Aegean easting typically 300–700 km, northing ~4.1–4.3e6
+    assertTrue(m.x > 200000 && m.x < 800000, "easting=" + m.x);
+    assertTrue(m.y > 4_100_000 && m.y < 4_300_000, "northing=" + m.y);
+    Projection.LonLat back = ais.toWgs84(m.x, m.y);
+    assertEquals(23.55, back.lon, 1e-6);
+    assertEquals(37.95, back.lat, 1e-6);
+  }
 }

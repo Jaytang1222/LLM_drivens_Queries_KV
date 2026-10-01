@@ -38,6 +38,35 @@ Local framework check (no HBase): `bash scripts/check-comparative-framework.sh`.
 Conditional LLM freeze file: `experiments/suites/conditional_llm_freeze.json`
 (set `status=frozen_for_test` only after train/val selection).
 
+### CBO＋LLM proposal pilot (mechanism diagnostic)
+
+See `docs/comparative_refine_verify.md`. Independent 5-query set
+`bound_ir_cbo_llm_pilot_v1` — does **not** change default `plan.yaml` / `e2e.yaml`.
+
+```bash
+# Inputs and FullScan Oracle are frozen; run these only when ready to collect pilot results.
+./scripts/bench-plan.sh --suite experiments/suites/plan-cbo-llm-pilot.yaml \
+  --run-id cbo-llm-pilot-v1-plan --trials 3
+./scripts/bench-e2e.sh --suite experiments/suites/e2e-cbo-llm-pilot.yaml \
+  --run-id cbo-llm-pilot-v1-warm --cache warm --trials 3
+# Cache miss/hit study (separate run-id; do not merge latency):
+./scripts/bench-e2e.sh --suite experiments/suites/e2e-cbo-llm-pilot-cache.yaml \
+  --run-id cbo-llm-pilot-v1-cache --cache warm --trials 3
+```
+
+Arm `cbo-llm-proposal` = CBO floor + one LLM novel-plan proposal (no second search).
+Arm `cbo-llm-proposal-cached` = same with process-local plan-id cache.
+
+CBO＋LLM proposal pilot (`docs/comparative_refine_verify.md`):
+- Arms: `cbo-llm-proposal` (cache off), `cbo-llm-proposal-cached` (plan-id cache).
+- Suites: `plan-cbo-llm-pilot.yaml`, `e2e-cbo-llm-pilot.yaml`,
+  `e2e-cbo-llm-pilot-cache.yaml` — do not merge into advantage_v2 main tables.
+- Workload gen: `python3 experiments/adapters/generate_cbo_llm_pilot_v1.py --write-candidates`
+  then `bash scripts/screen-cbo-llm-pilot.sh` (CBO/Bao and safe-plan qualification),
+  `python3 experiments/adapters/generate_cbo_llm_pilot_v1.py --freeze-from-screen experiments/workloads/bound_ir_cbo_llm_pilot_v1.screen_log.json`,
+  then `bash scripts/fill-cbo-llm-pilot-oracle.sh`. Regeneration changes the frozen inputs;
+  preserve the current files before doing it.
+
 E2 suites (default workload `bound_ir_advantage_v2.json`):
 - Native search: `experiments/suites/plan.yaml` (`kart`, `cbo`, `bao`, …)
 - Shared-pool selection: `experiments/suites/plan-shared-pool.yaml`

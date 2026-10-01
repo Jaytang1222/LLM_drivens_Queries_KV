@@ -1,0 +1,36 @@
+{
+  "workload_id": "invalid_plan_verify_v1",
+  "seed": "2026-09-28-cbo-opportunity-verify-v1",
+  "note": "Safety fixtures only. Shared PlanValidator must reject; do not execute to manufacture wrong answers. Not part of E2 plan_ok / E3 ok_oracle denominators.",
+  "base_query_id_hint": "st_ss_1",
+  "cases": [
+    {
+      "case_id": "inv_omit_temporal_predicate",
+      "expected_reject_stage": "PlanValidator",
+      "expected_reason_contains": ["Coverage", "temporal", "Time", "predicate"],
+      "description": "Exact filter declares no temporal predicate although BoundIR requires it",
+      "mutation": "omit_temporal_from_exact_filter"
+    },
+    {
+      "case_id": "inv_skip_exact_filter",
+      "expected_reject_stage": "PlanValidator",
+      "expected_reason_contains": ["StructureCheck", "MATCHED_CHUNK"],
+      "description": "Plan claims exact filter but omits ExactFilter node",
+      "mutation": "remove_exact_filter_node"
+    },
+    {
+      "case_id": "inv_topk_without_similarity",
+      "expected_reject_stage": "PlanValidator",
+      "expected_reason_contains": ["SIMILARITY", "TOP_K", "Semantic"],
+      "description": "Top-K plan bypasses the required similarity computation",
+      "mutation": "topk_without_similarity"
+    },
+    {
+      "case_id": "inv_physical_range_mismatch",
+      "expected_reject_stage": "PlanValidator",
+      "expected_reason_contains": ["PhysicalSafetyCheck", "start >= stop"],
+      "description": "Compiled physical scan contains a zero-width range",
+      "mutation": "invalid_physical_scan_range"
+    }
+  ]
+}

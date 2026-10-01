@@ -1,0 +1,14 @@
+# Offline candidate qualification only; no KART or LLM proposal arm.
+kind: compare
+id: plan-cbo-llm-screen
+workload: experiments/workloads/_pilot_screen_workload.json
+oracle: experiments/workloads/bound_ir_cbo_llm_pilot_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - bao
+  - pilot-safety-probe

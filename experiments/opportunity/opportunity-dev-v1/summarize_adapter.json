@@ -1,0 +1,15 @@
+{
+  "run": "experiments/opportunity/opportunity-dev-v1",
+  "label_counts": {
+    "candidate_fast_but_overhead_dominates": 21,
+    "censored": 79,
+    "oracle_or_execution_failure": 19,
+    "search_miss_with_exec_gain": 21
+  },
+  "search_miss_tag_counts": {
+    "candidate_miss": 405
+  },
+  "n_search_gain_queries": 21,
+  "n_selection_gain_queries": 0,
+  "n_near_hybrid_half": 0
+}

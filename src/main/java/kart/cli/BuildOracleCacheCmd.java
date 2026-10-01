@@ -65,6 +65,14 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       description = "Input BoundIR workload for --evaluate-workload (default: --workload-out)")
   private Path workloadIn;
 
+  @Option(names = "--format", defaultValue = "tdrive",
+      description = "Input format for --data: tdrive|ais")
+  private String format;
+
+  @Option(names = "--crs",
+      description = "Projected CRS when loading data (default: from manifest.layout.crs or EPSG:32650)")
+  private String crs;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
@@ -90,7 +98,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     System.out.println("ORACLE_CACHE_PHASE=load_cleaned data=" + data);
     System.out.flush();
     long t0 = System.currentTimeMillis();
-    List<Trajectory> trajs = TDriveLoader.loadCleaned(data, domain);
+    List<Trajectory> trajs = loadTrajectories(data, domain, m);
     System.out.println("ORACLE_CACHE_PROGRESS trajectories=" + trajs.size()
         + " elapsed_s=" + ((System.currentTimeMillis() - t0) / 1000));
     System.out.flush();
@@ -465,7 +473,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
 
     Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
     System.out.println("ORACLE_CACHE_PHASE=load_cleaned data=" + data);
-    List<Trajectory> trajs = TDriveLoader.loadCleaned(data, domain);
+    List<Trajectory> trajs = loadTrajectories(data, domain, m);
     FullScanOracle oracle = new FullScanOracle(trajs);
 
     @SuppressWarnings("unchecked")
@@ -549,7 +557,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     }
     Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
     System.out.println("ORACLE_EVAL_PHASE=load_cleaned data=" + data + " queries=" + queries.size());
-    List<Trajectory> trajs = TDriveLoader.loadCleaned(data, domain);
+    List<Trajectory> trajs = loadTrajectories(data, domain, m);
     FullScanOracle oracle = new FullScanOracle(trajs);
 
     Map<String, Map<String, Object>> byId = new LinkedHashMap<String, Map<String, Object>>();
@@ -606,6 +614,20 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     System.out.println("ORACLE_EVAL_OK oracle=" + oOut + " total=" + answers.size()
         + " non_empty=" + nonEmpty);
     return 0;
+  }
+
+  private List<Trajectory> loadTrajectories(Path data, Rect domain, Manifest m) throws Exception {
+    String fmt = format == null || format.trim().isEmpty() ? "tdrive" : format.trim();
+    String useCrs = crs;
+    if (useCrs == null || useCrs.trim().isEmpty()) {
+      if (m != null && m.layout != null && m.layout.crs != null && !m.layout.crs.trim().isEmpty()) {
+        useCrs = m.layout.crs.trim();
+      } else {
+        useCrs = kart.geo.Projection.DEFAULT_CRS;
+      }
+    }
+    System.out.println("ORACLE_LOAD format=" + fmt + " crs=" + useCrs);
+    return TDriveLoader.loadCleaned(data, domain, fmt, useCrs);
   }
 
   private Path resolveRoot() {

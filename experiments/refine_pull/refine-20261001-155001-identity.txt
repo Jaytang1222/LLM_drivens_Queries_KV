@@ -1,0 +1,7 @@
+build_id=refine-20261001-155001
+host=startserver02
+pwd=/home/tyq/projects/llm-kv
+time=2026-10-01T15:50:01+08:00
+git_head=unknown
+-rw-rw-r-- 1 tyq tyq 48M 10月  1 15:49 target/kart.jar
+cbo_llm_compact_v6

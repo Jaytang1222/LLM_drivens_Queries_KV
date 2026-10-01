@@ -1,0 +1,35 @@
+{
+  "cache" : "warm",
+  "created_at" : "2026-09-28T17:51:07",
+  "development_diagnostic" : true,
+  "git" : {
+    "commit" : "6ef179445512336b2f41259aa331589476dd1d74",
+    "dirty" : true
+  },
+  "hbase_env" : {
+    "cluster_id" : "5ddd7edf-386b-4267-860d-f1094a1cb9a8",
+    "conclusion_boundary" : "single-node mixed HBase classpath; relative results only; do not extrapolate",
+    "hbase_client_implementation_version" : "2.2.3",
+    "hbase_client_jar" : "/home/jaytang/projects/llm-kv/target/kart.jar",
+    "hbase_client_specification_version" : "2.2",
+    "hbase_client_version_source" : "classpath_pom_plus_lib_hbase_client_manifest_spec",
+    "hbase_cluster_version" : "2.1.2",
+    "live_region_servers" : 1,
+    "region_server_count" : 1
+  },
+  "hybrid_extra_plan_ms_provisional" : 900,
+  "include_fullscan_exec" : false,
+  "initial_trials" : 1,
+  "manifest_id" : "tdrive_v1_ready",
+  "manifest_status" : "READY",
+  "max_exec_ms" : 60000,
+  "max_wall_minutes" : 180,
+  "n_queries_deduped" : 79,
+  "oracle_entries_loaded" : 63,
+  "phase_exec" : true,
+  "phase_search" : true,
+  "queries_missing_oracle" : 19,
+  "repeat_gain_threshold_ms" : 500,
+  "repeat_trials" : 3,
+  "run_id" : "opportunity-dev-v1"
+}

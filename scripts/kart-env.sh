@@ -55,7 +55,7 @@ kart_load_llm_env() {
     val="${val#\"}"; val="${val%\"}"
     val="${val#\'}"; val="${val%\'}"
     case "$key" in
-      LLM_BASE_URL|LLM_MODEL|LLM_API_KEY|LLM_JSON_MODE|OPENAI_API_KEY|deepseek_api_key)
+      LLM_BASE_URL|LLM_MODEL|LLM_API_KEY|LLM_JSON_MODE|LLM_PROVIDER|OPENAI_API_KEY|deepseek_api_key|GOOGLE_API_KEY|GOOGLE_LLM_BASE_URL|GOOGLE_LLM_MODEL)
         export "$key=$val"
         ;;
     esac
@@ -66,13 +66,27 @@ kart_load_llm_env() {
   if [[ -z "${LLM_API_KEY:-}" && -n "${deepseek_api_key:-}" ]]; then
     export LLM_API_KEY="$deepseek_api_key"
     export LLM_BASE_URL="${LLM_BASE_URL:-https://api.deepseek.com/v1}"
-    export LLM_MODEL="${LLM_MODEL:-deepseek-chat}"
+    export LLM_MODEL="${LLM_MODEL:-deepseek-flash}"
   fi
+  # Switch active LLM_* from Google Gemini OpenAI-compatible profile.
+  case "${LLM_PROVIDER:-}" in
+    google|gemini|GOOGLE|GEMINI)
+      if [[ -z "${GOOGLE_API_KEY:-}" ]]; then
+        echo "LLM_PROVIDER=google requires GOOGLE_API_KEY in $ENV_FILE" >&2
+        return 1
+      fi
+      export LLM_API_KEY="$GOOGLE_API_KEY"
+      export LLM_BASE_URL="${GOOGLE_LLM_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}"
+      export LLM_MODEL="${GOOGLE_LLM_MODEL:-gemini-3.5-flash-lite}"
+      # Gemini OpenAI compat is flaky with response_format=json_object; rely on prompt.
+      export LLM_JSON_MODE="${LLM_JSON_MODE_GOOGLE:-false}"
+      ;;
+  esac
   if [[ -z "${LLM_API_KEY:-}" || -z "${LLM_BASE_URL:-}" || -z "${LLM_MODEL:-}" ]]; then
     echo "Need LLM_BASE_URL + LLM_MODEL + LLM_API_KEY in $ENV_FILE (see docs/how-to-run.md)" >&2
     return 1
   fi
-  echo "llm_env loaded model=${LLM_MODEL} base=${LLM_BASE_URL} key_len=${#LLM_API_KEY} json_mode=${LLM_JSON_MODE:-true}"
+  echo "llm_env loaded provider=${LLM_PROVIDER:-deepseek} model=${LLM_MODEL} base=${LLM_BASE_URL} key_len=${#LLM_API_KEY} json_mode=${LLM_JSON_MODE:-true}"
 }
 
 kart_ensure_compat_symlink() {

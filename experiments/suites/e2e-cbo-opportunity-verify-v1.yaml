@@ -1,0 +1,18 @@
+# E3 — CBO opportunity mechanism verify (warm).
+# Development diagnostic; do not merge into advantage_v2 mains.
+kind: compare
+id: e2e-cbo-opportunity-verify-v1
+workload: experiments/workloads/bound_ir_cbo_opportunity_verify_v1.json
+oracle: experiments/workloads/bound_ir_cbo_opportunity_verify_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - bao
+  - kart
+  - cbo-llm-proposal

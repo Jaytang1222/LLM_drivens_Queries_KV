@@ -60,9 +60,19 @@ public final class OpenAiCompatibleClient implements LlmClient {
         msg.put("role", m.role);
         msg.put("content", m.content);
       }
-      if (o.jsonObjectFormat && jsonModeSupported) {
+      if (o.responseSchemaFormat && responseSchemaHint != null) {
+        ObjectNode rf = body.putObject("response_format");
+        rf.put("type", "json_schema");
+        ObjectNode schema = rf.putObject("json_schema");
+        schema.put("name", "plan_choice");
+        schema.put("strict", true);
+        schema.set("schema", responseSchemaHint);
+      } else if (o.jsonObjectFormat && jsonModeSupported) {
         ObjectNode rf = body.putObject("response_format");
         rf.put("type", "json_object");
+      }
+      if (o.maxTokens != null && o.maxTokens.intValue() > 0) {
+        body.put("max_tokens", o.maxTokens.intValue());
       }
 
       byte[] payload = MAPPER.writeValueAsBytes(body);
@@ -70,7 +80,10 @@ public final class OpenAiCompatibleClient implements LlmClient {
       int attempts = 1;
       boolean jsonFallback = false;
       // JSON-mode retry only on HTTP 400 (format rejection) — never on 401/402/403/429/5xx.
-      if (posted.code == 400 && o.jsonObjectFormat && jsonModeSupported && body.has("response_format")) {
+      // Disabled when {@link LlmOptions#allowJsonModeRetry} is false (one-shot arms).
+      if (o.allowJsonModeRetry
+          && posted.code == 400 && o.jsonObjectFormat && jsonModeSupported
+          && body.has("response_format")) {
         jsonFallback = true;
         attempts = 2;
         body.remove("response_format");

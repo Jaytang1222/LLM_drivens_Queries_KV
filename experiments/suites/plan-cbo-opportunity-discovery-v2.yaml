@@ -1,0 +1,14 @@
+# CBO-only pre-KART screen; this is not the E2 comparison set.
+kind: compare
+id: plan-cbo-opportunity-discovery-v2
+workload: experiments/workloads/bound_ir_cbo_opportunity_candidates_v2.json
+oracle: experiments/workloads/bound_ir_cbo_opportunity_candidates_v2.screen-oracle.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - bao
+  - pilot-safety-probe

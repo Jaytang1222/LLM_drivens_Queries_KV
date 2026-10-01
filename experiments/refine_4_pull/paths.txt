@@ -1,0 +1,12 @@
+OUT_ROOT=experiments/refine_4/refine4-20261001-190054
+STAMP=20261001-190054
+experiments/refine_4/refine4-20261001-190054/ais_e2e.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_T_alone_t1.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_T_alone_t2.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_T_alone_t3.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_T_par_t1.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_TZ_alone_t1.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_TZ_alone_t2.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_TZ_alone_t3.jsonl
+experiments/refine_4/refine4-20261001-190054/iso_P_TZ_par_t1.jsonl
+experiments/refine_4/refine4-20261001-190054/td_e2e.jsonl

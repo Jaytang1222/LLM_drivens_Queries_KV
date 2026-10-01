@@ -1,0 +1,27 @@
+{
+  "version": "online_pair_nnls_v1",
+  "coefficients": [
+    0.0,
+    23347.83458461887,
+    1.5234751250630312
+  ],
+  "margin_ms": 435.74560345237063,
+  "training_queries": 35,
+  "pairs": 70,
+  "excluded_query_ids": [
+    "a2_topk_dtw_wide",
+    "a2_tz_hard_a",
+    "a2_tz_hard_d",
+    "ais_st_control_small",
+    "ais_st_control_tiny",
+    "ais_st_port_focus",
+    "ais_topk_dtw_2week",
+    "ais_topk_frechet_wide",
+    "topk_st_3"
+  ],
+  "oof_mae_ms": 120.27088239498933,
+  "margin_definition": "query-group OOF upper residual p90, development empirical only",
+  "feature_source": "compiled range count + execution-before frozen-statistics estimates",
+  "features_sha256": "d43e566e89f6396227966d8f468531ddfd8a5646cfe9909bbdc60d386f184156",
+  "basis": "linear"
+}

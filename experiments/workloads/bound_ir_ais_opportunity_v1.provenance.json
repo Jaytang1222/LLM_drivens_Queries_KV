@@ -1,0 +1,15 @@
+{
+  "census": "experiments/opportunity/opportunity-ais-complex-v1",
+  "query_ids": [
+    "ais_topk_frechet_wide",
+    "ais_topk_dtw_2week",
+    "ais_st_port_focus",
+    "ais_st_control_tiny",
+    "ais_st_control_small"
+  ],
+  "note": "census stable opportunities + control",
+  "sha256": {
+    "bound_ir_ais_opportunity_v1.json": "8180e5072c3b37d3ab52bd941da86e3678afbf527588b7e2d3836c82990d11e3",
+    "bound_ir_ais_opportunity_v1.oracle.json": "bd0cfaa0c65d9a0efc0b5a22a43bef0afc572c5d30069055d7a1001f06149add"
+  }
+}

@@ -1,0 +1,13 @@
+# Cache diagnosis only — uses cbo-llm-proposal-cached. Do not merge with main pilot latency.
+kind: compare
+id: e2e-cbo-llm-pilot-cache
+workload: experiments/workloads/bound_ir_cbo_llm_pilot_v1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_pilot_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+arms:
+  - cbo
+  - cbo-llm-proposal-cached

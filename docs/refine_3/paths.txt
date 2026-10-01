@@ -1,0 +1,9 @@
+STAMP=20261001-180830
+OUT_ROOT=experiments/refine_3/refine3-20261001-180830
+MODEL=qwen2.5:1.5b-instruct
+AIS_LEGACY=refine3-ais-legacy-20261001-180830
+AIS_INDEXED=refine3-ais-indexed-20261001-180830
+AIS_LLM_ALONE=refine3-ais-llm-alone-20261001-180830
+AIS_HINT_OFF=refine3-ais-hint-off-20261001-180830
+AIS_HINT_SHUFFLE=refine3-ais-hint-shuffle-20261001-180830
+TD_E2E=refine3-td-e2e-20261001-180830

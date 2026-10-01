@@ -1,0 +1,16 @@
+# Plan-only: T-Drive 4 census overhead — CBO vs cold LLM vs cached LLM.
+# trials=2 so cbo-llm-proposal-cached can miss then hit in-process (proposal cache, not HBase).
+# Metric fields unchanged vs plan-cbo-llm-overhead-v1.
+kind: compare
+id: plan-cbo-llm-overhead-cache-v1
+workload: experiments/workloads/bound_ir_cbo_llm_overhead_v1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_overhead_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 2
+stages:
+  - plan
+arms:
+  - cbo
+  - cbo-llm-proposal
+  - cbo-llm-proposal-cached

@@ -34,9 +34,9 @@ Windows `settings.xml` may set `localRepository` to a path like `F:\maven-reposi
 ## LLM env (OI-1 closed 2026-09-23; provider switched 2026-09-23)
 
 - Provider: **DeepSeek** (`https://api.deepseek.com/v1`)
-- Model: `deepseek-chat`
+- Model: **`deepseek-flash`**（混合臂延迟包默认；旧名 `deepseek-chat` 仍可能被路由到 Flash）
 - `response_format=json_object`: **supported** (curl + `kart probe-llm` / `kart.sh probe`, 2026-09-23)
-- Live acceptance: `./scripts/kart.sh chat-easy` / `chat-handbook`（DeepSeek；`LLM_MODEL=deepseek-chat` → 服务端常报 `deepseek-flash`）
+- Live acceptance: `./scripts/kart.sh chat-easy` / `chat-handbook`；混合臂提示版本 `cbo_llm_compact_v5`；LLM-on：`KART_CBO_LLM_MAX_TOKENS`（默认 32）+ `KART_CBO_LLM_SPECULATE_PT`（默认 on）
 - Java client: `OpenAiCompatibleClient` via `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` / `LLM_JSON_MODE`
 - Secrets in gitignored `.env` only (do not commit)
 - Previous PinAI/`gpt-5.5` relay retired due to instability

@@ -1,0 +1,16 @@
+# E2 plan-stage mechanism validation on 12 frozen new queries.
+# Selection was based on CBO/Bao plus safety-probe screening, before KART outcomes.
+kind: compare
+id: plan-cbo-opportunity-verify-v2
+workload: experiments/workloads/bound_ir_cbo_opportunity_verify_v2.json
+oracle: experiments/workloads/bound_ir_cbo_opportunity_verify_v2.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - bao
+  - kart
+  - cbo-llm-proposal

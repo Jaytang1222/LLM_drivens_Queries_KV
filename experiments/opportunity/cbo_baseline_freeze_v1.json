@@ -1,0 +1,70 @@
+{
+  "freeze_id": "cbo_baseline_freeze_v1",
+  "frozen_at_utc": "2026-09-28T11:09:37Z",
+  "note": "Do not modify these files while optimizing KART arms; if shared code must change, label original vs changed CBO separately.",
+  "cbo_arm": {
+    "arm_id": "cbo",
+    "registration": "NativePolicyArm(cbo, PlannerMode.BEST_FIRST)",
+    "path": "src/main/java/kart/bench/ArmRegistry.java"
+  },
+  "git": {
+    "commit": "6ef179445512336b2f41259aa331589476dd1d74",
+    "commit_short": "6ef1794",
+    "dirty": true,
+    "status_porcelain_sha256": "d67818f42ed1af790ed1f696a5ce61f15966f7da663021b909349240d1ab2d21"
+  },
+  "files": {
+    "src/main/java/kart/bench/ArmRegistry.java": {
+      "exists": true,
+      "sha256": "084abb5a8805a9ae418d612613fb2c77979fe9a9cbe4f3e6831179aa884fb935",
+      "bytes": 3529
+    },
+    "src/main/java/kart/bench/NativePolicyArm.java": {
+      "exists": true,
+      "sha256": "76cd1165db4b50da70d398ef112d3bcaab51b497c57541cb0828fddef8404e06",
+      "bytes": 1797
+    },
+    "src/main/java/kart/search/PlannerMode.java": {
+      "exists": true,
+      "sha256": "d2ba7bc65327c18bb9337efca867826f064ca6a654820e2b14eaa9bed8dc3fd0",
+      "bytes": 1605
+    },
+    "src/main/java/kart/search/BestFirstPolicy.java": {
+      "exists": true,
+      "sha256": "4daea621c93527eeb2ae9c52c3a9083ec0a3baa73403f22a78590281628916b2",
+      "bytes": 3423
+    },
+    "src/main/java/kart/cost/PlanSelector.java": {
+      "exists": true,
+      "sha256": "b6e78d0a774dd0230d7849efaf676b38e70b4e7389459c5da4e4b90d0138a1fd",
+      "bytes": 2954
+    },
+    "src/main/java/kart/cost/CostModel.java": {
+      "exists": true,
+      "sha256": "2e84e5fc135253296e5db3522c449b541ec7ab447ced4acc1774049fed06b317",
+      "bytes": 10591
+    },
+    "src/main/java/kart/cost/FastCost.java": {
+      "exists": true,
+      "sha256": "5fed0a42a5751037dd55f518b54dd907aefc9e532d038464ab293e71f0061106",
+      "bytes": 1978
+    },
+    "src/main/java/kart/plan/PlanBuilder.java": {
+      "exists": true,
+      "sha256": "14de254d337e72252048cd2bfeb4eaf9fdd8796627328273bae51c566b7a8a80",
+      "bytes": 12995
+    },
+    "src/main/java/kart/validation/PlanValidator.java": {
+      "exists": true,
+      "sha256": "dedebba5f22aba5dfbce454c5c2c3afe6568ead17d09875143d2d1d8e97858d3",
+      "bytes": 25956
+    },
+    "config/planner.yaml": {
+      "exists": true,
+      "sha256": "dfa849c7c6bfe68ebd48482af27b38d226fd744718f42cf10842f8db6b33bb98",
+      "bytes": 1246
+    }
+  },
+  "census_run_reference": "experiments/opportunity/opportunity-dev-v1",
+  "corrected_summary": "experiments/opportunity/opportunity-dev-v1/corrected/summary.json"
+}

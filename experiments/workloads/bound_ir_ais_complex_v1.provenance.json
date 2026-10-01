@@ -1,0 +1,34 @@
+{
+  "seed": "2026-09-29-ais-complex-v1",
+  "generator": "generate_ais_complex_v1.py/v1",
+  "manifest": "ais_v1_ready",
+  "query_count": 16,
+  "query_ids": [
+    "ais_st_wide_week",
+    "ais_st_wide_2week",
+    "ais_s_large",
+    "ais_t_wide_month",
+    "ais_st_mid",
+    "ais_st_mid_b",
+    "ais_st_control_small",
+    "ais_st_control_tiny",
+    "ais_topk_dtw_wide",
+    "ais_topk_dtw_2week",
+    "ais_topk_frechet_wide",
+    "ais_topk_hausdorff_mid",
+    "ais_topk_dtw_large_s",
+    "ais_topk_dtw_control",
+    "ais_topk_dtw_t_wide",
+    "ais_st_port_focus"
+  ],
+  "domain": {
+    "xmin": 677624.8754950762,
+    "xmax": 756930.4784023277,
+    "ymin": 4150624.3555469033,
+    "ymax": 4213936.72184439
+  },
+  "epoch_ms": 1494338400000,
+  "sha256": {
+    "bound_ir_ais_complex_v1.json": "d47b508f1eb7b4421f7f4d4e45afc053d0d90a0197dad2c55e0ba68f774f2baa"
+  }
+}

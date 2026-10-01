@@ -1,0 +1,6 @@
+UB_TD=experiments/opportunity/opportunity-refine-tdrive4q-20261001-155001
+UB_AIS=experiments/opportunity/opportunity-refine-ais-20261001-155001
+TD_E2E_LOG=experiments/refine/refine-20261001-155001-tdrive-e2e.log
+AIS_E2E_LOG=experiments/refine/refine-20261001-155001-ais-e2e.log
+TD_E2E_DIR=experiments/results/cbo-llm-overhead-e2e-local-ollama-20261001-155001
+AIS_E2E_DIR=experiments/results/ais-llm-overhead-e2e-local-ollama-20261001-155129

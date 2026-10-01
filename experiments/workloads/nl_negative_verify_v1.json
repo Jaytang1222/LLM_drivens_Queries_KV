@@ -1,0 +1,74 @@
+{
+  "workload_id": "nl_negative_verify_v1",
+  "seed": "2026-09-28-cbo-opportunity-verify-v1",
+  "note": "E1/NL→IR or input-validation only. Do not mix into BoundIR E2/E3 denominators.",
+  "items": [
+    {
+      "case_id": "nl_incomplete_time_clarify",
+      "utterance": "Show trajectories intersecting tdrive_smoke_anchor between 2008-02-03T20:50:00+08:00 and an unspecified end time",
+      "expected_status": "NEED_CLARIFICATION",
+      "expected_field": "temporal",
+      "reason": "the user explicitly requests a time interval but leaves its end unspecified; a spatial-only interpretation drops the requested constraint"
+    },
+    {
+      "case_id": "nl_unsupported_aggregate",
+      "utterance": "Compute the average DTW distance of all taxis to 8857-8857_14 yesterday",
+      "expected_status": "UNSUPPORTED_QUERY",
+      "expected_field": null,
+      "reason": "aggregation not in supported BoundIR surface"
+    },
+    {
+      "case_id": "nl_contradictory",
+      "utterance": "Find trajectories of taxi 8857 that never intersect tdrive_smoke_anchor and also must intersect tdrive_smoke_anchor between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "expected_status": "NEED_CLARIFICATION",
+      "expected_field": null,
+      "reason": "contradictory spatial constraints requiring clarification or reject"
+    },
+    {
+      "case_id": "nl_same_point_boundary",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using DTW with SAME_POINT coupling",
+      "expected_status": "OK_OR_BOUND_IR",
+      "expected_field": null,
+      "reason": "valid NL that must preserve SAME_POINT; gold BoundIR must keep coupling"
+    }
+  ],
+  "invalid_bound_ir_samples": [
+    {
+      "case_id": "bir_bad_semantics_version",
+      "expected_status": "INPUT_VALIDATION_ERROR",
+      "note": "semantics_version unknown",
+      "bound_ir": {
+        "ir_version": "1.0",
+        "query_id": "bir_bad_semantics_version",
+        "source": {"dataset_id": "tdrive_v1", "entity": "trajectory"},
+        "temporal": {"start_ms": 1202044800000, "end_ms": 1202045400000},
+        "spatial": {
+          "min_x": 469979.0, "min_y": 4442298.0, "max_x": 470779.0, "max_y": 4443098.0,
+          "relation": "INTERSECTS", "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "semantics": {"mode": "NOT_A_REAL_MODE", "coupling": "SAME_POINT"},
+        "similarity": null,
+        "result": {"mode": "TRAJECTORY_IDS", "k": null, "tie_breaker": "TID_ASC"},
+        "snapshot": {"manifest_id": "tdrive_v1_ready", "semantics_version": "no_such_sem_v9"}
+      }
+    },
+    {
+      "case_id": "bir_missing_semantics",
+      "expected_status": "INPUT_VALIDATION_ERROR",
+      "note": "required semantics object omitted",
+      "bound_ir": {
+        "ir_version": "1.0",
+        "query_id": "bir_missing_temporal",
+        "source": {"dataset_id": "tdrive_v1", "entity": "trajectory"},
+        "spatial": {
+          "min_x": 469979.0, "min_y": 4442298.0, "max_x": 470779.0, "max_y": 4443098.0,
+          "relation": "INTERSECTS", "boundary": "INCLUDED"
+        },
+        "predicates": [],
+        "result": {"mode": "TRAJECTORY_IDS", "k": null, "tie_breaker": "TID_ASC"},
+        "snapshot": {"manifest_id": "tdrive_v1_ready", "semantics_version": "point_dtw_v1"}
+      }
+    }
+  ]
+}

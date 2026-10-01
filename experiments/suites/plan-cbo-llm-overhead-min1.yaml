@@ -1,0 +1,12 @@
+kind: compare
+id: plan-cbo-llm-overhead-min1
+workload: experiments/workloads/bound_ir_cbo_llm_overhead_min1.json
+oracle: experiments/workloads/bound_ir_cbo_llm_overhead_min1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - plan
+arms:
+  - cbo
+  - cbo-llm-proposal

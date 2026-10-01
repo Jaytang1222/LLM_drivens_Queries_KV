@@ -1,0 +1,32 @@
+{
+  "evaluation_role": "candidate_discovery_before_kart_outcomes",
+  "seed": "cbo-opportunity-mechanism-v2-seed-1",
+  "generator": "generate_cbo_opportunity_candidates_v2.py/v1",
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "candidate_count": 23,
+  "category_counts": {
+    "bao_tzh_full_risk": 10,
+    "cbo_candidate_miss": 9,
+    "normal_control": 4
+  },
+  "selection_quota_for_freeze": {
+    "cbo_candidate_miss": 8,
+    "bao_tzh_full_risk": 3,
+    "normal_control": 1
+  },
+  "source_sha256": {
+    "bound_ir_cbo_llm_pilot_v1.candidates.json": "54795979f5a50c813fdcf90634ba7be22899e0162acd35ceb87b9471dcadee6c",
+    "bound_ir_advantage_v2.json": "95789725d4632085138dc1db5d626763410fecbfe070aced08c4265a056fe3fb",
+    "bound_ir_v1.json": "b19017a7a7343f196a75f56087f64011254e0fa55c59179f27ba4bf49e9469fd",
+    "bound_ir_holdout_v2_test.json": "e7dc0262438a3c014a6c433851cff8beada27b675c2f49c4725d7136a074bb9c",
+    "bound_ir_cbo_llm_pilot_v1.json": "a7375fdd3a57940cfd9ec28f94c159911c9bac14ffe75e801d640a0ca73d15d8",
+    "bound_ir_cbo_opportunity_dev_smoke_v1.json": "73624470a004be93e41ea48a98af4bfb8b2a1996c08fc6b12a25c5362953a3da"
+  },
+  "sha256": {
+    "bound_ir_cbo_opportunity_candidates_v2.candidates.json": "30ed093c97b8331b130fe90b2a67bf6a0e539d16a70ed2d19ceb4d1d6255e5e5",
+    "bound_ir_cbo_opportunity_candidates_v2.json": "b19bafb3d05e089e4a895d29a304294c06d930a646abb9535504eb60fa28b7cd",
+    "bound_ir_cbo_opportunity_candidates_v2.screen-oracle.json": "3e70894f31eac232a31bb9f420dccd44b0e777770f1600ba146876a73b4d3995"
+  },
+  "note": "The screen oracle is intentionally empty; it is not used for E2. A fresh FullScan oracle is required after freezing the selected workload."
+}

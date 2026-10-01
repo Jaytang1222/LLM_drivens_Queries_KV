@@ -1,0 +1,5 @@
+{"query_id": "ais_st_control_small", "llm_alone_ms": 4197.0, "llm_par_legacy_ms": 5096.0, "llm_par_indexed_ms": 4268.0, "spec_alone": false, "spec_legacy": true, "spec_indexed": true, "tokens_in_alone": 171, "tokens_out_alone": 21}
+{"query_id": "ais_st_control_tiny", "llm_alone_ms": 4004.0, "llm_par_legacy_ms": 4182.0, "llm_par_indexed_ms": 3940.0, "spec_alone": false, "spec_legacy": true, "spec_indexed": true, "tokens_in_alone": 169, "tokens_out_alone": 20}
+{"query_id": "ais_st_port_focus", "llm_alone_ms": 4982.0, "llm_par_legacy_ms": 5804.0, "llm_par_indexed_ms": 4939.0, "spec_alone": false, "spec_legacy": true, "spec_indexed": true, "tokens_in_alone": 172, "tokens_out_alone": 20}
+{"query_id": "ais_topk_dtw_2week", "llm_alone_ms": 4572.0, "llm_par_legacy_ms": 9598.0, "llm_par_indexed_ms": 4070.0, "spec_alone": false, "spec_legacy": true, "spec_indexed": true, "tokens_in_alone": 181, "tokens_out_alone": 20}
+{"query_id": "ais_topk_frechet_wide", "llm_alone_ms": 5075.0, "llm_par_legacy_ms": 11298.0, "llm_par_indexed_ms": 6828.0, "spec_alone": false, "spec_legacy": true, "spec_indexed": true, "tokens_in_alone": 181, "tokens_out_alone": 20}

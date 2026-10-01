@@ -3,7 +3,7 @@ package kart.snapshot;
 import kart.catalog.CatalogStore;
 import kart.catalog.Manifest;
 import kart.catalog.StatsSnapshot;
-import kart.config.AppConfig;
+import kart.data.AisParser;
 import kart.data.Chunk;
 import kart.data.Chunker;
 import kart.data.Cleaner;
@@ -45,6 +45,16 @@ public final class SnapshotBuilder {
     public long bucketMs = 600_000L;
     public int zorderLevel = 8;
     public int maxZorderRanges = 64;
+    /** {@code tdrive} (part-* MULTIPOINT) or {@code ais} (trajectories.txt). */
+    public String format = "tdrive";
+    /** Projected CRS; default EPSG:32650 (T-Drive). AIS uses EPSG:32634. */
+    public String crs = Projection.DEFAULT_CRS;
+    /**
+     * When set (e.g. {@code ais_v1}), HBase tables become
+     * {@code traj_raw_<prefix>}, {@code traj_meta_<prefix>}, {@code idx_*_<prefix>}.
+     * Null/empty keeps legacy {@code traj_*_v1} / {@code idx_*_v1} names.
+     */
+    public String tablePrefix;
   }
 
   public static final class BuildResult {
@@ -61,8 +71,7 @@ public final class SnapshotBuilder {
     long tStart = System.currentTimeMillis();
     BuildResult result = new BuildResult();
 
-    TDriveParser parser = new TDriveParser();
-    List<RawTrajectory> raws = loadAll(opt.dataDir, parser, result);
+    List<RawTrajectory> raws = loadAll(opt, result);
     if (result.failureReason != null) {
       return result;
     }
@@ -70,7 +79,7 @@ public final class SnapshotBuilder {
     DataProfiler profiler = new DataProfiler();
     DataProfiler.Profile profile = new DataProfiler.Profile();
     // light profile from already-parsed raws
-    Projection projection = new Projection();
+    Projection projection = new Projection(opt.crs);
     for (RawTrajectory rt : raws) {
       profile.trajectories++;
       for (RawTrajectory.RawPoint rp : rt.points) {
@@ -93,7 +102,7 @@ public final class SnapshotBuilder {
     Files.createDirectories(opt.catalogDir);
     catalog.saveManifest(manifest);
 
-    Cleaner cleaner = new Cleaner(new Projection(), domain);
+    Cleaner cleaner = new Cleaner(new Projection(opt.crs), domain);
     Cleaner.Result cleaned = cleaner.cleanAll(raws);
     List<Trajectory> withTid = TidAssigner.assign(cleaned.trajectories);
 
@@ -103,6 +112,7 @@ public final class SnapshotBuilder {
     layout.epochMs = epoch;
     layout.zorderLevel = opt.zorderLevel;
     layout.domain = domain;
+    applyTableNames(layout, opt.tablePrefix);
 
     KvBackend kv;
     HBaseBackend hbase = null;
@@ -171,10 +181,19 @@ public final class SnapshotBuilder {
     }
   }
 
-  private static List<RawTrajectory> loadAll(Path dir, TDriveParser parser, BuildResult result) throws IOException {
+  private static List<RawTrajectory> loadAll(Options opt, BuildResult result) throws IOException {
+    Path dir = opt.dataDir;
+    String format = opt.format == null ? "tdrive" : opt.format.trim().toLowerCase();
+    List<Path> files = listInputFiles(dir, format);
     List<RawTrajectory> raws = new ArrayList<RawTrajectory>();
     long parseReject = 0;
-    for (Path part : DataProfiler.listParts(dir)) {
+    TDriveParser tdrive = "tdrive".equals(format) ? new TDriveParser() : null;
+    AisParser ais = "ais".equals(format) ? new AisParser() : null;
+    if (tdrive == null && ais == null) {
+      result.failureReason = "unsupported format: " + opt.format + " (use tdrive|ais)";
+      return raws;
+    }
+    for (Path part : files) {
       try (BufferedReader br = Files.newBufferedReader(part, StandardCharsets.UTF_8)) {
         String line;
         while ((line = br.readLine()) != null) {
@@ -182,7 +201,11 @@ public final class SnapshotBuilder {
             continue;
           }
           try {
-            raws.add(parser.parseLine(line));
+            if (ais != null) {
+              raws.add(ais.parseLine(line));
+            } else {
+              raws.add(tdrive.parseLine(line));
+            }
           } catch (IllegalArgumentException e) {
             parseReject++;
           }
@@ -190,18 +213,51 @@ public final class SnapshotBuilder {
       }
     }
     if (raws.isEmpty()) {
-      result.failureReason = "no trajectories parsed from " + dir;
+      result.failureReason = "no trajectories parsed from " + dir + " format=" + format;
     }
     result.trajectories = parseReject; // stash parse rejects until overwrite with traj count
     return raws;
   }
 
+  static List<Path> listInputFiles(Path dir, String format) throws IOException {
+    if ("ais".equals(format)) {
+      List<Path> out = new ArrayList<Path>();
+      Path named = dir.resolve("trajectories.txt");
+      if (Files.isRegularFile(named)) {
+        out.add(named);
+        return out;
+      }
+      try (java.nio.file.DirectoryStream<Path> ds = Files.newDirectoryStream(dir, "*.txt")) {
+        for (Path p : ds) {
+          out.add(p);
+        }
+      }
+      java.util.Collections.sort(out);
+      return out;
+    }
+    return DataProfiler.listParts(dir);
+  }
+
+  static void applyTableNames(IndexBuilders.LayoutParams layout, String tablePrefix) {
+    if (tablePrefix == null || tablePrefix.trim().isEmpty()) {
+      return;
+    }
+    String p = tablePrefix.trim();
+    layout.tableRaw = "traj_raw_" + p;
+    layout.tableMeta = "traj_meta_" + p;
+    layout.tableTime = "idx_time_" + p;
+    layout.tableZorder = "idx_zorder_" + p;
+    layout.tableHash = "idx_hash_" + p;
+  }
+
   private static Manifest newManifest(Options opt, Rect domain, long epoch) {
+    IndexBuilders.LayoutParams names = new IndexBuilders.LayoutParams();
+    applyTableNames(names, opt.tablePrefix);
     Manifest m = new Manifest();
     m.manifest_id = opt.manifestId;
     m.semantics_version = "point_similarity_v2";
     m.stats_version = "stats_v1";
-    m.tid_map_location = "traj_meta_v1";
+    m.tid_map_location = names.tableMeta;
     m.dataset = new Manifest.Dataset();
     m.dataset.source = opt.dataDir.toString();
     m.dataset.checksum = "see-build-report";
@@ -212,18 +268,19 @@ public final class SnapshotBuilder {
     m.layout.bucket_ms = opt.bucketMs;
     m.layout.epoch_ms = epoch;
     m.layout.zorder_level = opt.zorderLevel;
-    m.layout.crs = "EPSG:32650";
+    m.layout.crs = opt.crs == null || opt.crs.trim().isEmpty()
+        ? Projection.DEFAULT_CRS : opt.crs.trim();
     m.layout.hash_version = "murmur3_x64_128";
     m.layout.domain = new Manifest.Domain();
     m.layout.domain.xmin = domain.minX;
     m.layout.domain.xmax = domain.maxX;
     m.layout.domain.ymin = domain.minY;
     m.layout.domain.ymax = domain.maxY;
-    m.layout.tables.put("raw", "traj_raw_v1");
-    m.layout.tables.put("meta", "traj_meta_v1");
-    m.layout.tables.put("time", "idx_time_v1");
-    m.layout.tables.put("zorder", "idx_zorder_v1");
-    m.layout.tables.put("hash", "idx_hash_v1");
+    m.layout.tables.put("raw", names.tableRaw);
+    m.layout.tables.put("meta", names.tableMeta);
+    m.layout.tables.put("time", names.tableTime);
+    m.layout.tables.put("zorder", names.tableZorder);
+    m.layout.tables.put("hash", names.tableHash);
     return m;
   }
 

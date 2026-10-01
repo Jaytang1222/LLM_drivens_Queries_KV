@@ -1,0 +1,4 @@
+mode=after
+trials=3
+model=kart-refine7-1p5b-t2
+protocol=v11

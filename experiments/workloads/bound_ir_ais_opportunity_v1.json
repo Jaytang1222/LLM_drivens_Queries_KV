@@ -1,0 +1,198 @@
+{
+  "manifest_id": "ais_v1_ready",
+  "semantics_version": "point_similarity_v2",
+  "workload_id": "bound_ir_ais_opportunity_v1",
+  "evaluation_role": "ais_opportunity_e2e_dev",
+  "note": "census stable opportunities + control",
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "query_id": "ais_topk_frechet_wide",
+      "source": {
+        "dataset_id": "ais_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1494424800000,
+        "end_ms": 1494943200000
+      },
+      "spatial": {
+        "min_x": 693485.9960765265,
+        "min_y": 4163286.8288064003,
+        "max_x": 741069.3578208775,
+        "max_y": 4201274.248584893,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 1,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "ais_v1_ready",
+        "semantics_version": "point_similarity_v2"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "ais_topk_dtw_2week",
+      "source": {
+        "dataset_id": "ais_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1494338400000,
+        "end_ms": 1495548000000
+      },
+      "spatial": {
+        "min_x": 693485.9960765265,
+        "min_y": 4163286.8288064003,
+        "max_x": 741069.3578208775,
+        "max_y": 4201274.248584893,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 1,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 5,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "ais_v1_ready",
+        "semantics_version": "point_similarity_v2"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "ais_st_port_focus",
+      "source": {
+        "dataset_id": "ais_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1494943200000,
+        "end_ms": 1495202400000
+      },
+      "spatial": {
+        "min_x": 707761.0045998318,
+        "min_y": 4174683.054739948,
+        "max_x": 726794.3492975722,
+        "max_y": 4189878.022651345,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "ais_v1_ready",
+        "semantics_version": "point_similarity_v2"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "ais_st_control_tiny",
+      "source": {
+        "dataset_id": "ais_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1494511200000,
+        "end_ms": 1494513000000
+      },
+      "spatial": {
+        "min_x": 715277.676948702,
+        "min_y": 4180280.5386956464,
+        "max_x": 719277.676948702,
+        "max_y": 4184280.5386956464,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "ais_v1_ready",
+        "semantics_version": "point_similarity_v2"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "ais_st_control_small",
+      "source": {
+        "dataset_id": "ais_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1494424800000,
+        "end_ms": 1494428400000
+      },
+      "spatial": {
+        "min_x": 713312.3968033394,
+        "min_y": 4179114.920380772,
+        "max_x": 721242.9570940646,
+        "max_y": 4185446.157010521,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "ais_v1_ready",
+        "semantics_version": "point_similarity_v2"
+      }
+    }
+  ]
+}

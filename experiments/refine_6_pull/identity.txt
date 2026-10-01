@@ -1,0 +1,11 @@
+build_id=refine6-20261001-213004
+host=startserver02
+pwd=/home/tyq/projects/llm-kv
+time=2026-10-01T21:30:04+08:00
+note=e2e_rerun_full_residual_p95
+-rw-rw-r-- 1 tyq tyq 50070108 10月  1 21:24 target/kart.jar
+model=qwen2.5:1.5b-instruct
+prompt=cbo_llm_action_v10
+calib_overest_p95=1128
+probe_budget_ms=50
+validator=indexed

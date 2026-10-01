@@ -1,0 +1,20 @@
+{
+  "role": "development_diagnostic_only",
+  "source_workload": "bound_ir_advantage_v2.json",
+  "source_oracle": "bound_ir_advantage_v2.oracle.json",
+  "census_opportunities": [
+    "a2_tz_hard_d",
+    "a2_topk_dtw_wide",
+    "topk_st_3",
+    "a2_tz_hard_a"
+  ],
+  "normal_controls": [
+    "a2_th_unc_a",
+    "a2_th_unc_b"
+  ],
+  "query_count": 6,
+  "sha256": {
+    "bound_ir_cbo_opportunity_dev_smoke_v1.json": "73624470a004be93e41ea48a98af4bfb8b2a1996c08fc6b12a25c5362953a3da",
+    "bound_ir_cbo_opportunity_dev_smoke_v1.oracle.json": "c7d38266818097b5a5535e89d096afad1659c1694c7bd8ba1bd187110178c85b"
+  }
+}

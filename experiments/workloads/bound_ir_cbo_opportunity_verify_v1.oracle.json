@@ -1,0 +1,38 @@
+{
+  "oracle_status": "frozen",
+  "source": "remapped_from_bound_ir_advantage_v2.oracle.json_via_FullScan_answers",
+  "answers": [
+    {
+      "query_id": "cov_sema_st_ss_1",
+      "trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "cov_sema_st_ss_2",
+      "trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "cov_norm_a2_th_unc_a",
+      "trajectory_ids": [
+        "8857-8857_13",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "cov_norm_a2_th_unc_b",
+      "trajectory_ids": [
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_4",
+        "8857-8857_6",
+        "8857-8857_7",
+        "8857-8857_8",
+        "8857-8857_9"
+      ]
+    }
+  ]
+}

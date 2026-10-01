@@ -1,0 +1,87 @@
+{
+  "manifest_id": "ais_v1_ready",
+  "semantics_version": "point_similarity_v2",
+  "oracle_status": "frozen",
+  "source": "subset_of_bound_ir_ais_complex_v1.oracle.json",
+  "answers": [
+    {
+      "query_id": "ais_topk_frechet_wide",
+      "trajectory_ids": [
+        "ais-884",
+        "ais-987",
+        "ais-969"
+      ],
+      "top_k": [
+        {
+          "tid": 5873,
+          "trajectory_id": "ais-884",
+          "distance": 3381.683134452425
+        },
+        {
+          "tid": 5987,
+          "trajectory_id": "ais-987",
+          "distance": 3420.3689680971947
+        },
+        {
+          "tid": 5967,
+          "trajectory_id": "ais-969",
+          "distance": 3742.3275669803998
+        }
+      ]
+    },
+    {
+      "query_id": "ais_topk_dtw_2week",
+      "trajectory_ids": [
+        "ais-975",
+        "ais-58",
+        "ais-880",
+        "ais-1334",
+        "ais-599"
+      ],
+      "top_k": [
+        {
+          "tid": 5974,
+          "trajectory_id": "ais-975",
+          "distance": 123401.80791045606
+        },
+        {
+          "tid": 5334,
+          "trajectory_id": "ais-58",
+          "distance": 164654.38669795843
+        },
+        {
+          "tid": 5869,
+          "trajectory_id": "ais-880",
+          "distance": 183211.62868898374
+        },
+        {
+          "tid": 374,
+          "trajectory_id": "ais-1334",
+          "distance": 187790.89021914202
+        },
+        {
+          "tid": 5545,
+          "trajectory_id": "ais-599",
+          "distance": 192928.59244175983
+        }
+      ]
+    },
+    {
+      "query_id": "ais_st_port_focus",
+      "trajectory_ids": [
+        "ais-241",
+        "ais-525"
+      ]
+    },
+    {
+      "query_id": "ais_st_control_tiny",
+      "trajectory_ids": []
+    },
+    {
+      "query_id": "ais_st_control_small",
+      "trajectory_ids": [
+        "ais-892"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+# E2E AIS complex / opportunity subset — hybrid vs CBO net gain.
+kind: compare
+id: e2e-ais-llm-overhead-v1
+workload: experiments/workloads/bound_ir_ais_opportunity_v1.json
+oracle: experiments/workloads/bound_ir_ais_opportunity_v1.oracle.json
+manifest: ais_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - e2e
+arms:
+  - cbo
+  - cbo-llm-proposal

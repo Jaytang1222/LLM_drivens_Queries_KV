@@ -28,6 +28,10 @@ public final class ArmRegistry {
     register(new BaoPlanArm(root));
     register(new LlmOptPlanArm(root));
     register(ConditionalLlmArm.fromRoot(root));
+    register(CboLlmProposalArm.withoutCache());
+    register(CboLlmProposalArm.withCache());
+    register(new FixedPlanIdArm());
+    register(new PilotSafetyProbeArm());
     register(SharedPoolPlanArm.cbo(root));
     register(SharedPoolPlanArm.bao(root));
     register(SharedPoolPlanArm.conditionalLlm(root));

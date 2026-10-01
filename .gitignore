@@ -24,6 +24,24 @@ zookeeper.out
 # Accidental Windows path folders (e.g. F:\maven-repository as dir name)
 F*maven-repository/
 
+# Accidental Maven localRepository dump into project root (groupId trees)
+/asm/
+/avalon-framework/
+/ch/
+/classworlds/
+/com/
+/commons-*/
+/info/
+/io/
+/javax/
+/jline/
+/junit/
+/log4j/
+/logkit/
+/net/
+/org/
+/xmlenc/
+
 # Secrets / local env override
 config/environment.yaml
 .env
@@ -36,6 +54,7 @@ KART_SYNC_*
 # Python / editor junk
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Large cloned upstreams (commits frozen in experiments/third_party/commits.json)
 experiments/third_party/din-sql/
@@ -46,6 +65,7 @@ experiments/third_party/llmopt/
 # Bench run outputs (regenerated; keep only frozen HBase evidence in git)
 experiments/results/**
 !experiments/results/hbase_version_evidence.txt
+!experiments/results/tdrive_smoke_report.json
 
 # Local helper scratch (not part of formal harness)
 scripts/_*.sh

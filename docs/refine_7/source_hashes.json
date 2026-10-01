@@ -1,0 +1,14 @@
+{
+  "src/main/java/kart/bench/CboLlmProposalArm.java": "11ac9e5b5b90ab3cbeae6e19156b2cd89a53fbe664d44f2423a96b856072bb38",
+  "src/main/java/kart/cost/BenefitCalibrator.java": "929c0d7aded5cf7791e519c00793a5b649d9dcd212f51e6545f5610be0e97c26",
+  "src/main/java/kart/cost/OnlineBenefitModel.java": "a2a725fe7850420f8ef13dfe341736d602583dd7b6b16da4b9c4e1d1077c1a86",
+  "src/main/java/kart/cost/CompiledBenefitFeatures.java": "f8a45f2535809dbcdc2280f9198213ee537238452282f30f910d37dde8b0a1f6",
+  "src/main/java/kart/llm/LlmOptions.java": "b6261f1cb99fff77c222c8bd16a2952a3f9417865466ad46be00159f41e7e074",
+  "src/main/java/kart/llm/OpenAiCompatibleClient.java": "2093aeac346e81df0f7b3804c6e61a7b5a3170eba664f084933e229c7789a619",
+  "scripts/run-refine7-iteration.sh": "5b6558cc562147bd988e1a4fbc6b21c0f5f01422faf3b1a79e3785e717ea70b6",
+  "scripts/build-refine7.sh": "b0035f7b2e149993e54d3363c3b5ff4b719b6fd331e7c59c7d576d9a96f58e75",
+  "scripts/create-refine7-resource-model.py": "5bfd12ec779d0449296a359de0f1d97b00db59342ebdd0bdd2e0ac17d814f781",
+  "experiments/adapters/fit_refine7_online.py": "d6a5569e6fd0bb486141769b223a4b2ff462ab2a259d4365fc3251d77aac05c0",
+  "experiments/adapters/summarize_refine7.py": "f1d927bcbf26106270510888a196a25c3e8534ddcf2d926b867a657d34c82a9f",
+  "experiments/refine_7/model_verified_linear.json": "9c70b163ed337c55257dd741446d0a9b35be8e9dc3d5849f341943313b4c03ac"
+}

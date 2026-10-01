@@ -1,0 +1,12 @@
+build_id=refine4-20261001-190054
+host=startserver02
+pwd=/home/tyq/projects/llm-kv
+time=2026-10-01T19:00:54+08:00
+git_head=unknown
+-rw-rw-r-- 1 tyq tyq 50053333 10月  1 18:58 target/kart.jar
+model=qwen2.5:1.5b-instruct
+prompt=cbo_llm_short_v8
+calib=calib_loglin_v1
+min_spec_s=500
+min_adopt_s=200
+validator=indexed
