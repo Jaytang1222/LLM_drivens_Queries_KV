@@ -354,8 +354,61 @@ public final class PlanValidator {
         }
       }
     }
+    for (PlanNode n : env.nodes) {
+      if (n.op == Op.CHUNK_META_FILTER) {
+        if (ir.temporal == null && ir.spatial == null) {
+          report.fail(C, "CHUNK_META_FILTER " + n.id + " without ST predicates");
+          return false;
+        }
+        for (PlanNode m : env.nodes) {
+          if (m.inputs.contains(n.id) && m.op != Op.FETCH_TRAJECTORY_CHUNK) {
+            report.fail(C, "CHUNK_META_FILTER " + n.id + " must feed only FETCH_TRAJECTORY_CHUNK");
+            return false;
+          }
+        }
+      }
+      String bad = badParam(n, "max_ranges", Op.ZORDER_RANGE_SCAN, 1, 4096);
+      bad = bad != null ? bad : badParam(n, "fetch_batch", Op.FETCH_TRAJECTORY_CHUNK, 1, 10000);
+      bad = bad != null ? bad : badParam(n, "topk_lb_b0", Op.BATCH_GET_TRAJECTORY, 1, Integer.MAX_VALUE);
+      bad = bad != null ? bad : badParam(n, "topk_lb_growth", Op.BATCH_GET_TRAJECTORY, 2, 64);
+      if (bad == null && n.params != null && n.params.get("topk_lb_b0") != null) {
+        PlanNode sim = null;
+        for (PlanNode m : env.nodes) {
+          if (m.inputs.contains(n.id)) {
+            sim = m;
+          }
+        }
+        PlanNode top = sim == null ? null : byId.get(env.root);
+        Object k = n.params.get("topk_lb_k");
+        Object topKParam = top == null || top.params == null ? null : top.params.get("k");
+        Integer irK = ir.result == null ? null : ir.result.k;
+        int effective = topKParam instanceof Number ? ((Number) topKParam).intValue() : (irK == null ? -1 : irK);
+        if (!topK || sim == null || sim.op != Op.SIMILARITY || !(k instanceof Number)
+            || ((Number) k).intValue() != effective) {
+          bad = "topk_lb params require TOP_K chain with topk_lb_k equal to the result k";
+        }
+      }
+      if (bad != null) {
+        report.fail(C, bad + " (node " + n.id + ")");
+        return false;
+      }
+    }
     report.pass(C, "semantic constraints ok (mode=" + (topK ? "TOP_K" : "TRAJECTORY_IDS") + ")");
     return true;
+  }
+
+  private static String badParam(PlanNode n, String key, Op allowed, int min, int max) {
+    Object v = n.params == null ? null : n.params.get(key);
+    if (v == null) {
+      return null;
+    }
+    if (n.op != allowed) {
+      return key + " only allowed on " + allowed;
+    }
+    if (!(v instanceof Number) || ((Number) v).intValue() < min || ((Number) v).intValue() > max) {
+      return key + " out of range [" + min + "," + max + "]";
+    }
+    return null;
   }
 
   // ----------------------------------------------------------------- coverage

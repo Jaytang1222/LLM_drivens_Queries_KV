@@ -44,6 +44,8 @@
 
 ## 2. 总体架构
 
+KART 是 HBase 上基于 LLM 的轨迹查询整系统：NL→IR、查询优化（CBO + dual rewrite）、PlanValidator 与执行输出。
+
 ```mermaid
 flowchart LR
   subgraph offline [离线：快照构建]
@@ -60,14 +62,14 @@ flowchart LR
     Verify --> Manifest[manifest READY]
   end
   subgraph online [在线：查询]
-    CLI[CLI 多轮对话] --> Parser[SemanticParser LLM]
-    Parser --> Binder[Validator + Binder]
-    Binder --> Search[SearchEngine]
-    Search --> Val[PlanValidator]
-    Val --> Cost[CostModel + Selector]
-    Cost --> Comp[Compiler]
+    CLI[CLI / Dialog] --> Parser[NL to DraftIR]
+    Parser --> Binder[Schema + Binder]
+    Binder --> CBO[CBO BEST_FIRST CostModel]
+    CBO --> Dual[Dual rewrite]
+    Dual --> Val[PlanValidator]
+    Val --> Comp[Compiler]
     Comp --> Exec[Executor]
-    Exec --> Out[结果 + trace]
+    Exec --> Out[轨迹 ID / Top-K + trace]
   end
   Manifest -.读取.-> Binder
   Exec --> HB[(HBase 2.2.3)]

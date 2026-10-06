@@ -22,16 +22,24 @@ public final class ZOrderIndexAdapter {
   }
 
   public List<ZOrder.MortonRange> mortonRanges(Rect query) {
+    return mortonRanges(query, layout.maxZorderRanges);
+  }
+
+  public List<ZOrder.MortonRange> mortonRanges(Rect query, int maxRanges) {
     Rect d = layout.domain;
     ZOrder.CellRect cells = ZOrder.metersToCells(
         query.minX, query.minY, query.maxX, query.maxY,
         d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
-    return ZOrder.decompose(cells, layout.zorderLevel, layout.maxZorderRanges);
+    return ZOrder.decompose(cells, layout.zorderLevel, maxRanges);
   }
 
   public List<ScanTask> scanTasks(Rect query, String sourceNodeId) {
+    return scanTasks(query, sourceNodeId, layout.maxZorderRanges);
+  }
+
+  public List<ScanTask> scanTasks(Rect query, String sourceNodeId, int maxRanges) {
     List<ScanTask> out = new ArrayList<ScanTask>();
-    List<ZOrder.MortonRange> ranges = mortonRanges(query);
+    List<ZOrder.MortonRange> ranges = mortonRanges(query, maxRanges);
     for (int shard = 0; shard < layout.shardCount; shard++) {
       for (ZOrder.MortonRange r : ranges) {
         byte[] start = RowKeyCodec.encodeZorder(shard, r.lo, 0, 0);

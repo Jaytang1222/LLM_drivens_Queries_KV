@@ -87,7 +87,9 @@ public final class QueryCompiler {
             }
           }
           Rect rect = new Rect(minX, minY, maxX, maxY);
-          phys.scanTasks.addAll(zorder.scanTasks(rect, n.id));
+          int maxRanges = n.params != null && n.params.get("max_ranges") instanceof Number
+              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxZorderRanges;
+          phys.scanTasks.addAll(zorder.scanTasks(rect, n.id, maxRanges));
           break;
         }
         case EQUALITY_LOOKUP: {

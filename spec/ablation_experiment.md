@@ -4,7 +4,7 @@
 - 状态：规范已锁定；规划侧 leave-one-out 开关与 `experiments/suites/ablation.yaml` 已按本文落地。正式主表仍须 HBase 冷跑与 Oracle 门禁，不得以「脚本能启动」代替。
 - 上游：`spec/design.md` §8–10、`spec/IMPLEMENTATION_PLAN.md` §19.2、`docs/environment-lock.md`
 - 正交规范：[`spec/comparative_experiment.md`](comparative_experiment.md)（外部方法 / HBase 基线横比；**不**在消融中复用为臂）
-- 数据与用例：与对比实验 E2/E3 同一 `experiments/workloads/bound_ir_v1.json` 及对应 Oracle
+- 数据与用例：与对比实验 E2/E3 同一 `experiments/workloads/bound_ir_cmp_v3.json`（当前冻结 20 条 rewrite≥10% 切片）及对应 Oracle
 
 ---
 
@@ -12,14 +12,13 @@
 
 ### 1.1 目标
 
-在**同一金标 BoundIR、同一 T-Drive 快照与同一 HBase 环境**下，对 KART **规划侧**做 leave-one-out 消融，量化各组件对正确性与延迟的贡献，支撑论文「规划层」主张：
+KART 是 HBase 上基于 LLM 的轨迹查询整系统（NL→IR、dual 优化、校验与执行输出）。本文主表只消融其**查询优化层**。
 
-1. LLM 动作提案相对规则 / Best-first 的价值
-2. 动作搜索相对「LLM 一次吐完整计划」的价值
-3. Fast Cost（搜索引导）与 Final Cost（SafePlan 选优）各自的价值
-4. 联合索引（INTERSECT 族）相对仅单索引的价值
-5. 代价系数反馈校准的价值
-6. （风险对照）CoverageCheck 对正确性的必要性
+在**同一金标 BoundIR、同一 T-Drive 快照与同一 HBase 环境**下，对 Full KART 的 dual 优化（CBO 地板 + 离线准入规则 + 在线残差 LLM）做 leave-one-out：
+
+1. 去掉 LLM 层（离线规则与/或在线残差）对 e2e 延迟与正确性的影响
+2. 去掉 Fast Cost / Final Cost 对 e2e 延迟的影响（CBO 选优仍走同一 rewrite 路径）
+3. （风险对照）关掉 CoverageCheck 对正确性的影响
 
 ### 1.2 假设与限制
 
@@ -34,7 +33,7 @@
 
 | 规范 | 回答的问题 | 臂来源 |
 |---|---|---|
-| 对比实验 | KART 相对外部方法 / HBase 基线如何 | 外部移植臂 + fullscan/rbo/cbo/kart |
+| 对比实验 | KART **整系统**相对外部方法 / HBase 基线如何 | 外部移植臂 + fullscan/rbo/cbo/`kart`（系统在该层的入口） |
 | **消融实验（本文）** | KART **内部**哪块贡献了什么 | 相对 Full KART 的单因素变体 |
 
 二者共享 workload / Oracle / 计时边界约定，但**结果表不得混写**；不得用消融臂冒充外部对比，也不得把对比臂塞进消融主表。
@@ -57,7 +56,7 @@
 | 名称 | 原因 |
 |---|---|
 | DIN-SQL / SAG / Bao / LLMOpt | 属对比实验外部移植臂 |
-| `fullscan` / `rbo` / `cbo` | 属对比实验 E3 基线；消融用 `no_llm_*` / `no_final_cost` 等表达同类信息 |
+| `fullscan` / `rbo` / `cbo` | 属对比实验 E3 基线；消融用 `cbo_only` 表达「仅 CBO 地板」，不把对比臂 `cbo` 列入消融表 |
 | NL 解析变体（澄清开关、schema 重试等） | 论文重心为规划层；解析消融不进主表 |
 | 参数网格点（如 `beam_width=1`） | 属 param 实验，不是 leave-one-out 组件消融 |
 
@@ -132,10 +131,12 @@ experiments/results/<run_id>/
 
 ### 4.1 Full KART（基线）
 
+主表从金标 BoundIR 起，对应整系统的**优化 + 校验 + 执行输出**（NL→IR 不进本表）。
+
 | 字段 | 取值 |
 |---|---|
-| 臂 / 线名 | `full`（suite 中 `base_arm` 应对齐 `llm` / `kart`，**不得**以 `rule` 为 Full） |
-| 策略 | `PlannerMode.LLM`（`LlmProposalPolicy` + BeamSearch） |
+| 臂 / 线名 | `full`（suite 中 `base_arm: kart` = `LlmRewriteArm`，**不得**以 `rule` 为 Full） |
+| 策略 | Dual rewrite（`dual_rewrite_v43`：CBO + 离线 admitted 规则 + 至多一次在线残差 LLM；无命中保留 CBO） |
 | 验证 | Structure + Semantic + **Coverage** + PhysicalSafety |
 | 代价 | Fast Cost（搜索引导）+ Final Cost（SafePlan 上 `estimated_ms` 最小） |
 | 索引族 | 允许联合索引（INTERSECT：`P_TZ` / `P_TH` / …）及单索引、`P_FULL` |
@@ -146,21 +147,20 @@ experiments/results/<run_id>/
 
 相对 `full` **每次只改一列「相对变化」**。
 
-| `--factor` / 臂 ID | 相对 Full | 操作化 | 支撑 RQ |
+| `--factor` / 臂 ID | 相对 Full | 操作化 | 主指标 |
 |---|---|---|---|
-| `full` | — | 见 §4.1 | 完整系统参照 |
-| `no_llm_rule` | −LLM 策略 | `RulePolicy`（固定动作顺序）；其余同 Full | RQ1 |
-| `no_llm_best_first` | −LLM 策略 | `BestFirstPolicy`（无 LLM、代价有序）；其余同 Full | RQ1（与 rule 分离「无 LLM」与「无代价引导」） |
-| `llm_direct` | −动作搜索 | `PlannerMode.LLM_DIRECT`（`LlmDirectPlanPlanner`：完整 `PlanEnvelope` 或族内 `plan_id`）；**同一四层验证器**；非法则 Rule 回退（与 design 一致） | RQ2 |
-| `no_fast_cost` | −搜索中 Fast Cost | Beam / 搜索扩展**不按** Fast Cost 排序或剪枝（如固定 / Rule 序扩展）；**Final Cost 仍负责** SafePlan 选优 | RQ3 |
-| `no_final_cost` | −Final Cost 选优 | SafePlan 集合上**固定选取**（规范默认：按 `plan_id` 字典序取第一；实现须写入 meta）；**不用** `estimated_ms` 最小；搜索侧仍可用 Fast Cost | RQ3 |
-| `single_index` | −联合索引 | 合法动作 / PlanBuilder **禁止 INTERSECT 族**；仅单索引计划 + `P_FULL`；策略与验证与代价同 Full | RQ4 |
-| `uncalibrated` | −反馈校准 | 同一代价公式与模型版本；加载**冻结的未校准系数**（`calibrated=false`）；**禁止**用本实验测试查询重拟合后报告 | RQ5 |
+| `full` | — | `kart` 默认 `action_mode=dual-rules` | 参照 |
+| `cbo_only` | −离线规则 −在线残差 | 同一 `LlmRewriteArm` / 同一 CBO 搜索后跳过 rewrite（`action_mode=cbo_only`）；**不**换成 `RulePolicy` | e2e + Oracle |
+| `no_online_llm` | −在线残差 | `action_mode=dual-offline-rules`：CBO + 离线规则，不调在线 LLM | e2e + Oracle |
+| `no_fast_cost` | −搜索中 Fast Cost | `use_fast_cost=false`；rewrite 路径不变 | e2e |
+| `no_final_cost` | −Final Cost 选优 | `final_select=plan_id`；rewrite 路径不变 | e2e |
+| `no_coverage` | −CoverageCheck | 见 §4.3；**仅风险表** | Oracle |
 
 说明：
 
-- `no_llm_rule` 与 `no_llm_best_first` **都必须进主表**（默认约定），避免把「去掉 LLM」与「去掉代价引导搜索」绑死。
-- `llm_direct` **进主表**（默认约定），用于「动作搜索 vs 一次完整计划」。
+- `cbo_only` 与 `no_online_llm` 都留在 `kart` 臂上，只改 `action_mode`，避免整臂替换成 Native policy。
+- `no_fast_cost` / `no_final_cost` 只改 CBO 的 `PlannerConfig`，不改 Dual rewrite 的 G1/规则逻辑。
+- 旧因子 `no_llm_rule` / `llm_direct` / `single_index` / `uncalibrated` **不进本主表**。
 
 ### 4.3 风险对照臂（不进可部署主结论）
 
@@ -174,13 +174,11 @@ experiments/results/<run_id>/
 
 ### 4.4 实现对照（语义锁定；缺口不豁免公平性）
 
-| 因子 | 现有能力 | 规范要求的缺口（若尚未落地） |
+| 因子 | 现有能力 | 规范要求 |
 |---|---|---|
-| `full` / `no_llm_*` / `llm_direct` | `PlannerMode`：`llm` / `rule` / `best_first` / `llm_direct` | 已落地：`base_arm: kart`，factor id 对齐 §4.2 |
-| `no_fast_cost` | `PlannerConfig.use_fast_cost` | 已落地：关闭 beam 按 Fast Cost 排序/停滞剪枝 |
+| `full` / `cbo_only` / `no_online_llm` | `LlmRewriteArm` + `action_mode` overlay（经 `BenchContext.extras`） | 已落地；因子不得用 `policy:` 整臂替换 |
+| `no_fast_cost` | `PlannerConfig.use_fast_cost` | 已落地：关闭 CBO 搜索按 Fast Cost 排序/停滞剪枝 |
 | `no_final_cost` | `PlannerConfig.final_select=plan_id` | 已落地：SafePlan 按 `plan_id` 字典序选取 |
-| `single_index` | `PlannerConfig.allow_intersect` | 已落地：合法动作 / PlanBuilder 禁止 INTERSECT |
-| `uncalibrated` | overlay → `config/cost_coeffs_uncalibrated.yaml` | 已落地；禁止用测试集回灌 |
 | `no_coverage` | `PlannerConfig.skip_coverage_check` | 已落地；须 `--allow-unsafe` |
 
 未实现的因子不得用「近似替代」（例如用缩 beam 冒充 `no_fast_cost`）填主表；实现完成并写入 meta 后方可作为正式结论。
@@ -193,8 +191,9 @@ experiments/results/<run_id>/
 
 | 文件 | 用途 |
 |---|---|
-| `experiments/workloads/bound_ir_v1.json` | 金标 BoundIR（与对比实验 E2/E3 **同一冻结版本**） |
-| `experiments/workloads/bound_ir_v1.oracle.json`（或套件声明的 oracle） | FullScan Oracle 缓存 |
+| `experiments/workloads/bound_ir_cmp_v3.json` | 金标 BoundIR（与对比实验 E2/E3 **同一冻结版本**，当前 20 条） |
+| `experiments/workloads/bound_ir_cmp_v3.oracle.json` | FullScan Oracle 缓存 |
+| `experiments/workloads/bound_ir_v1.json` | 历史 BoundIR-65；仅回归 / oracle-diff，**不是**消融主表 |
 
 正式实验前冻结版本号与校验和写入 `meta.json`。Smoke（如 `tdrive_smoke.json`）仅用于连通性，**不得**单独作为论文主表。
 
@@ -204,7 +203,7 @@ experiments/results/<run_id>/
 
 - 谓词：仅 T / 仅 Z / 仅 H / TZ / 组合 / Top-K
 - 选择率：小窗 / 大窗
-- 含「联合索引有收益」与「单索引易错 / RBO 易错」样例，以便 `single_index` 与代价相关臂可解释
+- 含 CBO 易错 / rewrite 有机会改写的样例，以便 `cbo_only` 与代价相关臂可解释
 
 ### 5.3 Oracle
 
@@ -244,7 +243,7 @@ experiments/results/<run_id>/
 
 ### 6.3 辅助（解释与规划开销）
 
-- LLM calls / tokens（仅 `full`、`llm_direct` 等调用 LLM 的臂）
+- LLM calls / tokens（`full` 可能调用在线残差；`cbo_only` / `no_online_llm` 应为 `null` 或 0）
 - `n_candidates`、验证拒绝次数、`plan_regret_ms`（有则报）
 - 扫描 ranges、索引行、回表 chunk、bytes、`dtw_cells`
 
@@ -260,9 +259,9 @@ experiments/results/<run_id>/
 
 1. 同一快照、表布局、manifest、执行器、batch / 线程池；禁止一侧隐藏加速（未文档化的预热等）
 2. 相对 `full` **单因素**变化；禁止一次关掉多个主表因子后仍称 leave-one-out
-3. 调用 LLM 的臂（`full`、`llm_direct`）使用同一 `LLM_BASE_URL` / `LLM_MODEL` / `temperature=0`（或写入 meta 的统一采样设置）
+3. 调用在线 LLM 的因子（`full`）使用同一 `LLM_BASE_URL` / `LLM_MODEL` / `temperature=0`（或写入 meta 的统一采样设置）
 4. SearchBudget 上限与对比实验 E2 一致，写入 meta
-5. 代价系数：`full` 用冻结已校准文件；`uncalibrated` 用冻结预校准文件；**禁止**用测试集实测回灌后再报事前指标
+5. 代价系数：`full` 与代价消融臂使用冻结已校准文件；**禁止**用测试集实测回灌后再报事前指标
 6. 主延迟：成功子集 + 失败率披露
 7. 单节点结论不得写成集群结论
 8. unsafe 因子默认不跑；正式风险表须 `--allow-unsafe` 且单独披露协议
@@ -287,7 +286,7 @@ experiments/results/<run_id>/
 - JDK / HBase client·server / ZK（对齐 `docs/environment-lock.md`）
 - `LLM_BASE_URL`、`LLM_MODEL`（无密钥）
 - `base_arm` / `factors[]`：每项含 `id`、`arm`、`overrides`、`unsafe`、`cost_calibrated`、`cost_model_version`、`cost_coeffs_path`、`cost_coeffs_sha256`
-- 顶层 `cost_calibrated` 仅表示 base `planner.yaml`；逐因子状态以 `factors[]` 为准（`uncalibrated` 必须为 `false`）
+- 顶层 `cost_calibrated` 仅表示 base `planner.yaml`；逐因子状态以 `factors[]` 为准
 - `workload` 路径与校验和、`oracle` 路径、`cache`、`trials`、`formal_workload_complete`
 - `search_budget`（`beam_width`、`max_llm_calls`、`max_candidates`、`max_plan_ms` 等）
 - `allow_unsafe`
@@ -311,20 +310,18 @@ experiments/results/<run_id>/
 
 ## 11. 与需求 / 设计 / 实现计划的关系
 
-- `IMPLEMENTATION_PLAN.md` §19.2「必做消融」由本文操作化为可运行臂表；并增加主表臂 `llm_direct`（动作搜索 vs 直接计划）及将「无 LLM」拆为 `rule` / `best_first`
-- 计划搜索、验证器、代价模型行为以 `design.md` §8–10 为准；本文只定义消融因素与测量边界
+- `IMPLEMENTATION_PLAN.md` §19.2「必做消融」由本文操作化为 Dual rewrite leave-one-out（`cbo_only` / `no_online_llm` / cost / coverage）
+- 计划搜索、验证器、代价模型行为以 `design.md` §8–10 为准；rewrite 语义以 `DualRewritePolicy` 为准
 - 对比实验规范定义外部公平横比；本文定义内部因果消融；二者互补，互不替代
-- 套件文件 `experiments/suites/ablation.yaml`：`base_arm: kart`（Full），factors 对齐 §4.2–4.3；`no_coverage` 为 `unsafe`，默认跳过
+- 套件文件 `experiments/suites/ablation.yaml`：`base_arm: kart`（Full Dual rewrite），factors 对齐 §4.2–4.3；`no_coverage` 为 `unsafe`，默认跳过
 
 ---
 
 ## 12. 实现阶段建议顺序
 
-1. ~~修正 suite：`base_arm=llm`（或 `kart`），因子 id 对齐 §4；去掉 param 型 `narrow_beam`~~ 已落地
-2. ~~落地已有 `PlannerMode` 臂：`full` / `no_llm_rule` / `no_llm_best_first` / `llm_direct`~~ 已落地
-3. ~~落地 `uncalibrated`（冻结系数：`config/cost_coeffs_uncalibrated.yaml`）~~ 已落地
-4. ~~落地 `single_index`、`no_fast_cost`、`no_final_cost` 开关~~ 已落地
-5. ~~落地 `no_coverage`（`--allow-unsafe`）~~ 已落地
-6. 与对比实验同一 workload 跑正式 cold 主表 + 风险表，生成 `summary.md`（HBase 环境；本文不填数字）
+1. ~~修正 suite：`base_arm=kart`（Dual rewrite），因子对齐 §4~~ 已落地
+2. ~~`cbo_only` / `no_online_llm` 经 `action_mode` overlay，不换 Native policy 臂~~ 已落地
+3. ~~`no_fast_cost` / `no_final_cost` / `no_coverage`~~ 已落地
+4. 与对比实验同一 `bound_ir_cmp_v3`（当前 20 条）跑正式 cold 主表 + 风险表
 
 入口：`scripts/bench-ablation.sh`。因子语义未按 §4 执行的 run 仍不得进论文主表。

@@ -18,6 +18,20 @@ public interface KvBackend extends AutoCloseable {
 
   List<Row> get(String table, List<byte[]> rows) throws IOException;
 
+  default List<Row> get(String table, List<byte[]> rows, List<String> columns) throws IOException {
+    List<Row> out = new java.util.ArrayList<Row>();
+    for (Row r : get(table, rows)) {
+      Map<String, byte[]> keep = new java.util.HashMap<String, byte[]>();
+      for (String c : columns) {
+        if (r.columns.containsKey(c)) {
+          keep.put(c, r.columns.get(c));
+        }
+      }
+      out.add(new Row(r.key, keep));
+    }
+    return out;
+  }
+
   /**
    * Scan [start, stop). stop may be null meaning unbounded (to end of table).
    * Materializes all rows — avoid for huge tables; prefer {@link #scanConsume}.

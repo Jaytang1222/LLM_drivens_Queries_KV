@@ -25,7 +25,6 @@ import java.util.Map;
  * <ul>
  *   <li>{@code pool-cbo} — argmin CostCard</li>
  *   <li>{@code pool-bao} — Bao surrogate reward on the same cards</li>
- *   <li>{@code pool-conditional-llm} — conditional LLM pick / else argmin</li>
  *   <li>{@code pool-llm} — always ask LLM on the shared pool (else argmin)</li>
  * </ul>
  *
@@ -60,10 +59,6 @@ public final class SharedPoolPlanArm implements Arm {
   }
 
   public static SharedPoolPlanArm bao(Path root) {
-    return new SharedPoolPlanArm("pool-bao", Selector.BAO_SURROGATE, root);
-  }
-
-  public static SharedPoolPlanArm conditionalLlm(Path root) {
     return new SharedPoolPlanArm("pool-conditional-llm", Selector.CONDITIONAL_LLM, root);
   }
 
@@ -96,10 +91,6 @@ public final class SharedPoolPlanArm implements Arm {
       fail.extras.put("t_pool_enum_ms", Long.valueOf(tEnum));
       return fail;
     }
-
-    String cboDefault = pool.selected != null && pool.selected.plan() != null
-        ? pool.selected.plan().plan_id : null;
-    boolean triggered = false;
     boolean usedLlm = false;
     String fallbackReason = null;
     String selectMode;
@@ -109,6 +100,8 @@ public final class SharedPoolPlanArm implements Arm {
       case BAO_SURROGATE:
         SharedCandidatePool.selectBaoSurrogate(pool, familyWeight);
         selectMode = "bao_surrogate_on_shared_pool";
+        break;
+      case LLM_ALWAYS:
         break;
       case LLM_ALWAYS:
         triggered = true;
@@ -125,26 +118,6 @@ public final class SharedPoolPlanArm implements Arm {
           }
         } else {
           SharedCandidatePool.selectArgminCost(pool);
-          fallbackReason = "no_llm_client";
-        }
-        break;
-      case CONDITIONAL_LLM:
-        triggered = condHelper.shouldTrigger(pool.costCards);
-        selectMode = "conditional_llm_on_shared_pool";
-        if (triggered && ctx.llm != null) {
-          String pick = askLlm(ctx.llm, usage, ir, pool.costCards, cboDefault);
-          if (pick != null && QueryEngine.reselectByPlanId(pool, pick)) {
-            usedLlm = true;
-          } else {
-            SharedCandidatePool.selectArgminCost(pool);
-            fallbackReason = pick == null
-                ? (usage.failedAttempts() > 0 ? "http_failure" : "empty_plan_id")
-                : "illegal_plan_id";
-          }
-        } else if (triggered) {
-          SharedCandidatePool.selectArgminCost(pool);
-          fallbackReason = "no_llm_client";
-        } else {
           SharedCandidatePool.selectArgminCost(pool);
         }
         break;
@@ -195,15 +168,8 @@ public final class SharedPoolPlanArm implements Arm {
     tr.extras.put("n_pool_rejected", Integer.valueOf(
         pool.rejections == null ? 0 : pool.rejections.size()));
     if (poolRegret != null) {
-      tr.extras.put("pool_regret_ms", poolRegret);
-    }
-    tr.extras.put("shared_pool_catalog", SharedCandidatePool.catalogRow(pool));
-    if (selector == Selector.CONDITIONAL_LLM || selector == Selector.LLM_ALWAYS) {
-      tr.extras.put("conditional_llm_triggered", Boolean.valueOf(triggered));
-      if (selector == Selector.LLM_ALWAYS) {
-        stampPoolLlmOutcome(tr, usedLlm, fallbackReason);
-      } else {
-        ConditionalLlmArm.stampConditionalOutcome(tr, triggered, usedLlm, fallbackReason);
+    if (selector == Selector.LLM_ALWAYS) {
+      stampPoolLlmOutcome(tr, usedLlm, fallbackReason);
         tr.extras.put("conditional_rel_gap_threshold",
             Double.valueOf(condHelper.relGapThreshold()));
       }
@@ -256,7 +222,7 @@ public final class SharedPoolPlanArm implements Arm {
     msgs.add(LlmMessage.user(sb.toString()));
     try {
       LlmResponse resp = llm.chat(msgs, null, LlmOptions.defaults());
-      if (usage != null) {
+      return extractPlanId(resp != null ? resp.content : null);
         usage.record(resp);
       }
       return ConditionalLlmArm.extractPlanId(resp != null ? resp.content : null);
@@ -265,6 +231,25 @@ public final class SharedPoolPlanArm implements Arm {
         usage.recordHttpFailure(e.httpStatus, 0L);
       }
       return null;
+  static String extractPlanId(String content) {
+    if (content == null) {
+      return null;
+    }
+    int idx = content.indexOf("P_");
+    if (idx < 0) {
+      return null;
+    }
+    int end = idx + 2;
+    while (end < content.length()) {
+      char c = content.charAt(end);
+      if (!(Character.isLetterOrDigit(c) || c == '_')) {
+        break;
+      }
+      end++;
+    }
+    return content.substring(idx, end);
+  }
+
     }
   }
 

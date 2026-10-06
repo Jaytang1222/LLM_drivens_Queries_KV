@@ -41,8 +41,8 @@ MAX_REPAIR_ROUNDS = int(os.environ.get("KART_SAG_REPAIR_ROUNDS", "3"))
 
 def _sys_prompt() -> str:
     return (
-        "You are a SAG-style solver. Emit ONLY a logical MQL JSON array "
-        "(dialect kart_logical_mql/1.0). Do NOT emit DraftIR.\n"
+        "You are a SAG-style solver. Emit ONLY JSON object "
+        '{"pipeline":[...]} in dialect kart_logical_mql/1.0. Do NOT emit DraftIR.\n'
         + LOGICAL_MQL_HINT
         + "\n"
         + LOGICAL_CATALOG
@@ -154,7 +154,7 @@ def _world_probe(draft: dict, feedback_on: bool) -> dict:
 def _run_attempt(utterance: str, usage: dict, attempt: int, feedback_on: bool) -> dict:
     msgs = [
         {"role": "system", "content": _sys_prompt()},
-        {"role": "user", "content": "NLQ: " + utterance + "\nProduce MQL pipeline JSON array."},
+        {"role": "user", "content": "NLQ: " + utterance + "\nProduce {\"pipeline\":[...]} JSON."},
     ]
     best = None
     best_key = (10**9, 1, 0)
@@ -224,6 +224,14 @@ def _run_attempt(utterance: str, usage: dict, attempt: int, feedback_on: bool) -
     return {"best": best, "world_log": world_log, "attempt": attempt}
 
 
+def _select_violations(best: dict) -> list:
+    """Empty [] must not be treated as failure: `[] or ['no candidate']` is True in Python."""
+    viol = list((best or {}).get("violations") or [])
+    if (best or {}).get("draft") is None and not viol:
+        return ["no candidate"]
+    return viol
+
+
 def run_sag_mql(utterance: str, feedback_on: bool = True) -> dict:
     usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
     attempts = []
@@ -262,7 +270,7 @@ def run_sag_mql(utterance: str, feedback_on: bool = True) -> dict:
         provenance["pipeline"] = best["prov"].get("pipeline")
         provenance["kart_topk_extension"] = best["prov"].get("kart_topk_extension")
 
-    viol = best.get("violations") or ["no candidate"]
+    viol = _select_violations(best)
     draft = best.get("draft")
     if best.get("infrastructure_failure") or any("world_unavailable" in str(v) for v in viol):
         return {

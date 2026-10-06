@@ -36,7 +36,8 @@
               "BATCH_GET_TRAJECTORY",
               "SIMILARITY",
               "TOP_K",
-              "RETURN_TRAJECTORY_IDS"
+              "RETURN_TRAJECTORY_IDS",
+              "CHUNK_META_FILTER"
             ]
           },
           "inputs": {

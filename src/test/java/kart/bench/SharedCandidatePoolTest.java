@@ -73,8 +73,10 @@ final class SharedCandidatePoolTest {
     ArmRegistry reg = new ArmRegistry(java.nio.file.Paths.get(".").toAbsolutePath().normalize());
     assertEquals("pool-cbo", reg.resolve("pool-cbo").id());
     assertEquals("pool-bao", reg.resolve("pool-bao").id());
-    assertEquals("pool-conditional-llm", reg.resolve("pool-conditional-llm").id());
     assertEquals("pool-llm", reg.resolve("pool-llm").id());
+    assertEquals(null, reg.resolve("pool-conditional-llm"));
+    assertEquals(null, reg.resolve("kart-conditional-llm"));
+    assertTrue(reg.resolve("kart") instanceof LlmRewriteArm);
   }
 
   @Test

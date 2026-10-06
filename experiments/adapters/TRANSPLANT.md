@@ -20,7 +20,7 @@ Upstream checkouts: `experiments/third_party/` (gitignored). Frozen SHAs: `commi
 
 ### `kart`
 
-Native `Dialog` / `QueryEngine` NL→DraftIR path. No transplant.
+KART 系统的解析层：native `Dialog` / Binder NL→DraftIR→BoundIR. No transplant.
 
 ### `din-spider`
 
@@ -66,9 +66,9 @@ Same-model single-shot DraftIR baseline for fair E1 comparison.
 
 ## E2 — Plan
 
-### `kart-conditional-llm`
+### `kart`
 
-CBO enumerates SafePlans + CostCards; LLM picks among them only when `n_safe>=2` and (relative cost gap ≤ freeze `rel_gap` / constructor threshold, or any `uncertainty=HIGH`). Effective threshold comes from `experiments/suites/conditional_llm_freeze.json` via `ConditionalLlmArm.fromRoot` (status `frozen_for_test` ignores env). On LLM failure, falls back to CBO. Not merged into pure `kart` LLM arm.
+KART 系统的查询优化层：CBO (`PlannerMode.BEST_FIRST`) then `dual_rewrite_v43`（admitted offline rules `train_measured_v1` + at most one online residual LLM patch）。Default `KART_ACTION_MODE=dual-rules`, G1=50ms. No match / invalid patch keeps the CBO plan. Rules from `KART_ACTION_RULES`. Not `LlmProposalPolicy` beam search. Plans still pass `PlanValidator` before execute.
 
 ### `bao`
 
@@ -86,15 +86,11 @@ CBO enumerates SafePlans + CostCards; LLM picks among them only when `n_safe>=2`
 | Ported | G proposes candidates; S picks one; `t_plan` = Python G+S + Java generate→select (not execute) |
 | Changed | Candidates from KART plan family; Java `forcePlanId`+validator replaces `pg_hint_plan`; same fair LLM (no vLLM / LLMOpt checkpoints) |
 
-### `kart` (plan)
-
-Native `LlmProposalPolicy` / cost search. No transplant.
-
-KART LLM rows that use RulePolicy (no client, zero calls, illegal action, or rule fill) are labeled `kart-rule-fallback` and are **not** merged into the `kart` arm.
+Dual `kart` CBO-keep stays under `kart`. Native `llm` / `llm_direct` RulePolicy rows are `*-rule-fallback`.
 
 ## E3 — E2E
 
-`fullscan` / `rbo` / `cbo` / `kart` are **native** KART arms (not third-party transplants). See spec §7.
+`fullscan` / `rbo` / `cbo` are HBase/native planner baselines. `--arm kart` is the KART system (optimizer + validator + executor), not a transplant. See spec §0 / §7.
 
 ## Provenance in results
 

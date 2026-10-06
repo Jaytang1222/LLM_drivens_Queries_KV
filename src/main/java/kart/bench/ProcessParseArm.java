@@ -365,11 +365,27 @@ public final class ProcessParseArm implements ParseArm {
   }
 
   private static String lastJsonObject(String s) {
-    int idx = s.indexOf('{');
-    if (idx < 0) {
-      return s;
+    if (s == null || s.isEmpty()) {
+      return "";
     }
-    return s.substring(idx);
+    String last = s;
+    int from = 0;
+    while (from < s.length()) {
+      int idx = s.indexOf('{', from);
+      if (idx < 0) {
+        break;
+      }
+      try {
+        JsonNode n = MAPPER.readTree(s.substring(idx));
+        if (n != null && n.isObject() && n.has("status")) {
+          last = s.substring(idx);
+        }
+      } catch (Exception ignored) {
+        // keep scanning
+      }
+      from = idx + 1;
+    }
+    return last;
   }
 
   private static String truncate(String s, int n) {

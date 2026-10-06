@@ -1,6 +1,6 @@
 # KART (LLM_KV)
 
-LLM-guided trajectory queries over **HBase** (T-Drive): typed IR, BeamSearch + cost selection, schema/coverage-safe plans.
+键值存储（HBase）上基于 LLM 的轨迹查询**整系统**：NL→typed IR、查询优化（CBO + dual rewrite）、覆盖/语义校验后执行并输出结果。
 
 - Java 8 · HBase 2.2.3 · **WSL Ubuntu**
 - Spec: `spec/requirement.md`, `spec/design.md`, `spec/副本1.pdf`

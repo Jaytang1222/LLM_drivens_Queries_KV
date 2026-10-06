@@ -7,7 +7,7 @@ KART_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The Windows checkout is this repository; the WSL checkout follows $HOME so
 # the scripts also work when the WSL login name and home-directory basename
 # differ (as they do on the current machine).
-export KART_SRC="${KART_SRC:-/mnt/f/code/InventoryApp}"
+export KART_SRC="${KART_SRC:-/mnt/f/Projects/LLM_KV}"
 export KART_DST="${KART_DST:-${HOME}/projects/llm-kv}"
 export KART_COMPAT="${KART_COMPAT:-${HOME}/build/LLM_KV}"
 # Windows Maven settings often set localRepository to F:\maven-repository. Under WSL
@@ -123,6 +123,11 @@ kart_ensure_jar() {
     kart_rebuild_jar
   fi
 }
+
+if [[ -z "${KART_ACTION_RULES:-}" && -f "$KART_ROOT/experiments/suites/dual_action_rules.json" ]]; then
+  export KART_ACTION_RULES="$KART_ROOT/experiments/suites/dual_action_rules.json"
+  export KART_ACTION_MODE="${KART_ACTION_MODE:-dual-rules}"
+fi
 
 kart_java() {
   kart_ensure_jar

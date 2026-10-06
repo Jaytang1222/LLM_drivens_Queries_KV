@@ -21,7 +21,40 @@ from llm_client import (  # noqa: E402
 )
 
 
-def run_direct(utterance: str, repair: bool = False) -> dict:
+def _coerce_draft(draft):
+    if not isinstance(draft, dict):
+        return draft
+    if draft.get("ir_version") in (None, "1", 1):
+        draft["ir_version"] = "1.0"
+    src = draft.get("source")
+    if not isinstance(src, dict):
+        draft["source"] = {"dataset_id": "tdrive_v1", "entity": "trajectory"}
+    else:
+        src.setdefault("dataset_id", "tdrive_v1")
+        src.setdefault("entity", "trajectory")
+    sem = draft.get("semantics")
+    if not isinstance(sem, dict):
+        draft["semantics"] = {"mode": "OBSERVED_POINT", "coupling": "SAME_POINT"}
+    else:
+        sem.setdefault("mode", "OBSERVED_POINT")
+        sem.setdefault("coupling", "SAME_POINT")
+    res = draft.get("result")
+    if not isinstance(res, dict):
+        draft["result"] = {"mode": "TRAJECTORY_IDS"}
+    else:
+        res.setdefault("mode", "TRAJECTORY_IDS")
+        res.pop("tie_breaker", None)
+        if res.get("k") is None:
+            res.pop("k", None)
+    if isinstance(draft.get("temporal"), dict):
+        draft["temporal"].setdefault("boundary", "[start,end)")
+    if isinstance(draft.get("spatial"), dict):
+        draft["spatial"].setdefault("relation", "INTERSECTS")
+        draft["spatial"].setdefault("boundary", "INCLUDED")
+    return draft
+
+
+def run_direct(utterance: str, repair: bool = True) -> dict:
     usage = {"calls": 0}
     msgs = [
         {
@@ -33,12 +66,16 @@ def run_direct(utterance: str, repair: bool = False) -> dict:
     content, u = chat(msgs, temperature=0.0, json_mode=True)
     merge_usage(usage, u)
     draft = extract_json(content)
-    if draft is None and repair:
+    if isinstance(draft, dict):
+        draft = _coerce_draft(draft)
+    if (draft is None or not isinstance(draft, dict)) and repair:
         msgs.append({"role": "assistant", "content": content or ""})
         msgs.append({"role": "user", "content": "Reply with ONLY valid DraftIR JSON."})
         content, u = chat(msgs, temperature=0.0, json_mode=True)
         merge_usage(usage, u)
         draft = extract_json(content)
+        if isinstance(draft, dict):
+            draft = _coerce_draft(draft)
     provenance = {
         "method": "direct-draftir",
         "protocol": "single_shot" + ("_plus_one_repair" if repair else ""),
@@ -67,7 +104,7 @@ def main():
     ap.add_argument("--repair", action="store_true")
     args = ap.parse_args()
     try:
-        out = run_direct(args.utterance, repair=args.repair)
+        out = run_direct(args.utterance, repair=True)
     except LlmHttpError as e:
         out = {
             "status": "INFRASTRUCTURE_FAILURE",

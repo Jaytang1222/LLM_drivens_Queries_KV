@@ -51,31 +51,9 @@ public final class OpenAiCompatibleClient implements LlmClient {
     LlmOptions o = opts == null ? LlmOptions.defaults() : opts;
     String model = o.model != null ? o.model : defaultModel;
     try {
-      ObjectNode body = MAPPER.createObjectNode();
-      body.put("model", model);
-      body.put("temperature", o.temperature);
-      ArrayNode msgs = body.putArray("messages");
-      for (LlmMessage m : messages) {
-        ObjectNode msg = msgs.addObject();
-        msg.put("role", m.role);
-        msg.put("content", m.content);
-      }
-      if (o.responseSchemaFormat && responseSchemaHint != null) {
-        ObjectNode rf = body.putObject("response_format");
-        rf.put("type", "json_schema");
-        ObjectNode schema = rf.putObject("json_schema");
-        schema.put("name", "plan_choice");
-        schema.put("strict", true);
-        schema.set("schema", responseSchemaHint);
-      } else if (o.jsonObjectFormat && jsonModeSupported) {
-        ObjectNode rf = body.putObject("response_format");
-        rf.put("type", "json_object");
-      }
-      if (o.maxTokens != null && o.maxTokens.intValue() > 0) {
-        body.put("max_tokens", o.maxTokens.intValue());
-      }
-
+      ObjectNode body = buildBody(messages, responseSchemaHint, o);
       byte[] payload = MAPPER.writeValueAsBytes(body);
+      String requestSha256 = sha256(payload);
       Posted posted = post(baseUrl + "/chat/completions", payload, o.timeoutMs, apiKey);
       int attempts = 1;
       boolean jsonFallback = false;
@@ -100,6 +78,7 @@ public final class OpenAiCompatibleClient implements LlmClient {
       JsonNode root = MAPPER.readTree(posted.raw);
       LlmResponse resp = new LlmResponse();
       resp.rawBody = posted.raw;
+      resp.requestSha256 = requestSha256;
       resp.latencyMs = posted.latencyMs;
       resp.attempts = attempts;
       resp.jsonModeFallback = jsonFallback;
@@ -128,6 +107,41 @@ public final class OpenAiCompatibleClient implements LlmClient {
     } catch (Exception e) {
       throw new LlmException("LLM call failed: " + e.getMessage(), e);
     }
+  }
+
+  public ObjectNode buildBody(List<LlmMessage> messages, JsonNode responseSchemaHint, LlmOptions o) {
+    ObjectNode body = MAPPER.createObjectNode();
+    body.put("model", o.model != null ? o.model : defaultModel);
+    body.put("temperature", o.temperature);
+    ArrayNode msgs = body.putArray("messages");
+    for (LlmMessage m : messages) {
+      ObjectNode msg = msgs.addObject();
+      msg.put("role", m.role);
+      msg.put("content", m.content);
+    }
+    if (o.responseSchemaFormat && responseSchemaHint != null) {
+      ObjectNode rf = body.putObject("response_format");
+      rf.put("type", "json_schema");
+      ObjectNode schema = rf.putObject("json_schema");
+      schema.put("name", "plan_choice");
+      schema.put("strict", true);
+      schema.set("schema", responseSchemaHint);
+    } else if (o.jsonObjectFormat && jsonModeSupported) {
+      ObjectNode rf = body.putObject("response_format");
+      rf.put("type", "json_object");
+    }
+    if (o.maxTokens != null && o.maxTokens.intValue() > 0) {
+      body.put("max_tokens", o.maxTokens.intValue());
+    }
+    return body;
+  }
+
+  public static String sha256(byte[] payload) throws Exception {
+    StringBuilder sb = new StringBuilder();
+    for (byte b : java.security.MessageDigest.getInstance("SHA-256").digest(payload)) {
+      sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
   }
 
   /** OI-1: probe whether response_format=json_object is accepted. */

@@ -89,6 +89,11 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
+    extra = json.loads(os.environ.get("KART_LLM_EXTRA_BODY") or "{}")
+    if json_mode:
+        extra.setdefault("enable_thinking", False)
+        extra.setdefault("thinking", {"type": "disabled"})
+    body.update(extra)
 
     def _post(payload):
         req = urllib.request.Request(
@@ -101,7 +106,7 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=float(os.environ.get("KART_LLM_TIMEOUT_S", "120"))) as resp:
                 raw = resp.read().decode("utf-8")
                 return int(resp.getcode() or 200), json.loads(raw), raw
         except urllib.error.HTTPError as e:
@@ -121,19 +126,21 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
     attempts = 1
     http_statuses.append(code)
 
-    # Only treat HTTP 400 as a possible response_format rejection.
-    if (
-        code >= 400
-        and json_mode
-        and code == 400
-        and body.get("response_format") is not None
-    ):
-        body.pop("response_format", None)
-        json_fallback = True
-        code2, data2, raw2 = _post(body)
-        attempts = 2
-        http_statuses.append(code2)
-        code, data, raw = code2, data2, raw2
+    # HTTP 400: drop response_format / thinking flags the gateway may reject.
+    if code == 400:
+        popped = False
+        if body.pop("response_format", None) is not None:
+            popped = True
+            json_fallback = True
+        for k in ("thinking", "enable_thinking"):
+            if k in body:
+                body.pop(k)
+                popped = True
+        if popped:
+            code2, data2, raw2 = _post(body)
+            attempts = 2
+            http_statuses.append(code2)
+            code, data, raw = code2, data2, raw2
 
     t_ms = int((time.perf_counter() - t0) * 1000)
     base_usage = {
@@ -156,7 +163,16 @@ def chat(messages, temperature=None, max_tokens=2048, json_mode=None):
         fail_usage["infrastructure_failure"] = _is_infrastructure_http(code)
         raise LlmHttpError(code, raw or "", fail_usage)
 
-    choice = data["choices"][0]["message"]["content"]
+    msg = data["choices"][0]["message"]
+    choice = (msg.get("content") or "").strip()
+    if not choice:
+        rc = msg.get("reasoning_content") or ""
+        for marker in ('{"patches"', '{"diagnosis"', '{"rules"', '"patches":', '"rules":'):
+            i = rc.find(marker)
+            if i >= 0:
+                brace = rc.rfind("{", 0, i + 1)
+                choice = rc[brace if brace >= 0 else i:]
+                break
     usage = data.get("usage") or {}
     out = dict(base_usage)
     out["prompt_tokens"] = usage.get("prompt_tokens")
@@ -184,7 +200,7 @@ def extract_json(text: str):
 
 
 LOGICAL_CATALOG = """
-Logical catalog (DraftIR, NOT SQL) — same catalog for all E1 arms:
+Logical catalog (same for all E1 arms):
 - temporal: {start, end} ISO-8601 Asia/Shanghai
 - spatial: region_name (registered only) OR RECTANGLE min_lon/min_lat/max_lon/max_lat
 - predicates: vehicle_id EQ <string>
@@ -194,14 +210,13 @@ Logical catalog (DraftIR, NOT SQL) — same catalog for all E1 arms:
 UNSUPPORTED: COUNT/aggregation; continuous path; continuous Fréchet; EDIT_DISTANCE;
   derived speed/dwell; pair co-location; inventing unknown places as beijing_core.
 Registered regions: tdrive_smoke_anchor, tdrive_topk_box, tdrive_topk_wide, tdrive_topk_s1,
-  beijing_core, zhongguancun, wangjing, guomao, beijing_cbd, tiananmen, capital_airport,
-  haidian_central, chaoyang_central.
+  tdrive_topk_mid, beijing_core, zhongguancun, wangjing, guomao, beijing_cbd, tiananmen,
+  capital_airport, haidian_central, chaoyang_central.
 """
 
-# Presented to DIN prompt_makers as a fake "database schema" string
+# Presented to DIN prompt_makers; columns must match kart_logical_sql/1.0.
 DIN_SCHEMA_FIELDS = (
-    "Table trajectory, columns = [*,trajectory_id,vehicle_id,t_start,t_end,min_lon,min_lat,max_lon,max_lat]\n"
-    "Table region, columns = [*,region_name,min_lon,min_lat,max_lon,max_lat]\n"
+    "Table trajectory_point, columns = [trajectory_id,vehicle_id,event_time,lon,lat,region_name]\n"
 )
 DIN_FOREIGN_KEYS = "[]"
 

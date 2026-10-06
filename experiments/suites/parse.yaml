@@ -5,8 +5,10 @@
 # Enable sag-mql only after a snapshot-aligned HBase/Mongo WorldAccess is verified.
 kind: compare
 id: parse
-workload: experiments/workloads/nl_ir_v1.json
-oracle: experiments/workloads/nl_ir_v1.json
+# Default = nl_ir_v2 (kart-advantage slice; gold from FullScan of bound_ir_cmp_v3).
+# History: experiments/workloads/nl_ir_v1.json
+workload: experiments/workloads/nl_ir_v2.json
+oracle: experiments/workloads/nl_ir_v2.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

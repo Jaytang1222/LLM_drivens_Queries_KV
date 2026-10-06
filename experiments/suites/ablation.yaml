@@ -1,11 +1,11 @@
-# Planning-layer leave-one-out (spec/ablation_experiment.md)
-# Formal first-run: --cache cold --trials 1
-# Formal warm P50/P95: --cache warm --trials 5
+# Dual-rewrite leave-one-out (spec/ablation_experiment.md)
+# Full = kart (CBO + offline admitted rules + online residual LLM).
+# Do not run a formal table until cache/oracle gates are explicit.
 # Risk arm no_coverage: --allow-unsafe --factor no_coverage
 kind: ablation
 id: ablation
-workload: experiments/workloads/bound_ir_v1.json
-oracle: experiments/workloads/bound_ir_v1.oracle.json
+workload: experiments/workloads/bound_ir_cmp_v3.json
+oracle: experiments/workloads/bound_ir_cmp_v3.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3
@@ -13,18 +13,14 @@ stages:
   - e2e
 base_arm: kart
 factors:
-  - id: no_llm_rule
+  - id: cbo_only
     enabled: true
     overrides:
-      policy: rule
-  - id: no_llm_best_first
+      action_mode: cbo_only
+  - id: no_online_llm
     enabled: true
     overrides:
-      policy: best_first
-  - id: llm_direct
-    enabled: true
-    overrides:
-      policy: llm_direct
+      action_mode: dual-offline-rules
   - id: no_fast_cost
     enabled: true
     overrides:
@@ -33,14 +29,6 @@ factors:
     enabled: true
     overrides:
       final_select: plan_id
-  - id: single_index
-    enabled: true
-    overrides:
-      allow_intersect: false
-  - id: uncalibrated
-    enabled: true
-    overrides:
-      uncalibrated: true
   - id: no_coverage
     enabled: true
     unsafe: true

@@ -27,6 +27,7 @@ REGISTERED_REGIONS = {
     "tdrive_topk_box",
     "tdrive_topk_wide",
     "tdrive_topk_s1",
+    "tdrive_topk_mid",
     "beijing_core",
     "zhongguancun",
     "wangjing",
@@ -38,19 +39,20 @@ REGISTERED_REGIONS = {
     "chaoyang_central",
 }
 
+# Word-bounded: the token "path" must not match table name trajectory_point.
 _UNTRANSLATABLE = (
-    "count",
-    "avg(",
-    "sum(",
-    "group by",
-    "join",
-    "union",
-    "path",
-    "edit_distance",
-    "rowkey",
-    "insert",
-    "update",
-    "delete",
+    (r"\bcount\s*\(", "count"),
+    (r"\bavg\s*\(", "avg"),
+    (r"\bsum\s*\(", "sum"),
+    (r"\bgroup\s+by\b", "group by"),
+    (r"\bjoin\b", "join"),
+    (r"\bunion\b", "union"),
+    (r"\bcontinuous\s+path\b", "continuous path"),
+    (r"\bedit_distance\b", "edit_distance"),
+    (r"\browkey\b", "rowkey"),
+    (r"\binsert\b", "insert"),
+    (r"\bupdate\b", "update"),
+    (r"\bdelete\b", "delete"),
 )
 
 
@@ -68,12 +70,12 @@ def extract_sql(text: str) -> Optional[str]:
     if t.startswith("```"):
         lines = [ln for ln in t.split("\n") if not ln.strip().startswith("```")]
         t = "\n".join(lines).strip()
-    # Prefer SELECT ... block
-    m = re.search(r"(?is)\bSELECT\b.+$", t)
+    # Prefer SELECT ... up to the first terminator, ignoring trailing prose.
+    m = re.search(r"(?is)\bSELECT\b.+?(?=;|$)", t)
     if m:
         return m.group(0).strip().rstrip(";")
     if "FROM" in t.upper():
-        return t.rstrip(";")
+        return t.split(";")[0].rstrip()
     return None
 
 
@@ -84,20 +86,21 @@ def sql_to_draft_ir(sql: str) -> Tuple[dict, dict]:
     """
     if not sql or not str(sql).strip():
         raise TranslateError("invalid_sql", "empty SQL")
-    raw = str(sql).strip().rstrip(";")
-    low = raw.lower()
-    for bad in _UNTRANSLATABLE:
-        if bad in low:
-            raise TranslateError("untranslatable_sql", "forbidden construct: " + bad)
+    extracted = extract_sql(str(sql).strip())
+    raw = (extracted or str(sql).strip()).rstrip(";")
+    for pat, name in _UNTRANSLATABLE:
+        if re.search(pat, raw, re.I):
+            raise TranslateError("untranslatable_sql", "forbidden construct: " + name)
 
-    # Exactly one projection. Extra columns would be silently dropped.
+    # DISTINCT is optional; trajectory is a catalog synonym for trajectory_point.
     if not re.match(
-        r"(?is)^\s*select\s+distinct\s+trajectory_id\s+from\s+trajectory_point\b",
+        r"(?is)^\s*select\s+(?:distinct\s+)?trajectory_id\s+from\s+"
+        r"(?:trajectory_point|traj_point|trajectory)(?:\s+(?:as\s+)?[a-z_][\w]*)?\b",
         raw,
     ):
         raise TranslateError(
             "untranslatable_sql",
-            "must be SELECT DISTINCT trajectory_id FROM trajectory_point "
+            "must be SELECT [DISTINCT] trajectory_id FROM trajectory_point "
             "(no extra projection columns)",
         )
 
@@ -111,32 +114,45 @@ def sql_to_draft_ir(sql: str) -> Tuple[dict, dict]:
     spatial: Optional[dict] = None
     predicates: list = []
     similarity: Optional[dict] = None
-    result = {"mode": "TRAJECTORY_IDS", "k": None, "tie_breaker": "TID_ASC"}
+    result = {"mode": "TRAJECTORY_IDS"}
 
     # Parse AND-separated clauses (simple; no nested OR)
     if where_body:
+        where_body = re.sub(r"[\[\]]", " ", where_body)
         parts = _split_and(where_body)
         lon_lo = lon_hi = lat_lo = lat_hi = None
         region = None
         for p in parts:
-            p = p.strip()
+            p = p.strip().rstrip(";").strip()
             if not p:
                 continue
+            if "..." in p or "<registered>" in p or "<ref" in p:
+                continue
             m = re.match(
-                r"(?is)^event_time\s*>=\s*'([^']+)'\s*$", p
-            ) or re.match(r'(?is)^event_time\s*>=\s*"([^"]+)"\s*$', p)
+                r"(?is)^(?:event_time|t_start)\s*>=\s*'([^']+)'\s*$", p
+            ) or re.match(r'(?is)^(?:event_time|t_start)\s*>=\s*"([^"]+)"\s*$', p)
             if m:
                 if "start" in temporal:
                     raise TranslateError("untranslatable_sql", "duplicate event_time >=")
                 temporal["start"] = m.group(1)
                 continue
             m = re.match(
-                r"(?is)^event_time\s*<\s*'([^']+)'\s*$", p
-            ) or re.match(r'(?is)^event_time\s*<\s*"([^"]+)"\s*$', p)
+                r"(?is)^(?:event_time|t_end)\s*(?:<|<=)\s*'([^']+)'\s*$", p
+            ) or re.match(r'(?is)^(?:event_time|t_end)\s*(?:<|<=)\s*"([^"]+)"\s*$', p)
             if m:
                 if "end" in temporal:
                     raise TranslateError("untranslatable_sql", "duplicate event_time <")
                 temporal["end"] = m.group(1)
+                continue
+            m = re.match(
+                r"(?is)^(?:event_time|t_start)\s+between\s+'([^']+)'\s+and\s+'([^']+)'\s*$", p
+            ) or re.match(
+                r'(?is)^(?:event_time|t_start)\s+between\s+"([^"]+)"\s+and\s+"([^"]+)"\s*$', p
+            )
+            if m:
+                if "start" in temporal or "end" in temporal:
+                    raise TranslateError("untranslatable_sql", "duplicate event_time")
+                temporal["start"], temporal["end"] = m.group(1), m.group(2)
                 continue
             m = re.match(
                 r"(?is)^vehicle_id\s*=\s*'([^']+)'\s*$", p
@@ -247,7 +263,7 @@ def sql_to_draft_ir(sql: str) -> Tuple[dict, dict]:
             "reference_trajectory_id": ref,
             "exclude_reference": True,
         }
-        result = {"mode": "TOP_K", "k": int(k_s), "tie_breaker": "TID_ASC"}
+        result = {"mode": "TOP_K", "k": int(k_s)}
 
     if not temporal and spatial is None and not predicates and similarity is None:
         raise TranslateError(
@@ -278,12 +294,18 @@ def sql_to_draft_ir(sql: str) -> Tuple[dict, dict]:
 
 
 def _split_and(where_body: str) -> list:
+    protected = re.sub(
+        r"(?is)\bbetween\s+('[^']+'|\"[^\"]+\"|-?\d+(?:\.\d+)?)\s+and\s+"
+        r"('[^']+'|\"[^\"]+\"|-?\d+(?:\.\d+)?)",
+        lambda m: "BETWEEN " + m.group(1) + " \x00AND\x00 " + m.group(2),
+        where_body,
+    )
     parts = []
     buf = []
     i = 0
     in_q = None
-    while i < len(where_body):
-        c = where_body[i]
+    while i < len(protected):
+        c = protected[i]
         if in_q:
             buf.append(c)
             if c == in_q:
@@ -295,7 +317,7 @@ def _split_and(where_body: str) -> list:
             buf.append(c)
             i += 1
             continue
-        if where_body[i : i + 5].upper() == " AND ":
+        if protected[i : i + 5].upper() == " AND ":
             parts.append("".join(buf).strip())
             buf = []
             i += 5
@@ -304,7 +326,11 @@ def _split_and(where_body: str) -> list:
         i += 1
     if buf:
         parts.append("".join(buf).strip())
-    return [p for p in parts if p]
+    out = []
+    for p in parts:
+        if p:
+            out.append(p.replace(" \x00AND\x00 ", " AND "))
+    return out
 
 
 LOGICAL_SQL_HINT = """

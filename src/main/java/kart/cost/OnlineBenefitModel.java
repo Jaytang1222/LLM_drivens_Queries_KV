@@ -28,15 +28,21 @@ public final class OnlineBenefitModel {
     } catch(Exception e){throw new IllegalStateException("Invalid online benefit model: "+path,e);}
   }
   public double predict(CostCard card) {
+    double[] t=terms(card);
+    return t==null?Double.NaN:t[0]+t[1]+t[2];
+  }
+
+  /** Per-feature contributions in ms: {ranges, fetch, index rows}; null if unusable. */
+  public double[] terms(CostCard card) {
     String[][] keys={{"scan_ranges","seek_ranges"},{"fetch_gets","estimated_candidate_chunks"},{"estimated_index_rows","decode_rows"}};
-    double result=0;
-    if(card==null || card.features==null)return Double.NaN;
+    if(card==null || card.features==null)return null;
+    double[] out=new double[3];
     for(int i=0;i<3;i++){
       Object v=card.features.get(keys[i][0]);if(v==null)v=card.features.get(keys[i][1]);
-      if(!(v instanceof Number))return Double.NaN;
-      double d=((Number)v).doubleValue();if(!Double.isFinite(d)||d<0)return Double.NaN;
-      result+=coefficients[i]*(linear?d/1000.0:Math.log1p(d));
+      if(!(v instanceof Number))return null;
+      double d=((Number)v).doubleValue();if(!Double.isFinite(d)||d<0)return null;
+      out[i]=coefficients[i]*(linear?d/1000.0:Math.log1p(d));
     }
-    return result;
+    return out;
   }
 }

@@ -124,13 +124,25 @@ public final class HBaseBackend implements KvBackend {
 
   @Override
   public List<Row> get(String table, List<byte[]> rows) throws IOException {
+    return get(table, rows, null);
+  }
+
+  @Override
+  public List<Row> get(String table, List<byte[]> rows, List<String> columns) throws IOException {
     if (rows.isEmpty()) {
       return Collections.emptyList();
     }
     try (Table t = connection.getTable(TableName.valueOf(table))) {
       List<Get> gets = new ArrayList<Get>(rows.size());
       for (byte[] r : rows) {
-        gets.add(new Get(r));
+        Get g = new Get(r);
+        if (columns != null) {
+          for (String col : columns) {
+            int colon = col.indexOf(':');
+            g.addColumn(Bytes.toBytes(col.substring(0, colon)), Bytes.toBytes(col.substring(colon + 1)));
+          }
+        }
+        gets.add(g);
       }
       Result[] results = t.get(gets);
       List<Row> out = new ArrayList<Row>();

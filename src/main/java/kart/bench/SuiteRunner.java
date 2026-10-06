@@ -34,8 +34,8 @@ public final class SuiteRunner {
   private static final ObjectMapper MAPPER = new ObjectMapper()
       .enable(SerializationFeature.INDENT_OUTPUT);
 
-  /** Formal BoundIR cardinality for {@code bound_ir_v1.json} (spec / audit gate). */
-  public static final int FORMAL_BOUND_IR_COUNT = 65;
+  /** Formal BoundIR cardinality for {@code bound_ir_cmp_v3.json} (spec / audit gate). */
+  public static final int FORMAL_BOUND_IR_COUNT = 20;
 
   /** E1/E2/E3 arm rotation: {@code shift = (trial-1 + queryIndex) % nArm}. */
   static int armShift(int trial1Based, int queryIndex, int nArm) {
@@ -162,7 +162,7 @@ public final class SuiteRunner {
           || "kart".equals(c.armId) || "llmopt".equals(c.armId)
           || "cbo-llm-proposal".equals(c.armId)
           || "cbo-llm-proposal-cached".equals(c.armId)
-          || "kart-conditional-llm".equals(c.armId)
+          || "pool-llm".equals(c.armId)
           || "fixed-plan".equals(c.armId)) {
         needLlm = true;
         break;
@@ -888,6 +888,9 @@ public final class SuiteRunner {
           c.overrides.putAll(f.overrides != null ? f.overrides
               : Collections.<String, Object>emptyMap());
           c.extras.put("factor", f.id);
+          if (c.overrides.get("action_mode") != null) {
+            c.extras.put("action_mode", c.overrides.get("action_mode"));
+          }
           c.unsafe = f.unsafe;
           cells.add(c);
         }
@@ -1120,9 +1123,7 @@ public final class SuiteRunner {
     return "kart".equals(armId)
         || "llm".equals(armId)
         || "llm_direct".equals(armId)
-        || "kart-conditional-llm".equals(armId)
-        || "pool-llm".equals(armId)
-        || "pool-conditional-llm".equals(armId);
+        || "pool-llm".equals(armId);
   }
 
   static String fallbackArmName(String armId, String label, boolean ablation) {

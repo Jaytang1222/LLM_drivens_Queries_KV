@@ -182,6 +182,7 @@ public final class CostModel {
     card.features.put("L_hat_sim", Double.valueOf(lSim));
     card.features.put("L_hat_topk", Double.valueOf(lTopk));
 
+    CostPatch.apply(card);
     card.main_cost_drivers = mainDrivers(card);
     card.uncertainty.method = "SAMPLE";
     card.uncertainty.sample_size = features != null ? features.sampleSize : 0;

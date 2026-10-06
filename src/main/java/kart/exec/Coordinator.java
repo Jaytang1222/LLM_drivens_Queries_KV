@@ -53,6 +53,7 @@ public final class Coordinator {
   private final Map<ChunkRef, Long> payloadBytesByRef =
       Collections.synchronizedMap(new HashMap<ChunkRef, Long>());
   private final Map<Long, MetaRow> metaCache = new HashMap<Long, MetaRow>();
+  private long prunedCells;
   private final AtomicLong rpcCounter = new AtomicLong(0L);
   private final AtomicLong retainedBytes = new AtomicLong(0L);
   private final ThreadLocal<ExecutionTrace.NodeTrace> activeNode =
@@ -513,6 +514,8 @@ public final class Coordinator {
         return topK(n, values);
       case RETURN_TRAJECTORY_IDS:
         return returnIds(n, values);
+      case CHUNK_META_FILTER:
+        return metaFilter(n, values);
       default:
         throw new ExecException(ExecException.Code.FAILED, "unsupported op: " + n.op);
     }
@@ -846,10 +849,11 @@ public final class Coordinator {
       }
       list.add(r);
     }
+    final int batch = intParam(n, "fetch_batch", limits.fetchBatch);
     int parallelism = Math.max(1, limits.fetchParallelism);
     if (byRs.size() == 1 || parallelism <= 1) {
       for (List<ChunkRef> group : byRs.values()) {
-        fetchChunkBatch(group, out);
+        fetchChunkBatch(group, out, batch);
       }
       return out;
     }
@@ -863,7 +867,7 @@ public final class Coordinator {
           public Void call() throws Exception {
             Map<ChunkRef, List<Chunk.DecodedPoint>> local =
                 new LinkedHashMap<ChunkRef, List<Chunk.DecodedPoint>>();
-            fetchChunkBatch(group, local);
+            fetchChunkBatch(group, local, batch);
             synchronized (shared) {
               shared.putAll(local);
             }
@@ -878,9 +882,9 @@ public final class Coordinator {
     return out;
   }
 
-  private void fetchChunkBatch(List<ChunkRef> need, Map<ChunkRef, List<Chunk.DecodedPoint>> out)
+  private void fetchChunkBatch(List<ChunkRef> need, Map<ChunkRef, List<Chunk.DecodedPoint>> out, int batchSize)
       throws IOException {
-    int batch = Math.max(1, limits.fetchBatch);
+    int batch = Math.max(1, batchSize);
     for (int i = 0; i < need.size(); i += batch) {
       int end = Math.min(need.size(), i + batch);
       List<ChunkRef> slice = need.subList(i, end);
@@ -995,12 +999,17 @@ public final class Coordinator {
   }
 
   @SuppressWarnings("unchecked")
-  private Map<Long, List<Chunk.DecodedPoint>> batchGetTrajectories(PlanNode n,
-                                                                   Map<String, Object> values)
+  private Object batchGetTrajectories(PlanNode n, Map<String, Object> values)
       throws IOException {
     Set<Long> tids = (Set<Long>) values.get(n.inputs.get(0));
+    if (n.params != null && n.params.get("topk_lb_b0") instanceof Number) {
+      return pruneTopK(n, tids);
+    }
+    return loadTrajectories(new ArrayList<Long>(tids));
+  }
+
+  private Map<Long, List<Chunk.DecodedPoint>> loadTrajectories(List<Long> tidList) throws IOException {
     Map<Long, List<Chunk.DecodedPoint>> out = new LinkedHashMap<Long, List<Chunk.DecodedPoint>>();
-    List<Long> tidList = new ArrayList<Long>(tids);
     int parallelism = Math.max(1, limits.fetchParallelism);
     if (tidList.size() <= 1 || parallelism <= 1) {
       for (Long tid : tidList) {
@@ -1121,14 +1130,110 @@ public final class Coordinator {
   @SuppressWarnings("unchecked")
   private List<QueryResult.Scored> similarity(PlanNode n, Map<String, Object> values,
                                               ExecutionTrace trace) throws IOException {
-    Map<Long, List<Chunk.DecodedPoint>> trajs =
-        (Map<Long, List<Chunk.DecodedPoint>>) values.get(n.inputs.get(0));
-    long refTid = ir.similarity.reference_tid;
+    Object in = values.get(n.inputs.get(0));
+    long[] cells = {0L};
+    List<QueryResult.Scored> scored;
+    if (in instanceof List) {
+      scored = (List<QueryResult.Scored>) in;
+      cells[0] = prunedCells;
+    } else {
+      scored = score((Map<Long, List<Chunk.DecodedPoint>>) in,
+          toDtw(loadFullTrajectory(ir.similarity.reference_tid)), resolveMetric(n), cells);
+    }
+    trace.dtw_cells = Long.valueOf(cells[0]);
+    trace.dtwCells = cells[0];
+    return scored;
+  }
+
+  /**
+   * Exact Top-K over candidates visited in ascending lower-bound order. For a fetched point
+   * subset S of candidate A: DTW ≥ Σ_{a∈S} d(a,R); Fréchet ≥ Hausdorff ≥ max_{a∈S} d(a,R).
+   * Stops only when the next bound strictly exceeds the k-th distance, so pruned candidates
+   * cannot enter or tie the result.
+   */
+  private List<QueryResult.Scored> pruneTopK(PlanNode n, Set<Long> tids) throws IOException {
+    int k = intParam(n, "topk_lb_k", ir.result != null && ir.result.k != null ? ir.result.k : tids.size());
+    int batch = Math.max(1, intParam(n, "topk_lb_b0", k));
+    int growth = Math.max(2, intParam(n, "topk_lb_growth", 2));
     String metric = resolveMetric(n);
-    List<Chunk.DecodedPoint> refPts = loadFullTrajectory(refTid);
-    Dtw.Point[] refArr = toDtw(refPts);
+    boolean sum = TrajectorySimilarity.DTW.equals(metric);
+    Dtw.Point[] ref = toDtw(loadFullTrajectory(ir.similarity.reference_tid));
+    Map<Long, List<Chunk.DecodedPoint>> seen = new HashMap<Long, List<Chunk.DecodedPoint>>();
+    synchronized (chunkCache) {
+      for (Map.Entry<ChunkRef, List<Chunk.DecodedPoint>> e : chunkCache.entrySet()) {
+        if (tids.contains(e.getKey().tid)) {
+          List<Chunk.DecodedPoint> l = seen.get(e.getKey().tid);
+          if (l == null) {
+            l = new ArrayList<Chunk.DecodedPoint>();
+            seen.put(e.getKey().tid, l);
+          }
+          l.addAll(e.getValue());
+        }
+      }
+    }
+    final Map<Long, Double> lb = new HashMap<Long, Double>();
+    for (Long tid : tids) {
+      lb.put(tid, Double.valueOf(lowerBound(seen.get(tid), ref, sum)));
+    }
+    List<Long> order = new ArrayList<Long>(tids);
+    Collections.sort(order, new Comparator<Long>() {
+      @Override
+      public int compare(Long a, Long b) {
+        int c = Double.compare(lb.get(a), lb.get(b));
+        return c != 0 ? c : Long.compare(a, b);
+      }
+    });
     List<QueryResult.Scored> scored = new ArrayList<QueryResult.Scored>();
-    long cells = 0;
+    long[] cells = {0L};
+    int i = 0;
+    while (i < order.size()) {
+      if (scored.size() >= k) {
+        double kth = kthDistance(scored, k);
+        if (lb.get(order.get(i)) > kth + 1e-9 * Math.max(1.0, Math.abs(kth))) {
+          break;
+        }
+      }
+      List<Long> slice = new ArrayList<Long>(order.subList(i, Math.min(order.size(), i + batch)));
+      scored.addAll(score(loadTrajectories(slice), ref, metric, cells));
+      i += slice.size();
+      batch = (int) Math.min(Integer.MAX_VALUE, (long) batch * growth);
+    }
+    prunedCells = cells[0];
+    return scored;
+  }
+
+  static double lowerBound(List<Chunk.DecodedPoint> pts, Dtw.Point[] ref, boolean sum) {
+    if (pts == null || pts.isEmpty()) {
+      return 0.0d;
+    }
+    int step = Math.max(1, pts.size() / 64);
+    double total = 0.0d;
+    for (int i = 0; i < pts.size(); i += step) {
+      Chunk.DecodedPoint p = pts.get(i);
+      double best = Double.POSITIVE_INFINITY;
+      for (Dtw.Point r : ref) {
+        double dx = p.x - r.x;
+        double dy = p.y - r.y;
+        best = Math.min(best, Math.sqrt(dx * dx + dy * dy));
+      }
+      total = sum ? total + best : Math.max(total, best);
+    }
+    return total;
+  }
+
+  private static double kthDistance(List<QueryResult.Scored> scored, int k) {
+    double[] d = new double[scored.size()];
+    for (int i = 0; i < d.length; i++) {
+      d[i] = scored.get(i).distance;
+    }
+    java.util.Arrays.sort(d);
+    return d[k - 1];
+  }
+
+  private List<QueryResult.Scored> score(Map<Long, List<Chunk.DecodedPoint>> trajs, Dtw.Point[] refArr,
+                                         String metric, long[] cellsAcc) throws IOException {
+    List<QueryResult.Scored> scored = new ArrayList<QueryResult.Scored>();
+    long cells = cellsAcc[0];
     for (Map.Entry<Long, List<Chunk.DecodedPoint>> e : trajs.entrySet()) {
       checkBudgets();
       Dtw.Point[] cand = toDtw(e.getValue());
@@ -1149,9 +1254,69 @@ public final class Coordinator {
       MetaRow meta = loadMeta(e.getKey());
       scored.add(new QueryResult.Scored(e.getKey(), meta.extId, d.distance));
     }
-    trace.dtw_cells = Long.valueOf(cells);
-    trace.dtwCells = cells;
+    cellsAcc[0] = cells;
     return scored;
+  }
+
+  /** Keeps chunks whose stored time range and MBR can intersect every ST predicate. */
+  @SuppressWarnings("unchecked")
+  private Set<ChunkRef> metaFilter(PlanNode n, Map<String, Object> values) throws IOException {
+    List<ChunkRef> all = new ArrayList<ChunkRef>((Set<ChunkRef>) values.get(n.inputs.get(0)));
+    Set<ChunkRef> out = new LinkedHashSet<ChunkRef>();
+    int batch = Math.max(1, intParam(n, "batch", limits.fetchBatch));
+    List<String> cols = Collections.singletonList("d:m");
+    for (int i = 0; i < all.size(); i += batch) {
+      checkBudgets();
+      List<ChunkRef> slice = all.subList(i, Math.min(all.size(), i + batch));
+      List<byte[]> keys = new ArrayList<byte[]>(slice.size());
+      for (ChunkRef r : slice) {
+        keys.add(RowKeyCodec.encodeRaw(RowKeyCodec.shardOf(r.tid, layout.shardCount) & 0xFF, r.tid, r.chunkId));
+      }
+      noteRpc(1);
+      Set<ChunkRef> seen = new HashSet<ChunkRef>();
+      Set<ChunkRef> keep = new HashSet<ChunkRef>();
+      for (KvBackend.Row row : kv.get(layout.tableRaw, keys, cols)) {
+        RowKeyCodec.RawKey rk = RowKeyCodec.decodeRaw(row.key);
+        ChunkRef ref = new ChunkRef(rk.tid, rk.chunkId);
+        byte[] m = row.columns.get("d:m");
+        if (m == null) {
+          throw new ExecException(ExecException.Code.DATA_INTEGRITY_ERROR, "missing d:m for " + ref);
+        }
+        seen.add(ref);
+        if (metaMayMatch(ByteBuffer.wrap(m))) {
+          keep.add(ref);
+        }
+      }
+      for (ChunkRef r : slice) {
+        if (!seen.contains(r)) {
+          throw new ExecException(ExecException.Code.DATA_INTEGRITY_ERROR, "missing raw chunk for " + r);
+        }
+        if (keep.contains(r)) {
+          out.add(r);
+        }
+      }
+    }
+    return out;
+  }
+
+  private boolean metaMayMatch(ByteBuffer bb) {
+    bb.position(12);
+    long t0 = bb.getLong();
+    long t1 = bb.getLong();
+    double minX = bb.getDouble();
+    double minY = bb.getDouble();
+    double maxX = bb.getDouble();
+    double maxY = bb.getDouble();
+    if (ir.temporal != null && (t1 < ir.temporal.start_ms || t0 >= ir.temporal.end_ms)) {
+      return false;
+    }
+    return ir.spatial == null || !(maxX < ir.spatial.min_x || minX > ir.spatial.max_x
+        || maxY < ir.spatial.min_y || minY > ir.spatial.max_y);
+  }
+
+  private static int intParam(PlanNode n, String key, int def) {
+    Object v = n.params == null ? null : n.params.get(key);
+    return v instanceof Number ? ((Number) v).intValue() : def;
   }
 
   private String resolveMetric(PlanNode n) {

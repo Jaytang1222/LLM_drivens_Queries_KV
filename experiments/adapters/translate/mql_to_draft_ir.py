@@ -31,6 +31,7 @@ REGISTERED_REGIONS = {
     "tdrive_topk_box",
     "tdrive_topk_wide",
     "tdrive_topk_s1",
+    "tdrive_topk_mid",
     "beijing_core",
     "zhongguancun",
     "wangjing",
@@ -57,7 +58,18 @@ def extract_mql(text: str) -> Optional[list]:
     if t.startswith("```"):
         lines = [ln for ln in t.split("\n") if not ln.strip().startswith("```")]
         t = "\n".join(lines).strip()
-    # find JSON array
+    # json_mode object wrapper {"pipeline":[...]}
+    brace = t.find("{")
+    brack = t.find("[")
+    if brace >= 0 and (brack < 0 or brace < brack):
+        end = t.rfind("}")
+        if end > brace:
+            try:
+                obj = json.loads(t[brace : end + 1])
+                if isinstance(obj, dict) and isinstance(obj.get("pipeline"), list):
+                    return obj["pipeline"]
+            except Exception:
+                pass
     start = t.find("[")
     end = t.rfind("]")
     if start < 0 or end <= start:
@@ -72,6 +84,14 @@ def extract_mql(text: str) -> Optional[list]:
 def mql_to_draft_ir(pipeline: list) -> Tuple[dict, dict]:
     if not isinstance(pipeline, list) or not pipeline:
         raise TranslateError("invalid_mql", "pipeline must be a non-empty JSON array")
+
+    # $match-only is SELECT DISTINCT trajectory_id with implied grouping.
+    if (
+        len(pipeline) == 1
+        and isinstance(pipeline[0], dict)
+        and list(pipeline[0].keys()) == ["$match"]
+    ):
+        pipeline = [pipeline[0], {"$group": {"_id": "$trajectory_id"}}]
 
     # Exact stage order: $match → $group → optional $kart_topk.
     # Do NOT normalize out-of-order stages (e.g. $group then $match ≠ filter-then-group).
@@ -123,7 +143,7 @@ def mql_to_draft_ir(pipeline: list) -> Tuple[dict, dict]:
     spatial: Optional[dict] = None
     predicates: List[dict] = []
     similarity: Optional[dict] = None
-    result = {"mode": "TRAJECTORY_IDS", "k": None, "tie_breaker": "TID_ASC"}
+    result = {"mode": "TRAJECTORY_IDS"}
 
     _apply_match(match, temporal, predicates)
     # spatial from match
@@ -196,7 +216,7 @@ def mql_to_draft_ir(pipeline: list) -> Tuple[dict, dict]:
             "reference_trajectory_id": str(ref),
             "exclude_reference": True,
         }
-        result = {"mode": "TOP_K", "k": k, "tie_breaker": "TID_ASC"}
+        result = {"mode": "TOP_K", "k": k}
 
     if not temporal and spatial is None and not predicates and similarity is None:
         raise TranslateError("untranslatable_mql", "empty constraints")
@@ -228,6 +248,18 @@ def mql_to_draft_ir(pipeline: list) -> Tuple[dict, dict]:
 def _apply_match(match: dict, temporal: dict, predicates: list) -> None:
     if not isinstance(match, dict):
         raise TranslateError("invalid_mql", "$match must be object")
+    if "$and" in match:
+        clauses = match["$and"]
+        if not isinstance(clauses, list):
+            raise TranslateError("untranslatable_mql", "nested $and not supported; flatten fields")
+        for clause in clauses:
+            if not isinstance(clause, dict) or len(clause) != 1:
+                raise TranslateError("untranslatable_mql", "nested $and not supported; flatten fields")
+            k = next(iter(clause))
+            if k in match:
+                raise TranslateError("untranslatable_mql", "duplicate match field " + k)
+            match[k] = clause[k]
+        del match["$and"]
     if "event_time" in match:
         et = match["event_time"]
         if not isinstance(et, dict):
@@ -236,8 +268,10 @@ def _apply_match(match: dict, temporal: dict, predicates: list) -> None:
             temporal["start"] = et["$gte"]
         if "$lt" in et:
             temporal["end"] = et["$lt"]
+        elif "$lte" in et:
+            temporal["end"] = et["$lte"]
         for k in et:
-            if k not in ("$gte", "$lt"):
+            if k not in ("$gte", "$lt", "$lte"):
                 raise TranslateError("untranslatable_mql", "event_time op " + k)
     if "vehicle_id" in match:
         predicates.append(
@@ -249,18 +283,16 @@ def _apply_match(match: dict, temporal: dict, predicates: list) -> None:
         "region_name",
         "lon",
         "lat",
-        "$and",
     }
     for k in match:
         if k not in allowed:
             raise TranslateError("untranslatable_mql", "unsupported match field " + k)
-    if "$and" in match:
-        raise TranslateError("untranslatable_mql", "nested $and not supported; flatten fields")
 
 
 LOGICAL_MQL_HINT = """
-Emit ONLY a JSON array pipeline in dialect kart_logical_mql/1.0 (NOT DraftIR):
-[
+Emit ONLY JSON in dialect kart_logical_mql/1.0 (NOT DraftIR). Prefer an object
+{"pipeline":[...]} so JSON-mode clients accept it:
+{"pipeline":[
   {"$match": {
       "event_time": {"$gte": "ISO", "$lt": "ISO"},
       "vehicle_id": optional,
@@ -269,7 +301,7 @@ Emit ONLY a JSON array pipeline in dialect kart_logical_mql/1.0 (NOT DraftIR):
   }},
   {"$group": {"_id": "$trajectory_id"}}
   , optional {"$kart_topk": {"metric":"DTW","reference_trajectory_id":"...","k":5}}
-]
+]}
 Forbidden: $limit/$sort/$project/$lookup. Registered regions: """ + ", ".join(
     sorted(REGISTERED_REGIONS)
 ) + """

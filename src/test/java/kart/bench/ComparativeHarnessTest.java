@@ -256,7 +256,7 @@ public final class ComparativeHarnessTest {
     assertEquals("text_to_nosql", ThirdPartyAudit.upstreamKey("sag-mql"));
     assertEquals("bao", ThirdPartyAudit.upstreamKey("bao"));
     assertEquals(null, ThirdPartyAudit.upstreamKey("fullscan"));
-    assertEquals(null, ThirdPartyAudit.upstreamKey("kart-conditional-llm"));
+    assertEquals(null, ThirdPartyAudit.upstreamKey("kart"));
   }
 
   @Test

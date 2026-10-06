@@ -179,8 +179,7 @@ public final class SummaryMd {
       }
       if ("plan".equalsIgnoreCase(stage)) {
         sb.append("E2 notes: rows with `llm_fallback=true` are a separate arm ")
-            .append("(`kart-rule-fallback`, `kart-conditional-llm-rule-fallback`, ")
-            .append("`pool-llm-rule-fallback`, `pool-conditional-llm-rule-fallback`, or ")
+            .append("(`kart-rule-fallback`, `pool-llm-rule-fallback`, or ")
             .append("`*-rule-fallback`). They are not merged into the pure requested arm. ")
             .append("`bao` is a **Bao control-flow surrogate** ")
             .append("(KART CostCard + hand-set family weights), not a trained Bao model. ")

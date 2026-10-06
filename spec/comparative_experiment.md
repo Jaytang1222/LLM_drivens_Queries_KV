@@ -1,11 +1,21 @@
 # KART 对比实验规范（Experiment）
 
-- 版本：v0.2，2026-09-25
+- 版本：v0.3，2026-10-05
 - 状态：规范已锁定；benchmark 脚本与桥接实现已部分落地。真实性、公平性和可运行性以 [`docs/comparative-experiment-readiness-2026-09-25.md`](../docs/comparative-experiment-readiness-2026-09-25.md) 的审计门禁为准，未通过门禁的结果不得作为正式主表结论。
 - 上游：`spec/design.md`、`spec/IMPLEMENTATION_PLAN.md` §19、`docs/environment-lock.md`
 - 数据与用例参考：`experiments/workloads/tdrive_smoke.json`、`docs/easy_query_example.md`
 
 ---
+
+## 0. KART 系统与实验臂 `kart`
+
+**KART** 是键值存储（HBase）上基于 LLM 的轨迹查询整系统，包含：
+
+1. **NL → IR**：Dialog 将自然语言解析为 DraftIR，Schema 校验与 Binder 得到 BoundIR；
+2. **查询优化（dual）**：CBO（`BEST_FIRST` + CostModel）给出 SafePlan，再 dual rewrite（离线 admitted 规则 + 至多一次在线残差 LLM）；无命中则保留 CBO；
+3. **正确性验证与结果输出**：PlanValidator / CoverageCheck 只执行安全计划，编译为 HBase Scan/Get，返回轨迹 ID 或 Top-K（相对 FullScan Oracle）。
+
+对比实验把同一系统切成三块横比外部方法 / HBase 基线；`--arm kart` 始终是该系统在对应层的入口，不是单独的「搜索 LLM 优化器」产品。E2/E3 主表用金标 BoundIR，不把 E1 解析输出喂进 E3（避免解析误差污染延迟）。
 
 ## 1. 目标与假设
 
@@ -15,7 +25,7 @@
 
 1. **LLM → IR**：正确率与解析速度（相对开源 Text-to-SQL / Text-to-NoSQL 方法移植）
 2. **逻辑计划生成→选择**：规划全流程速度（相对开源计划优化设计移植）
-3. **端到端执行**：从 BoundIR 起的正确性与 latency（本系统 vs HBase 原生 FullScan vs RBO vs CBO）
+3. **端到端执行**：从 BoundIR 起的正确性与 latency（KART 整系统 vs HBase 原生 FullScan vs RBO vs CBO）
 
 ### 1.2 假设与限制
 
@@ -182,8 +192,8 @@ experiments/results/<run_id>/
 
 | 文件 | 用于 | 内容 |
 |---|---|---|
-| `experiments/workloads/nl_ir_v1.json` | E1 | 冻结 NL；金标 BoundIR 或期望 `UNSUPPORTED` / 澄清类标签；查询类型分层 |
-| `experiments/workloads/bound_ir_v1.json` | E2、E3 | 冻结 BoundIR；可从 `tdrive_smoke.json` 扩展；含选择率分层与「RBO 易错」样例 |
+| `experiments/workloads/nl_ir_v2.json` | E1（默认） | 冻结 NL；金标来自 `bound_ir_cmp_v3` FullScan；含拒绝/澄清；`nl_ir_v1.json` 仅作历史 |
+| `experiments/workloads/bound_ir_cmp_v3.json` | E2、E3（默认） | 工作区 BoundIR：advantage_v2 ∪ CBO-opportunity ∪ dual `locked_td` ∪ `c3_*`；`bound_ir_v1` / `bound_ir_advantage_v2` 仍作回归 |
 | `experiments/workloads/*.oracle.json` | 正确性 | FullScan Oracle 缓存的轨迹 ID / Top-K 有序列表 |
 
 现有 smoke / docs 用例作为种子；正式实验前冻结版本号写入 meta。
@@ -228,7 +238,7 @@ experiments/results/<run_id>/
 
 | `--arm` | 来源 | 操作化 |
 |---|---|---|
-| `kart` | 本系统 | NL→DraftIR（schema 校验与有限重试）→Binder；**主表默认单轮无澄清**；澄清协议另表附录 |
+| `kart` | KART 系统 · 解析层 | NL→DraftIR（schema 校验与有限重试）→Binder；**主表默认单轮无澄清**；澄清协议另表附录 |
 | `din-spider` | 官方 `DIN-SQL.py` | 保留：schema linking → 复杂度分类 → 分档生成 → self-correction；将「库表/SQL」替换为 **逻辑目录 + DraftIR JSON Schema**；解析输出为 DraftIR |
 | `din-bird` | 官方 `DIN-SQL_BIRD.py` | 同上；BIRD 式 external knowledge 映射为 **固定** 目录文本（regions、语义说明等），禁止临时加料 |
 | `sag` | Text-to-NoSQL `sag/` | 移植：grounding / 路径卡片思想 → 候选生成 → 对齐或校验反馈修复 → 多候选择优；**不启动 Mongo**；反馈用 Schema/Binder 错误与（可选）Oracle |
@@ -272,8 +282,8 @@ experiments/results/<run_id>/
 | `--arm` | 来源 | 操作化 |
 |---|---|---|
 | `bao` | BaoForPostgreSQL | 将本系统有限计划族（如 `P_T`/`P_Z`/`P_H`/`P_TZ`/…）视为 hint/臂；按 Bao 的选臂思路选一臂即止；**不安装 PostgreSQL 扩展** |
-| `llmopt` | LLMOpt | **G**：生成候选计划（或等价 hint 列表）→ **S**：选择最终计划；整段计入 `t_plan`；输出经本系统验证器 |
-| `kart` | 本系统 | `LlmProposalPolicy` 动作搜索 + 验证器 + Cost 选择 |
+| `llmopt` | LLMOpt | **G**：生成候选计划（或等价 hint 列表）→ **S**：选择最终计划；整段计入 `t_plan`；输出经 KART 验证器 |
+| `kart` | KART 系统 · 优化层 | CBO 选出 SafePlan 后 dual rewrite（离线 admitted 规则 + 至多一次在线残差 LLM）；无命中则保留 CBO；计划须过验证器 |
 
 ### 6.3 论文要点
 
@@ -285,7 +295,7 @@ experiments/results/<run_id>/
 | 臂 | 必读 | 故意不移植 |
 |---|---|---|
 | bao | `bao_server` 选臂/奖励思路 | PG C 扩展、IMDb/JOB 原实验栈 |
-| llmopt | G/S 推理脚本的输入输出协议 | 必须依赖的 PG/`pg_hint_plan` 执行引擎（本系统用自有验证器+执行器落地） |
+| llmopt | G/S 推理脚本的输入输出协议 | 必须依赖的 PG/`pg_hint_plan` 执行引擎（用 KART 验证器+执行器落地） |
 
 ### 6.5 指标
 
@@ -320,7 +330,7 @@ t_e2e 终点 = 返回轨迹 ID 列表或 Top-K
 | `fullscan` | **HBase 原生语义基线**：固定 `P_FULL` = `traj_raw` FullScan + 客户端 ExactFilter（无二级索引访问路径、无候选搜索） |
 | `rbo` | 固定公开规则 `TZ → T → Z → H → FULL` 映射到一个计划模板（无候选搜索、无代价枚举选优） |
 | `cbo` | 生成多个 SafePlan + **CostModel** 选 `estimated_ms` 最小（**无 LLM**） |
-| `kart` | 与 E2 臂 `kart` 相同的规划策略 + 同一执行器 |
+| `kart` | KART 系统 · 优化 + 校验 + 执行输出（规划与 E2 臂 `kart` 相同） |
 
 说明：HBase 无轨迹查询语言；`fullscan` 是规范的「仅用主表扫描」基线，不是 HBase Shell 随意 get。
 
@@ -381,7 +391,7 @@ t_e2e 终点 = 返回轨迹 ID 列表或 Top-K
 
 ## 11. 实现阶段建议顺序
 
-1. E3 四臂（本系统能力最近）+ `bench-e2e.sh`
+1. E3 四臂（KART 整系统相对 HBase 基线）+ `bench-e2e.sh`
 2. E1 `kart` + `din-spider` / `din-bird` 桥 + `bench-parse.sh`
 3. E1 `sag` 桥
 4. E2 `bao` / `llmopt` / `kart` + `bench-plan.sh`

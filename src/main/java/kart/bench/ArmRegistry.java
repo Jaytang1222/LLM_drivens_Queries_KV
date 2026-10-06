@@ -22,19 +22,17 @@ public final class ArmRegistry {
     register(new NativePolicyArm("cbo", PlannerMode.BEST_FIRST));
     register(new NativePolicyArm("llm", PlannerMode.LLM));
     register(new NativePolicyArm("llm_direct", PlannerMode.LLM_DIRECT));
-    register(new NativePolicyArm("kart", PlannerMode.LLM));
     register(new FullScanArm());
 
     register(new BaoPlanArm(root));
     register(new LlmOptPlanArm(root));
-    register(ConditionalLlmArm.fromRoot(root));
     register(CboLlmProposalArm.withoutCache());
     register(CboLlmProposalArm.withCache());
+    register(new LlmRewriteArm());
     register(new FixedPlanIdArm());
     register(new PilotSafetyProbeArm());
     register(SharedPoolPlanArm.cbo(root));
     register(SharedPoolPlanArm.bao(root));
-    register(SharedPoolPlanArm.conditionalLlm(root));
     register(SharedPoolPlanArm.llm(root));
 
     // Keep unsupported stubs for din/sag as Arm (plan stage shouldn't use them)

@@ -1,0 +1,930 @@
+{
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "workload_id": "bound_ir_cmp_v3",
+  "evaluation_role": "kart_rewrite_ge10_vs_cbo",
+  "seed": "2026-10-05-comparative-v3",
+  "query_count": 20,
+  "skip_ids": [
+    "a2_topk_dtw_wide",
+    "a2_topk_frechet_wide",
+    "a2_tz_hard_b",
+    "a2_tz_hard_c",
+    "a2_tz_hard_d",
+    "a2_tzh_a",
+    "a2_tzh_b",
+    "a2_tzh_c",
+    "a2_tzh_d",
+    "a2_tzh_e",
+    "a2_tzh_f",
+    "a2_tzh_g",
+    "a2_tzh_h",
+    "a2_zh_unc_a",
+    "a2_zh_unc_b",
+    "c3_th_a",
+    "c3_th_b",
+    "c3_topk_dtw_k7",
+    "c3_topk_haus_k5",
+    "c3_topk_mid_k5",
+    "c3_tz_d",
+    "c3_tzh_a",
+    "c3_tzh_b",
+    "c3_tzh_c",
+    "c3_veh_t_b",
+    "c3_veh_t_c",
+    "c3_veh_t_d",
+    "c3_zh_a",
+    "c3_zh_b",
+    "empty_far_1",
+    "empty_far_2",
+    "empty_far_3",
+    "empty_far_4",
+    "h2_empty_a",
+    "h2_t_hard_a",
+    "h2_t_hard_b",
+    "h2_topk_frechet_a",
+    "h2_topk_hausdorff_a",
+    "h2_tz_hard_a",
+    "h2_tzh_a",
+    "h2_tzh_test_a",
+    "h_eq_1",
+    "h_eq_2",
+    "h_s_2",
+    "h_s_small",
+    "h_st_1",
+    "h_st_2",
+    "h_st_3",
+    "h_st_4",
+    "h_t_large",
+    "h_t_mid",
+    "mechv2_005",
+    "mechv2_006",
+    "mechv2_007",
+    "mechv2_008",
+    "mechv2_009",
+    "mechv2_010",
+    "mechv2_014",
+    "mechv2_015",
+    "mechv2_016",
+    "pilot_bao_tzh_01",
+    "pilot_bao_tzh_02",
+    "pilot_cbo_miss_02",
+    "r9_locked_td_2",
+    "s_large_1",
+    "s_large_2",
+    "s_mid_2",
+    "s_pad_2",
+    "s_pad_3",
+    "st_ll_1",
+    "st_ll_2",
+    "st_sl_1",
+    "st_sl_2",
+    "t_large_1",
+    "t_large_2",
+    "t_large_3",
+    "t_large_grid_1",
+    "t_large_grid_2",
+    "t_large_grid_3",
+    "t_mid_2",
+    "t_small_2",
+    "topk_st_1",
+    "topk_st_2",
+    "topk_st_2_k1",
+    "topk_st_3",
+    "topk_st_frechet_1",
+    "topk_st_frechet_k5",
+    "topk_st_hausdorff_1",
+    "topk_st_hausdorff_k1",
+    "topk_st_k1",
+    "topk_st_k10",
+    "topk_st_k5",
+    "wj_tz_wide4x_pad5k"
+  ],
+  "catalog": {
+    "a2_tz_hard_a": {
+      "family": "TZ",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_tz_hard_e": {
+      "family": "TZ",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_tz_hard_f": {
+      "family": "TZ",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_tz_hard_g": {
+      "family": "TZ",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_tz_hard_h": {
+      "family": "TZ",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_th_unc_a": {
+      "family": "TH",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_th_unc_b": {
+      "family": "TH",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_dtw_k3": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_dtw_k7": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_frechet_k3": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_frechet_k7": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_haus_k3": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "a2_topk_haus_k5": {
+      "family": "TOPK",
+      "layer": "advantage_v2",
+      "source": "advantage_v2"
+    },
+    "mechv2_004": {
+      "family": "TZ",
+      "layer": "cbo_opportunity_v2",
+      "source": "cbo_opportunity_v2"
+    },
+    "r9_locked_td_1": {
+      "family": "TZ",
+      "layer": "dual_locked_td",
+      "source": "dual_locked_td"
+    },
+    "c3_tz_a": {
+      "family": "TZ",
+      "layer": "tz_hard_intersect",
+      "source": "cmp_v3_expand"
+    },
+    "c3_tz_b": {
+      "family": "TZ",
+      "layer": "tz_hard_intersect",
+      "source": "cmp_v3_expand"
+    },
+    "c3_tz_c": {
+      "family": "TZ",
+      "layer": "tz_hard_intersect",
+      "source": "cmp_v3_expand"
+    }
+  },
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "query_id": "c3_tz_c",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201976400000,
+        "end_ms": 1202113800000
+      },
+      "spatial": {
+        "min_x": 467179.38867069356,
+        "min_y": 4439498.001095969,
+        "max_x": 473579.38867069356,
+        "max_y": 4445898.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "c3_tz_b",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202068200000,
+        "end_ms": 1202250266000
+      },
+      "spatial": {
+        "min_x": 454028.2185096232,
+        "min_y": 4424043.643433361,
+        "max_x": 486730.5588317639,
+        "max_y": 4461352.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "c3_tz_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202003400000,
+        "end_ms": 1202235866000
+      },
+      "spatial": {
+        "min_x": 454828.2185096232,
+        "min_y": 4424843.643433361,
+        "max_x": 485930.5588317639,
+        "max_y": 4460552.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "t_mid_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202037600000,
+        "end_ms": 1202052600000
+      },
+      "spatial": null,
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "mechv2_004",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202043240000,
+        "end_ms": 1202218106000
+      },
+      "spatial": {
+        "min_x": 458128.2185096232,
+        "min_y": 4428143.643433361,
+        "max_x": 482630.5588317639,
+        "max_y": 4457252.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "r9_locked_td_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201944697510,
+        "end_ms": 1202189852060
+      },
+      "spatial": {
+        "min_x": 458965.91743700515,
+        "min_y": 4429372.884236004,
+        "max_x": 481792.85990438197,
+        "max_y": 4456023.117955934,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "h2_tz_hard_b",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202043000000,
+        "end_ms": 1202217866000
+      },
+      "spatial": {
+        "min_x": 458128.2185096232,
+        "min_y": 4428143.643433361,
+        "max_x": 482630.5588317639,
+        "max_y": 4457252.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201999800000,
+        "end_ms": 1202217866000
+      },
+      "spatial": {
+        "min_x": 457228.2185096232,
+        "min_y": 4427243.643433361,
+        "max_x": 483530.5588317639,
+        "max_y": 4458152.358758577,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_e",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202023200000,
+        "end_ms": 1202067000000
+      },
+      "spatial": {
+        "min_x": 444877.0483485528,
+        "min_y": 4412589.2857707525,
+        "max_x": 495881.72899283434,
+        "max_y": 4472806.716421186,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_f",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201980000000,
+        "end_ms": 1202110200000
+      },
+      "spatial": {
+        "min_x": 444077.0483485528,
+        "min_y": 4411789.2857707525,
+        "max_x": 496681.72899283434,
+        "max_y": 4473606.716421186,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_g",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201923000000,
+        "end_ms": 1202023800000
+      },
+      "spatial": {
+        "min_x": 467479.38867069356,
+        "min_y": 4439798.001095969,
+        "max_x": 473279.38867069356,
+        "max_y": 4445598.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_tz_hard_h",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201912200000,
+        "end_ms": 1202034600000
+      },
+      "spatial": {
+        "min_x": 465979.38867069356,
+        "min_y": 4438298.001095969,
+        "max_x": 474779.38867069356,
+        "max_y": 4447098.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_th_unc_a",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202034000000,
+        "end_ms": 1202059800000
+      },
+      "spatial": null,
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_th_unc_b",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1201929600000,
+        "end_ms": 1202017200000
+      },
+      "spatial": null,
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": null,
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "k": null,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_dtw_k3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202042400000,
+        "end_ms": 1202045400000
+      },
+      "spatial": {
+        "min_x": 469179.38867069356,
+        "min_y": 4441498.001095969,
+        "max_x": 471579.38867069356,
+        "max_y": 4443898.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_dtw_k7",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202035800000,
+        "end_ms": 1202048400000
+      },
+      "spatial": {
+        "min_x": 468979.38867069356,
+        "min_y": 4441298.001095969,
+        "max_x": 471779.38867069356,
+        "max_y": 4444098.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 7,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_frechet_k3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202042400000,
+        "end_ms": 1202046000000
+      },
+      "spatial": {
+        "min_x": 469079.38867069356,
+        "min_y": 4441398.001095969,
+        "max_x": 471679.38867069356,
+        "max_y": 4443998.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_frechet_k7",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202046600000,
+        "end_ms": 1202052000000
+      },
+      "spatial": {
+        "min_x": 468879.38867069356,
+        "min_y": 4441198.001095969,
+        "max_x": 471879.38867069356,
+        "max_y": 4444198.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 7,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_haus_k3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202041800000,
+        "end_ms": 1202045400000
+      },
+      "spatial": {
+        "min_x": 469129.38867069356,
+        "min_y": 4441448.001095969,
+        "max_x": 471629.38867069356,
+        "max_y": 4443948.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "HAUSDORFF",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "a2_topk_haus_k5",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "temporal": {
+        "start_ms": 1202039400000,
+        "end_ms": 1202048400000
+      },
+      "spatial": {
+        "min_x": 468479.38867069356,
+        "min_y": 4440798.001095969,
+        "max_x": 472279.38867069356,
+        "max_y": 4444598.001095969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "similarity": {
+        "metric": "HAUSDORFF",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 5,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      }
+    }
+  ]
+}

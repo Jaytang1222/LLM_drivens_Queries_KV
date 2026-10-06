@@ -6,6 +6,9 @@ import kart.cost.BenefitCalibrator;
 import kart.cost.CostCard;
 import kart.cost.FastCost;
 import kart.ir.BoundIr;
+import kart.policy.InvocationDecision;
+import kart.policy.QueryOpportunityFeatures;
+import kart.policy.SelectiveInvocationPolicy;
 import kart.probe.JointCandidateProbe;
 import kart.llm.LlmClient;
 import kart.llm.LlmException;
@@ -158,7 +161,18 @@ public final class CboLlmProposalArm implements Arm {
    */
   static String resolveProtocol() {
     String raw = System.getenv("KART_CBO_LLM_PROTOCOL");
-    if ("v11".equalsIgnoreCase(raw)) return "v11";
+    if (raw != null) {
+      String t = raw.trim().toLowerCase();
+      if ("v12".equals(t) || "selective".equals(t) || "v12-selective".equals(t)) {
+        return "v12";
+      }
+      if ("v11".equals(t)) {
+        return "v11";
+      }
+    }
+    if (SelectiveInvocationPolicy.selectiveMode()) {
+      return "v12";
+    }
     if (raw == null || raw.trim().isEmpty()) {
       return "v10";
     }
@@ -175,6 +189,10 @@ public final class CboLlmProposalArm implements Arm {
     return "v10";
   }
 
+  static boolean selectiveProtocol() {
+    return "v12".equals(resolveProtocol());
+  }
+
   static boolean shortProtocol() {
     String p = resolveProtocol();
     return !"v7".equals(p);
@@ -186,7 +204,12 @@ public final class CboLlmProposalArm implements Arm {
 
   static String activePromptVersion() {
     String p = resolveProtocol();
-    if ("v11".equals(p)) return "cbo_llm_compact_pair_v11";
+    if ("v12".equals(p)) {
+      return "cbo_llm_selective_v12";
+    }
+    if ("v11".equals(p)) {
+      return "cbo_llm_compact_pair_v11";
+    }
     if ("v7".equals(p)) {
       return PROMPT_VERSION_V7;
     }
@@ -197,6 +220,27 @@ public final class CboLlmProposalArm implements Arm {
       return PROMPT_VERSION_V9;
     }
     return "cbo_llm_action_v10";
+  }
+
+  /**
+   * Selective default is off unless MODE/PROTOCOL requests always.
+   * refine_7 ALWAYS=1 must not silently win when protocol=v12.
+   */
+  static boolean forceAlwaysCall() {
+    String mode = System.getenv("KART_CBO_LLM_MODE");
+    if (mode != null) {
+      String v = mode.trim().toLowerCase();
+      if ("selective".equals(v) || "v12".equals(v)) {
+        return false;
+      }
+      if ("always".equals(v) || "force".equals(v)) {
+        return true;
+      }
+    }
+    if (selectiveProtocol()) {
+      return false;
+    }
+    return alwaysCallLlm();
   }
 
   /** When no trustworthy novel opportunity, exec CBO in parallel with LLM. */
@@ -407,6 +451,21 @@ public final class CboLlmProposalArm implements Arm {
     String cboPlanId = cboPlanned.selected.plan() != null
         ? cboPlanned.selected.plan().plan_id : null;
     Set<String> cboSafeIds = safePlanIds(cboPlanned);
+    double cboEstMsEarly = cboPlanned.selectedCost != null
+        ? cboPlanned.selectedCost.estimated_ms : Double.POSITIVE_INFINITY;
+    InvocationDecision selectiveDecision = null;
+    if (selectiveProtocol()) {
+      Double cboEstObj = Double.isInfinite(cboEstMsEarly) ? null : Double.valueOf(cboEstMsEarly);
+      QueryOpportunityFeatures cheap =
+          QueryOpportunityFeatures.fromCheap(ir, cboPlanId, cboEstObj);
+      SelectiveInvocationPolicy policy = new SelectiveInvocationPolicy();
+      selectiveDecision = policy.decideG0(cheap);
+      if (selectiveDecision != null && !selectiveDecision.shouldCallLlm()
+          && selectiveDecision.g0 == InvocationDecision.Gate.SKIP) {
+        return finishSelectiveSkip(ir, ctx, cbo, cboPlanned, art, planStart, wall0,
+            tCboSearchMs, selectiveDecision, "g0_skip");
+      }
+    }
     List<PlanEnvelope> constructable = PlanBuilder.buildCandidatesWithMergeVariants(ir);
     List<String> novel = novelIds(constructable, cboSafeIds);
     FastCost fastCost = newFastCost(ctx);
@@ -435,9 +494,10 @@ public final class CboLlmProposalArm implements Arm {
         }
       }
     }
-    if ("v11".equals(resolveProtocol())) {
-      // Do not pay speculative execution for a candidate the unchanged gate
-      // would inevitably reject. LLM sees only admissible proposals plus KEEP.
+    List<String> admissibleActions = new ArrayList<String>(whitelist);
+    List<String> confidentCandidates = new ArrayList<String>();
+    if ("v11".equals(resolveProtocol()) || selectiveProtocol()) {
+      // Confident = gate-admissible for speculate; admissible stays broader for LLM (v12).
       List<String> eligible = new ArrayList<String>();
       for (String wid : whitelist) {
         Double gain = sHatById.get(wid);
@@ -446,9 +506,16 @@ public final class CboLlmProposalArm implements Arm {
           eligible.add(wid);
         }
       }
-      whitelist = eligible;
+      confidentCandidates.addAll(eligible);
+      if ("v11".equals(resolveProtocol())) {
+        whitelist = eligible;
+      } else {
+        // v12: LLM may see uncertain candidates; speculate only confident.
+        whitelist = admissibleActions;
+      }
     }
-    String preferId = preferIdFromRanked(whitelist);
+    String preferId = preferIdFromRanked(
+        selectiveProtocol() && !confidentCandidates.isEmpty() ? confidentCandidates : whitelist);
     Double preferEstMs = preferId == null ? null
         : Double.valueOf(fastEst(fastCost, constructable, ir, preferId));
     Double preferSHat = preferId != null && sHatById.containsKey(preferId)
@@ -456,6 +523,38 @@ public final class CboLlmProposalArm implements Arm {
     double minSpecS = BenefitCalibrator.resolveMinSpeculateSMs();
     double minAdoptS = BenefitCalibrator.resolveMinAdoptSMs();
     long tCalibMs = 0L;
+    String deterministicAction = "KEEP";
+    if (preferId != null && preferSHat != null) {
+      double cons0 = BenefitCalibrator.conservativeNetS(preferSHat.doubleValue(),
+          BenefitCalibrator.resolveSavingUncertaintyMs());
+      if (cons0 >= minAdoptS) {
+        deterministicAction = preferId; // D(q) before any LLM output
+      }
+    }
+    if (selectiveProtocol()) {
+      SelectiveInvocationPolicy policy = new SelectiveInvocationPolicy();
+      if (selectiveDecision == null) {
+        Double cboEstObj = Double.isInfinite(cboEstMs) ? null : Double.valueOf(cboEstMs);
+        selectiveDecision = policy.decideG0(
+            QueryOpportunityFeatures.fromCheap(ir, cboPlanId, cboEstObj));
+      }
+      Double consNet = preferSHat == null ? null
+          : Double.valueOf(BenefitCalibrator.conservativeNetS(preferSHat.doubleValue(),
+              BenefitCalibrator.resolveSavingUncertaintyMs()));
+      selectiveDecision = policy.decideG1(selectiveDecision, deterministicAction,
+          preferSHat, consNet, admissibleActions, confidentCandidates);
+      if (!selectiveDecision.shouldCallLlm()) {
+        // Deterministic path without LLM: adopt D(q) if confident plan, else CBO.
+        if (deterministicAction != null && !"KEEP".equals(deterministicAction)
+            && confidentCandidates.contains(deterministicAction)) {
+          return finishSelectiveDeterministic(ir, ctx, cbo, cboPlanned, art, planStart, wall0,
+              tCboSearchMs, constructable, deterministicAction, selectiveDecision,
+              "g1_deterministic");
+        }
+        return finishSelectiveSkip(ir, ctx, cbo, cboPlanned, art, planStart, wall0,
+            tCboSearchMs, selectiveDecision, "g1_skip");
+      }
+    }
 
     String cacheKey = cacheKey(ir, ctx);
     boolean cacheHit = false;
@@ -586,7 +685,8 @@ public final class CboLlmProposalArm implements Arm {
           }
           // refine_6 action protocol: LLM decides what to check first — no
           // pre-LLM candidate speculation (may still CBO∥LLM).
-          boolean allowSpec = !ctx.planOnly && speculateEnabled() && !whitelist.isEmpty()
+          boolean allowSpec = !ctx.planOnly && speculateEnabled()
+              && !(selectiveProtocol() ? confidentCandidates.isEmpty() : whitelist.isEmpty())
               && !actionProtocol();
           if (shortProtocol() && !actionProtocol()) {
             if (featuresMissing) {
@@ -609,8 +709,10 @@ public final class CboLlmProposalArm implements Arm {
           speculationRequested = allowSpec;
           if (allowSpec) {
             long launch0 = System.currentTimeMillis();
-            int k = Math.min(resolveSpeculateK(), whitelist.size());
-            List<String> specIds = new ArrayList<String>(whitelist.subList(0, k));
+            List<String> specSource = selectiveProtocol() && !confidentCandidates.isEmpty()
+                ? confidentCandidates : whitelist;
+            int k = Math.min(resolveSpeculateK(), specSource.size());
+            List<String> specIds = new ArrayList<String>(specSource.subList(0, k));
             speculativeIdsCsv = joinCsv(specIds);
             speculativeRanker = shortProtocol() ? BenefitCalibrator.VERSION : "fastcost";
             try {
@@ -691,19 +793,24 @@ public final class CboLlmProposalArm implements Arm {
           }
 
           LlmAsk ask;
-          if ("v11".equals(resolveProtocol())) {
+          long callBudgetMs = llmBudgetMs;
+          if (selectiveProtocol() && selectiveDecision != null
+              && selectiveDecision.budgetLlmMs > 0L) {
+            callBudgetMs = selectiveDecision.budgetLlmMs;
+          }
+          if ("v11".equals(resolveProtocol()) || selectiveProtocol()) {
             ask = askLlmCompact(ctx.llm, cboPlanId, whitelist, sHatById,
-                savingUncertaintyMs, llmBudgetMs);
+                savingUncertaintyMs, callBudgetMs);
           } else if (actionProtocol()) {
             ask = askLlmOnceAction(ctx.llm, ir, cboPlanId, whitelist, sHatById,
-                scheduleMode, llmBudgetMs);
+                scheduleMode, callBudgetMs);
             llmActionId = ask.actionId;
           } else if (shortProtocol()) {
             ask = askLlmOnceShort(ctx.llm, ir, cboPlanId, whitelist, sHatById, predExecById,
-                scheduleMode, estExtra, savingUncertaintyMs, llmBudgetMs);
+                scheduleMode, estExtra, savingUncertaintyMs, callBudgetMs);
           } else {
             ask = askLlmOnceIndependent(ctx.llm, ir, cboPlanId, whitelist, preferId,
-                llmBudgetMs);
+                callBudgetMs);
           }
           llmCalls = ask.calls;
           httpAttempts = ask.httpAttempts;
@@ -1045,6 +1152,18 @@ public final class CboLlmProposalArm implements Arm {
     stampBaseExtras(tr, cboPlanId, proposalId, selectedId, proposalNovel, proposalValid,
         llmTriggered, llmCalls, llmLatencyMs, validationMs, fallbackReason, cacheHit, cacheKey);
     tr.extras.put("llm_budget_ms", Long.valueOf(llmBudgetMs));
+    tr.extras.put("deterministic_action_before_llm", deterministicAction);
+    if (selectiveDecision != null) {
+      tr.extras.putAll(selectiveDecision.toExtras());
+      // Freeze D(q) — never overwrite with post-LLM recomputation.
+      tr.extras.put("deterministic_action_before_llm",
+          selectiveDecision.deterministicAction != null
+              ? selectiveDecision.deterministicAction : deterministicAction);
+    }
+    if (llmProposedAction != null) {
+      tr.extras.put("llm_raw_action", llmProposedAction);
+    }
+    tr.extras.put("final_action", selectedId);
     tr.extras.put("llm_http_attempts", Integer.valueOf(httpAttempts));
     tr.extras.put("tokens_in", promptTokens);
     tr.extras.put("tokens_out", completionTokens);
@@ -1384,6 +1503,14 @@ public final class CboLlmProposalArm implements Arm {
 
   static String llmSkipReason(BoundIr ir, List<String> whitelist, List<String> novel,
                               Double preferEstMs, double cboEstMs) {
+    if (selectiveProtocol()) {
+      // Selective call/skip decided by SelectiveInvocationPolicy before this point.
+      // If we reach here with empty whitelist, still skip.
+      if (whitelist == null || whitelist.isEmpty()) {
+        return "empty_whitelist";
+      }
+      return null;
+    }
     if ("v11".equals(resolveProtocol()) && alwaysCallLlm()) return null;
     if (whitelist == null || whitelist.isEmpty()) {
       if (novel != null && !novel.isEmpty()) {
@@ -1391,7 +1518,7 @@ public final class CboLlmProposalArm implements Arm {
       }
       return "empty_whitelist";
     }
-    if (alwaysCallLlm()) {
+    if (forceAlwaysCall() || alwaysCallLlm()) {
       return null;
     }
     if (!shouldTriggerLlm(ir, whitelist, preferEstMs, cboEstMs)) {
@@ -2441,6 +2568,98 @@ public final class CboLlmProposalArm implements Arm {
     int index = s.charAt(0)-'0';
     if (whitelist == null || index >= whitelist.size()) return null;
     d.action="propose"; d.planId=whitelist.get(index); return d;
+  }
+
+  private TrialResult finishSelectiveSkip(BoundIr ir, BenchContext ctx, QueryEngine cbo,
+      QueryEngine.RunResult cboPlanned, Path art, long planStart, long wall0,
+      long tCboSearchMs, InvocationDecision decision, String pathTag) throws Exception {
+    long planEnd = System.currentTimeMillis();
+    QueryEngine.RunResult executed;
+    if (ctx.planOnly) {
+      executed = cboPlanned;
+      executed.planStartEpochMs = planStart;
+      executed.planEndEpochMs = planEnd;
+      executed.t_plan_ms = Math.max(0L, planEnd - planStart);
+    } else {
+      executed = cbo.executeSelected(ir, art, cboPlanned);
+      executed.planStartEpochMs = planStart;
+      executed.planEndEpochMs = planEnd;
+      executed.t_plan_ms = Math.max(0L, planEnd - planStart);
+    }
+    long wall = Math.max(0L, System.currentTimeMillis() - wall0);
+    TrialResult tr = TrialResult.fromRun(executed, wall);
+    tr.t_plan_ms = Long.valueOf(Math.max(0L, planEnd - planStart));
+    if (tr.t_exec_ms != null && tr.t_plan_ms != null) {
+      tr.t_e2e_ms = Long.valueOf(tr.t_plan_ms.longValue() + tr.t_exec_ms.longValue());
+    } else {
+      tr.t_e2e_ms = Long.valueOf(wall);
+    }
+    String cboId = cboPlanned.selected != null && cboPlanned.selected.plan() != null
+        ? cboPlanned.selected.plan().plan_id : null;
+    stampBaseExtras(tr, cboId, null, cboId, false, false, false, 0, 0L, 0L,
+        decision != null ? decision.skipReason : pathTag, false, null);
+    tr.extras.put("proposal_prompt_version", activePromptVersion());
+    tr.extras.put("selective_path", pathTag);
+    tr.extras.put("llm_calls", Integer.valueOf(0));
+    tr.extras.put("llm_http_attempts", Integer.valueOf(0));
+    tr.extras.put("llm_latency_ms", Long.valueOf(0L));
+    tr.extras.put("t_cbo_search_ms", Long.valueOf(tCboSearchMs));
+    tr.extras.put("cbo_llm_second_search", Boolean.FALSE);
+    tr.extras.put("final_action", cboId);
+    tr.extras.put("final_selection_source", "cbo");
+    if (decision != null) {
+      tr.extras.putAll(decision.toExtras());
+    }
+    return tr;
+  }
+
+  private TrialResult finishSelectiveDeterministic(BoundIr ir, BenchContext ctx, QueryEngine cbo,
+      QueryEngine.RunResult cboPlanned, Path art, long planStart, long wall0,
+      long tCboSearchMs, List<PlanEnvelope> constructable, String planId,
+      InvocationDecision decision, String pathTag) throws Exception {
+    long v0 = System.currentTimeMillis();
+    QueryEngine.RunResult rebuilt =
+        validateFixed(cbo, ir, constructable, planId, safetyOnlyPrepareEnabled());
+    long validationMs = Math.max(0L, System.currentTimeMillis() - v0);
+    if (rebuilt == null || rebuilt.selected == null) {
+      return finishSelectiveSkip(ir, ctx, cbo, cboPlanned, art, planStart, wall0,
+          tCboSearchMs, decision, "deterministic_validate_failed");
+    }
+    long planEnd = System.currentTimeMillis();
+    QueryEngine.RunResult executed;
+    if (ctx.planOnly) {
+      executed = rebuilt;
+      executed.planStartEpochMs = planStart;
+      executed.planEndEpochMs = planEnd;
+      executed.t_plan_ms = Math.max(0L, planEnd - planStart);
+    } else {
+      executed = cbo.executeSelected(ir, art, rebuilt);
+      executed.planStartEpochMs = planStart;
+      executed.planEndEpochMs = planEnd;
+      executed.t_plan_ms = Math.max(0L, planEnd - planStart);
+    }
+    long wall = Math.max(0L, System.currentTimeMillis() - wall0);
+    TrialResult tr = TrialResult.fromRun(executed, wall);
+    tr.t_plan_ms = Long.valueOf(Math.max(0L, planEnd - planStart));
+    tr.t_e2e_ms = Long.valueOf(wall);
+    String cboId = cboPlanned.selected != null && cboPlanned.selected.plan() != null
+        ? cboPlanned.selected.plan().plan_id : null;
+    stampBaseExtras(tr, cboId, planId, planId, true, true, false, 0, 0L, validationMs,
+        decision != null ? decision.skipReason : pathTag, false, null);
+    tr.extras.put("proposal_prompt_version", activePromptVersion());
+    tr.extras.put("selective_path", pathTag);
+    tr.extras.put("llm_calls", Integer.valueOf(0));
+    tr.extras.put("llm_http_attempts", Integer.valueOf(0));
+    tr.extras.put("llm_latency_ms", Long.valueOf(0L));
+    tr.extras.put("t_cbo_search_ms", Long.valueOf(tCboSearchMs));
+    tr.extras.put("cbo_llm_second_search", Boolean.FALSE);
+    tr.extras.put("final_action", planId);
+    tr.extras.put("final_selection_source", "deterministic_d_q");
+    tr.extras.put("validation_ms", Long.valueOf(validationMs));
+    if (decision != null) {
+      tr.extras.putAll(decision.toExtras());
+    }
+    return tr;
   }
 
   private LlmAsk askLlmCompact(final LlmClient llm, String cboId,

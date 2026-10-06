@@ -1,0 +1,805 @@
+{
+  "workload_id": "nl_ir_v2",
+  "manifest_id": "tdrive_v1_ready",
+  "semantics_version": "point_dtw_v1",
+  "seed": "2026-10-05-comparative-v3",
+  "parent_bound_ir": "bound_ir_cmp_v3",
+  "query_count": 80,
+  "queries": [
+    {
+      "query_id": "e1_c3_veh_t_b_0",
+      "utterance": "Show trajectories of taxi 8857 between 2008-02-03T20:20:00+08:00 and 2008-02-03T22:30:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_b",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_c3_veh_t_b_1",
+      "utterance": "Which trajectories belong to taxi 8857 between 2008-02-03T20:20:00+08:00 and 2008-02-03T22:30:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_b",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_c3_veh_t_c_0",
+      "utterance": "Find trajectories of taxi 8857 between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:10:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_c",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_c3_veh_t_c_1",
+      "utterance": "Taxi 8857 ids from 2008-02-03T20:50:00+08:00 until 2008-02-03T21:10:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_c",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_c3_veh_t_d_0",
+      "utterance": "Taxi 8857 trajectories between 2008-02-03T22:20:00+08:00 and 2008-02-03T23:30:00+08:00",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_d",
+      "gold_trajectory_ids": [
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "e1_c3_veh_t_d_1",
+      "utterance": "Retrieve 8857 trajectories in [2008-02-03T22:20:00+08:00, 2008-02-03T23:30:00+08:00)",
+      "reject_expected": false,
+      "layer": "vehicle_temporal",
+      "gold_bound_ir_ref": "c3_veh_t_d",
+      "gold_trajectory_ids": [
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "e1_h_st_1_0",
+      "utterance": "Show trajectories of taxi 8857 that intersect tdrive_smoke_anchor between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "gold_bound_ir_ref": "h_st_1",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_h_st_1_1",
+      "utterance": "Find taxi 8857 trajectories intersecting tdrive_smoke_anchor from 2008-02-03T20:50:00+08:00 to 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "gold_bound_ir_ref": "h_st_1",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_h_st_1_2",
+      "utterance": "Vehicle 8857 AND region tdrive_smoke_anchor between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "st_vehicle",
+      "gold_bound_ir_ref": "h_st_1",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_st_ss_1_0",
+      "utterance": "List trajectory ids intersecting tdrive_topk_box between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "gold_bound_ir_ref": "st_ss_1",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_st_ss_1_1",
+      "utterance": "Which trajectories intersect tdrive_topk_box from 2008-02-03T21:20:00+08:00 to 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "gold_bound_ir_ref": "st_ss_1",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_st_ss_2_0",
+      "utterance": "List trajectory ids intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:10:00+08:00",
+      "reject_expected": false,
+      "layer": "spatial_temporal",
+      "gold_bound_ir_ref": "st_ss_2",
+      "gold_trajectory_ids": [
+        "8857-8857_14"
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_1_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_1_1",
+      "utterance": "Top-3 DTW neighbors of 8857-8857_14 intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_k5_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 5 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_k5",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_k5_1",
+      "utterance": "Top-5 DTW of 8857-8857_14 in tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_k5",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_2_0",
+      "utterance": "Top-5 DTW neighbors of 8857-8857_14 intersecting tdrive_topk_wide between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_2",
+      "gold_trajectory_ids": [
+        "4706-4706_8",
+        "5781-5781_10",
+        "2406-2406_9",
+        "4920-4920_24",
+        "529-529_7"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "4706-4706_8"
+        },
+        {
+          "trajectory_id": "5781-5781_10"
+        },
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        },
+        {
+          "trajectory_id": "529-529_7"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_2_1",
+      "utterance": "Among trajectories intersecting tdrive_topk_wide between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:30:00+08:00, find 5 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_2",
+      "gold_trajectory_ids": [
+        "4706-4706_8",
+        "5781-5781_10",
+        "2406-2406_9",
+        "4920-4920_24",
+        "529-529_7"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "4706-4706_8"
+        },
+        {
+          "trajectory_id": "5781-5781_10"
+        },
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        },
+        {
+          "trajectory_id": "529-529_7"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_3_0",
+      "utterance": "Top-3 DTW neighbors of 8857-8857_14 intersecting tdrive_topk_mid between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:50:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_3",
+      "gold_trajectory_ids": [
+        "5340-5340_15",
+        "2376-2376_10",
+        "289-289_12"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "5340-5340_15"
+        },
+        {
+          "trajectory_id": "2376-2376_10"
+        },
+        {
+          "trajectory_id": "289-289_12"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_3_1",
+      "utterance": "Among trajectories intersecting tdrive_topk_mid between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:50:00+08:00, find 3 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "topk_st_3",
+      "gold_trajectory_ids": [
+        "5340-5340_15",
+        "2376-2376_10",
+        "289-289_12"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "5340-5340_15"
+        },
+        {
+          "trajectory_id": "2376-2376_10"
+        },
+        {
+          "trajectory_id": "289-289_12"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_frechet_1_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using FRECHET",
+      "reject_expected": false,
+      "layer": "topk_frechet",
+      "gold_bound_ir_ref": "topk_st_frechet_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_frechet_1_1",
+      "utterance": "Top-3 FRECHET neighbors of 8857-8857_14 intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_frechet",
+      "gold_bound_ir_ref": "topk_st_frechet_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_hausdorff_1_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 3 most similar to 8857-8857_14 using HAUSDORFF",
+      "reject_expected": false,
+      "layer": "topk_hausdorff",
+      "gold_bound_ir_ref": "topk_st_hausdorff_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_topk_st_hausdorff_1_1",
+      "utterance": "Top-3 HAUSDORFF neighbors of 8857-8857_14 intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00",
+      "reject_expected": false,
+      "layer": "topk_hausdorff",
+      "gold_bound_ir_ref": "topk_st_hausdorff_1",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_c3_topk_dtw_k7_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 7 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "c3_topk_dtw_k7",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_c3_topk_haus_k5_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00, find 5 most similar to 8857-8857_14 using HAUSDORFF",
+      "reject_expected": false,
+      "layer": "topk_hausdorff",
+      "gold_bound_ir_ref": "c3_topk_haus_k5",
+      "gold_trajectory_ids": [
+        "2406-2406_9",
+        "4920-4920_24"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "2406-2406_9"
+        },
+        {
+          "trajectory_id": "4920-4920_24"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_c3_topk_mid_k5_0",
+      "utterance": "Among trajectories intersecting tdrive_topk_mid between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:50:00+08:00, find 5 most similar to 8857-8857_14 using DTW",
+      "reject_expected": false,
+      "layer": "topk_dtw",
+      "gold_bound_ir_ref": "c3_topk_mid_k5",
+      "gold_trajectory_ids": [
+        "5340-5340_15",
+        "2376-2376_10",
+        "289-289_12",
+        "4706-4706_8",
+        "5781-5781_10"
+      ],
+      "gold_top_k": [
+        {
+          "trajectory_id": "5340-5340_15"
+        },
+        {
+          "trajectory_id": "2376-2376_10"
+        },
+        {
+          "trajectory_id": "289-289_12"
+        },
+        {
+          "trajectory_id": "4706-4706_8"
+        },
+        {
+          "trajectory_id": "5781-5781_10"
+        }
+      ]
+    },
+    {
+      "query_id": "e1_r_count",
+      "utterance": "COUNT how many trajectories intersect tdrive_smoke_anchor between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_count"
+    },
+    {
+      "query_id": "e1_r_agg",
+      "utterance": "GROUP BY taxi and return average duration in tdrive_topk_box",
+      "reject_expected": true,
+      "layer": "reject_agg"
+    },
+    {
+      "query_id": "e1_r_median",
+      "utterance": "Compute the median speed of all taxis in tdrive_smoke_anchor",
+      "reject_expected": true,
+      "layer": "reject_agg"
+    },
+    {
+      "query_id": "e1_r_path",
+      "utterance": "Find trajectories whose continuous path segment crosses the ring road (not just GPS samples)",
+      "reject_expected": true,
+      "layer": "reject_continuous"
+    },
+    {
+      "query_id": "e1_r_poly",
+      "utterance": "Find trajectories using continuous Hausdorff over polyline edges",
+      "reject_expected": true,
+      "layer": "reject_continuous"
+    },
+    {
+      "query_id": "e1_r_edit",
+      "utterance": "Top-3 trajectories most similar to 8857-8857_14 using EDIT_DISTANCE",
+      "reject_expected": true,
+      "layer": "reject_metric"
+    },
+    {
+      "query_id": "e1_r_cfrechet",
+      "utterance": "Use continuous Fréchet distance to find neighbors of 8857-8857_14",
+      "reject_expected": true,
+      "layer": "reject_frechet"
+    },
+    {
+      "query_id": "e1_r_speed",
+      "utterance": "Find trajectories of taxi 8857 whose average speed exceeded 80 km/h between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_speed"
+    },
+    {
+      "query_id": "e1_r_pair",
+      "utterance": "Find pairs of taxis that were within 100 meters of each other between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_pair"
+    },
+    {
+      "query_id": "e1_r_stop",
+      "utterance": "Find trajectories that stopped for more than 10 minutes in tdrive_smoke_anchor",
+      "reject_expected": true,
+      "layer": "reject_stop"
+    },
+    {
+      "query_id": "e1_r_len",
+      "utterance": "Rank trajectories by length in kilometers between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_length"
+    },
+    {
+      "query_id": "e1_r_join",
+      "utterance": "Join taxi trajectories with weather rainfall for 2008-02-03",
+      "reject_expected": true,
+      "layer": "reject_join"
+    },
+    {
+      "query_id": "e1_r_write",
+      "utterance": "Delete trajectories of taxi 8857 older than 2008-02-03",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "e1_r_update",
+      "utterance": "Update vehicle_id of 8857-8857_14 to 9999",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "e1_r_live",
+      "utterance": "Show taxis currently online near Wangjing right now",
+      "reject_expected": true,
+      "layer": "reject_live"
+    },
+    {
+      "query_id": "e1_r_export",
+      "utterance": "Export trajectories as GeoJSON for QGIS",
+      "reject_expected": true,
+      "layer": "reject_export"
+    },
+    {
+      "query_id": "e1_r_place",
+      "utterance": "Trajectories through 火星广场 between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": true,
+      "layer": "reject_unknown_place"
+    },
+    {
+      "query_id": "e1_r_stream",
+      "utterance": "Subscribe to a live taxi stream for the next hour",
+      "reject_expected": true,
+      "layer": "reject_live"
+    },
+    {
+      "query_id": "e1_r_sql",
+      "utterance": "INSERT INTO trajectory_point values (1)",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "e1_r_od",
+      "utterance": "Find origin-destination flows from airport to CBD",
+      "reject_expected": true,
+      "layer": "reject_agg"
+    },
+    {
+      "query_id": "e1_r_avg",
+      "utterance": "Average number of GPS points per taxi in tdrive_topk_box",
+      "reject_expected": true,
+      "layer": "reject_agg"
+    },
+    {
+      "query_id": "e1_r_edit2",
+      "utterance": "Rank by Levenshtein distance to 8857-8857_14",
+      "reject_expected": true,
+      "layer": "reject_metric"
+    },
+    {
+      "query_id": "e1_r_live2",
+      "utterance": "Alert me when taxi 8857 enters tdrive_smoke_anchor",
+      "reject_expected": true,
+      "layer": "reject_live"
+    },
+    {
+      "query_id": "e1_r_join2",
+      "utterance": "Correlate trajectories with POI check-ins",
+      "reject_expected": true,
+      "layer": "reject_join"
+    },
+    {
+      "query_id": "e1_r_path2",
+      "utterance": "Follow the continuous road geometry not sampled points",
+      "reject_expected": true,
+      "layer": "reject_continuous"
+    },
+    {
+      "query_id": "e1_r_write2",
+      "utterance": "Drop the trajectory_point table",
+      "reject_expected": true,
+      "layer": "reject_write"
+    },
+    {
+      "query_id": "e1_r_count2",
+      "utterance": "How many distinct taxis crossed tdrive_topk_wide today",
+      "reject_expected": true,
+      "layer": "reject_count"
+    },
+    {
+      "query_id": "e1_c_nowin",
+      "utterance": "Find all trajectories of taxi 8857",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vehicle_no_window"
+    },
+    {
+      "query_id": "e1_c_vague",
+      "utterance": "Find taxis that went there yesterday",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "e1_c_sim",
+      "utterance": "Show similar trajectories",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_similarity"
+    },
+    {
+      "query_id": "e1_c_ref",
+      "utterance": "Top neighbors of that trajectory",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_ref"
+    },
+    {
+      "query_id": "e1_c_box",
+      "utterance": "Trajectories in the box",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    },
+    {
+      "query_id": "e1_c_noon",
+      "utterance": "8857 around noon",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_ambiguous_window"
+    },
+    {
+      "query_id": "e1_c_air",
+      "utterance": "Closest paths to the airport",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_place_metric"
+    },
+    {
+      "query_id": "e1_c_busy",
+      "utterance": "Show me the busy ones this morning",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_relative_time"
+    },
+    {
+      "query_id": "e1_c_near",
+      "utterance": "Find similar taxis near there",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "e1_c_cbd",
+      "utterance": "Something near CBD yesterday evening",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "e1_c_usual",
+      "utterance": "Find the usual routes",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "e1_c_metric",
+      "utterance": "Top-3 neighbors of 8857-8857_14 intersecting tdrive_topk_box",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_similarity"
+    },
+    {
+      "query_id": "e1_c_notime",
+      "utterance": "List trajectory ids intersecting tdrive_smoke_anchor",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    },
+    {
+      "query_id": "e1_c_noref",
+      "utterance": "Find 3 most similar trajectories using DTW between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_ref"
+    },
+    {
+      "query_id": "e1_c_where",
+      "utterance": "Taxi 8857 yesterday in that area",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "e1_c_k",
+      "utterance": "Most similar to 8857-8857_14 using DTW intersecting tdrive_topk_box between 2008-02-03T20:50:00+08:00 and 2008-02-03T21:20:00+08:00",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "e1_c_rel",
+      "utterance": "Trajectories last Tuesday around tdrive_topk_box",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_relative_time"
+    },
+    {
+      "query_id": "e1_c_who",
+      "utterance": "Who passed tdrive_smoke_anchor recently",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_relative_time"
+    },
+    {
+      "query_id": "e1_c_place",
+      "utterance": "Find trajectories near 中关村 sometime",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    },
+    {
+      "query_id": "e1_c_empty",
+      "utterance": "Show me interesting taxis",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "e1_c_when",
+      "utterance": "8857 in tdrive_smoke_anchor",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    },
+    {
+      "query_id": "e1_c_how",
+      "utterance": "Neighbors of 8857-8857_14 somewhere nearby",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "e1_c_k2",
+      "utterance": "Similar to 8857-8857_14 using FRECHET",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_constraints"
+    },
+    {
+      "query_id": "e1_c_win",
+      "utterance": "This afternoon around tdrive_topk_box",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_relative_time"
+    },
+    {
+      "query_id": "e1_c_who2",
+      "utterance": "The usual 8857 path",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_vague"
+    },
+    {
+      "query_id": "e1_c_box2",
+      "utterance": "Anything in tdrive_topk_mid",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "layer": "clarify_missing_time"
+    }
+  ]
+}

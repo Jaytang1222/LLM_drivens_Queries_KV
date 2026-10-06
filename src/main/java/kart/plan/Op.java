@@ -18,7 +18,8 @@ public enum Op {
   BATCH_GET_TRAJECTORY,
   SIMILARITY,
   TOP_K,
-  RETURN_TRAJECTORY_IDS;
+  RETURN_TRAJECTORY_IDS,
+  CHUNK_META_FILTER;
 
   /** Output data type of this operator. */
   public DataType outputType() {
@@ -29,6 +30,7 @@ public enum Op {
       case INTERSECT:
       case UNION:
       case DEDUPLICATE:
+      case CHUNK_META_FILTER:
         return DataType.CHUNK_REF_SET;
       case FULL_SCAN_CHUNKS:
         // design.md §7.1: FULL_SCAN_CHUNKS → ChunkBatch (raw scan + decode)
@@ -64,6 +66,7 @@ public enum Op {
       case UNION:
       case DEDUPLICATE:
       case FETCH_TRAJECTORY_CHUNK:
+      case CHUNK_META_FILTER:
         return DataType.CHUNK_REF_SET;
       case EXACT_ST_FILTER:
         return DataType.CHUNK_BATCH;
