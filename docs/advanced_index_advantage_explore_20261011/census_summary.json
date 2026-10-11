@@ -1,0 +1,111 @@
+{
+  "n_queries": 37,
+  "cbo_plan_hist": {
+    "P_T": 1,
+    "P_TZ": 22,
+    "P_H": 14
+  },
+  "n_adv_exec_wins": 9,
+  "wins": [
+    {
+      "query_id": "c3_tz_b",
+      "adv_plan": "P_XZ",
+      "adv_exec": 1171,
+      "classic_plan": "P_T",
+      "classic_exec": 1446,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 2130,
+      "gap_vs_classic": 275,
+      "gap_vs_cbo": 959
+    },
+    {
+      "query_id": "c3_tz_a",
+      "adv_plan": "P_XZ",
+      "adv_exec": 1262,
+      "classic_plan": "P_T",
+      "classic_exec": 1558,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 2118,
+      "gap_vs_classic": 296,
+      "gap_vs_cbo": 856
+    },
+    {
+      "query_id": "a2_tz_hard_d",
+      "adv_plan": "P_XZ",
+      "adv_exec": 1191,
+      "classic_plan": "P_Z",
+      "classic_exec": 1576,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1857,
+      "gap_vs_classic": 385,
+      "gap_vs_cbo": 666
+    },
+    {
+      "query_id": "a2_tz_hard_a",
+      "adv_plan": "P_XZTXZ",
+      "adv_exec": 1083,
+      "classic_plan": "P_T",
+      "classic_exec": 1307,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1535,
+      "gap_vs_classic": 224,
+      "gap_vs_cbo": 452
+    },
+    {
+      "query_id": "st_ll_2",
+      "adv_plan": "P_XZ",
+      "adv_exec": 1029,
+      "classic_plan": "P_T",
+      "classic_exec": 1206,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1403,
+      "gap_vs_classic": 177,
+      "gap_vs_cbo": 374
+    },
+    {
+      "query_id": "r9_locked_td_1",
+      "adv_plan": "P_XZ",
+      "adv_exec": 935,
+      "classic_plan": "P_Z",
+      "classic_exec": 1055,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1241,
+      "gap_vs_classic": 120,
+      "gap_vs_cbo": 306
+    },
+    {
+      "query_id": "mechv2_004",
+      "adv_plan": "P_XZT",
+      "adv_exec": 927,
+      "classic_plan": "P_T",
+      "classic_exec": 854,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1185,
+      "gap_vs_classic": -73,
+      "gap_vs_cbo": 258
+    },
+    {
+      "query_id": "c3_tz_c",
+      "adv_plan": "P_XZTZ",
+      "adv_exec": 165,
+      "classic_plan": "P_Z",
+      "classic_exec": 117,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 422,
+      "gap_vs_classic": -48,
+      "gap_vs_cbo": 257
+    },
+    {
+      "query_id": "st_ll_1",
+      "adv_plan": "P_XZ",
+      "adv_exec": 902,
+      "classic_plan": "P_T",
+      "classic_exec": 888,
+      "cbo_plan": "P_TZ",
+      "cbo_exec": 1110,
+      "gap_vs_classic": -14,
+      "gap_vs_cbo": 208
+    }
+  ],
+  "note": "wins = adv force-plan exec beats cbo exec by >=8ms"
+}
