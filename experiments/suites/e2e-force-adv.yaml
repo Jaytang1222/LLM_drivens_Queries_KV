@@ -1,0 +1,12 @@
+kind: compare
+id: e2e-force-adv
+workload: experiments/workloads/bound_ir_cmp_force_adv.json
+oracle: experiments/workloads/bound_ir_cmp_force_adv.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - e2e
+arms:
+  - kart
+  - cbo

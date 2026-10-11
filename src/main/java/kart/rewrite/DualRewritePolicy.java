@@ -16,6 +16,63 @@ public final class DualRewritePolicy {
   private static final ObjectMapper M = new ObjectMapper();
   private DualRewritePolicy() {}
 
+  /**
+   * Map advanced-index plan ids onto legacy families so admitted dual rules still match.
+   * XZT≈T, XZ/TS≈Z, combinations ≈ TZ / TH / ZH / TZH.
+   */
+  public static String aliasCboPlan(String planId) {
+    if (planId == null || planId.isEmpty()) {
+      return planId;
+    }
+    String p = planId;
+    int under = p.indexOf('_', 2);
+    String suffix = under > 0 ? p.substring(under) : "";
+    String core = under > 0 ? p.substring(0, under) : p;
+    if ("P_XZT".equals(core)) {
+      return "P_T" + suffix;
+    }
+    if ("P_XZ".equals(core) || "P_TS".equals(core)) {
+      return "P_Z" + suffix;
+    }
+    // P_XZTZ = XZT+ZORDER (legacy Z); P_XZTXZ = XZT+XZ; both ≈ TZ family.
+    if ("P_XZTXZ".equals(core) || "P_XZTTS".equals(core) || "P_XZTZ".equals(core)) {
+      return "P_TZ" + suffix;
+    }
+    if ("P_XZTH".equals(core)) {
+      return "P_TH" + suffix;
+    }
+    if ("P_XZH".equals(core) || "P_TSH".equals(core)) {
+      return "P_ZH" + suffix;
+    }
+    if ("P_XZTXZH".equals(core) || "P_XZTTSH".equals(core) || "P_XZTZH".equals(core)) {
+      return "P_TZH" + suffix;
+    }
+    return planId;
+  }
+
+  /** Family id for heuristics; prefers {@code cbo_plan_alias} when present. */
+  public static String featureCboFamily(JsonNode feats) {
+    if (feats == null) {
+      return "";
+    }
+    JsonNode alias = feats.get("cbo_plan_alias");
+    if (alias != null && alias.isTextual() && !alias.asText().isEmpty()) {
+      return alias.asText();
+    }
+    return aliasCboPlan(feats.path("cbo_plan").asText());
+  }
+
+  /** True when CBO selected a spatial-only family (P_Z / P_XZ / P_TS). */
+  public static boolean spatialOnlyFamily(String planId) {
+    String a = aliasCboPlan(planId);
+    if (a == null) {
+      return false;
+    }
+    int under = a.indexOf('_', 2);
+    String core = under > 0 ? a.substring(0, under) : a;
+    return "P_Z".equals(core);
+  }
+
   /** A rule's performance evidence never silently transfers to another snapshot or layout. */
   public static ArrayNode scoped(JsonNode rules, Manifest manifest) {
     ArrayNode out = M.createArrayNode();
@@ -28,12 +85,28 @@ public final class DualRewritePolicy {
       for (String key : new String[] {"manifest_id", "semantics_version", "stats_version", "dataset", "layout"}) {
         JsonNode expected = r.path("scope").path(key);
         JsonNode actual = current.path(key);
-        ok &= !expected.isMissingNode() && (expected.equals(actual)
-            || (expected.isNull() && (actual.isMissingNode() || actual.isNull())));
+        ok &= scopeFieldMatches(expected, actual);
       }
       if (ok) out.add(r);
     }
     return out;
+  }
+
+  /**
+   * Exact match for scalars; for objects, every expected field must equal actual
+   * (actual may add fields such as {@code xzt_horizon_ms} without invalidating old rules).
+   */
+  static boolean scopeFieldMatches(JsonNode expected, JsonNode actual) {
+    if (expected == null || expected.isMissingNode()) return false;
+    if (expected.isNull()) return actual == null || actual.isMissingNode() || actual.isNull();
+    if (expected.equals(actual)) return true;
+    if (!expected.isObject() || actual == null || !actual.isObject()) return false;
+    java.util.Iterator<String> it = expected.fieldNames();
+    while (it.hasNext()) {
+      String f = it.next();
+      if (!expected.get(f).equals(actual.get(f))) return false;
+    }
+    return true;
   }
 
   public static boolean admitted(JsonNode r) {
@@ -59,18 +132,24 @@ public final class DualRewritePolicy {
 
   static boolean mayHold(JsonNode rules, JsonNode feats, boolean topK, boolean cheapKeysClosed) {
     if (rules == null || feats == null) return false;
+    // Gating only: alias OK here; exact() itself prefers real cbo_plan before alias fallback.
     for (JsonNode r : rules) {
       if (!admitted(r)) continue;
-      if (whenMayHold(r.path("when"), feats, topK, cheapKeysClosed)) return true;
+      if (whenMayHold(r.path("when"), feats, topK, cheapKeysClosed, true)) return true;
     }
     return false;
   }
 
   static boolean whenMayHold(JsonNode when, JsonNode feats, boolean topK) {
-    return whenMayHold(when, feats, topK, false);
+    return whenMayHold(when, feats, topK, false, true);
   }
 
   static boolean whenMayHold(JsonNode when, JsonNode feats, boolean topK, boolean cheapKeysClosed) {
+    return whenMayHold(when, feats, topK, cheapKeysClosed, true);
+  }
+
+  static boolean whenMayHold(JsonNode when, JsonNode feats, boolean topK, boolean cheapKeysClosed,
+      boolean allowPlanAlias) {
     if (!when.isArray() || when.size() == 0) return false;
     for (JsonNode c : when) {
       String key = c.path(0).asText();
@@ -79,10 +158,11 @@ public final class DualRewritePolicy {
         if (!topK && ("k".equals(key) || "topk_work_ms".equals(key) || "metric".equals(key)
             || "eligible".equals(key))) return false;
         if (cheapKeysClosed && ("chunks_min".equals(key) || "chunks_keep".equals(key)
-            || "z_ranges".equals(key) || "cbo_plan".equals(key))) return false;
+            || "z_ranges".equals(key) || "xz_ranges".equals(key) || "tshape_ranges".equals(key)
+            || "cbo_plan".equals(key) || "cbo_plan_alias".equals(key))) return false;
         continue;
       }
-      if (!RewriteProtocol.clauseHolds(c, feats)) return false;
+      if (!RewriteProtocol.clauseHolds(c, feats, allowPlanAlias)) return false;
     }
     return true;
   }
@@ -103,11 +183,17 @@ public final class DualRewritePolicy {
 
   /** Access×fetch pairing may ignore idx_rows caps that were fit on P_TZ support rows. */
   static boolean holdsPairAccess(JsonNode when, JsonNode f) {
+    return holdsPairAccess(when, f, true);
+  }
+
+  static boolean holdsPairAccess(JsonNode when, JsonNode f, boolean allowPlanAlias) {
     if (when == null || !when.isArray()) return false;
     for (JsonNode clause : when) {
       String k = clause.path(0).asText();
-      if ("cbo_plan".equals(k) || k.startsWith("idx_rows_")) continue;
-      if (!RewriteProtocol.clauseHolds(clause, f)) return false;
+      if (k.startsWith("idx_rows_")) continue;
+      // Legacy: drop_spatial measured on P_TZ may bind on P_T/P_Z. Exact-plan mode keeps cbo_plan.
+      if ("cbo_plan".equals(k) && allowPlanAlias) continue;
+      if (!RewriteProtocol.clauseHolds(clause, f, allowPlanAlias)) return false;
     }
     return true;
   }
@@ -119,12 +205,22 @@ public final class DualRewritePolicy {
     return s;
   }
 
+  /** Hash-index families: measured e2e prefers plain P_H over P_H+MP (plan overhead dominates). */
+  static boolean hashFamily(String planId) {
+    String a = aliasCboPlan(planId);
+    if (a == null || a.isEmpty()) return false;
+    int under = a.indexOf('_', 2);
+    String core = under > 0 ? a.substring(0, under) : a;
+    return "P_H".equals(core) || "P_TH".equals(core) || "P_ZH".equals(core) || "P_TZH".equals(core);
+  }
+
   /** Protocol companion of an access rewrite: meta_probe only, never a third slot or P_Z→P_T flip. */
   static RewriteProtocol.Program attachMeta(JsonNode c, RewriteProtocol.Program p) {
     if (p == null || p.choice == null || !RewriteProtocol.slots(c).contains(RewriteProtocol.META)) return p;
+    if (hashFamily(featureCboFamily(c.path("features")))) return p;
     String acc = p.choice.containsKey(RewriteProtocol.ACCESS)
         ? p.choice.get(RewriteProtocol.ACCESS) : RewriteProtocol.defaults(c).choice.get(RewriteProtocol.ACCESS);
-    if ("drop_spatial_branch".equals(acc) && "P_Z".equals(c.path("features").path("cbo_plan").asText())) return p;
+    if ("drop_spatial_branch".equals(acc) && "P_Z".equals(featureCboFamily(c.path("features")))) return p;
     if ("on".equals(p.choice.get(RewriteProtocol.META))) return p;
     Map<String, String> def = RewriteProtocol.defaults(c).choice;
     for (String s : new String[] {"range_budget"}) {
@@ -164,7 +260,10 @@ public final class DualRewritePolicy {
 
   /** NNLS sweep: mid P_T with z_ranges≥64 has no measured fetch/MP win (td_2/4). */
   static boolean denseZ(JsonNode c) {
-    return c.path("features").path("z_ranges").asDouble() >= 64;
+    JsonNode f = c.path("features");
+    double z = Math.max(f.path("z_ranges").asDouble(0),
+        Math.max(f.path("xz_ranges").asDouble(0), f.path("tshape_ranges").asDouble(0)));
+    return z >= 64;
   }
 
   /** Small TOP_K queries where lb2 is the measured discrete win (td_5/6). */
@@ -180,7 +279,7 @@ public final class DualRewritePolicy {
     RewriteProtocol.Program start = base != null && base.choice != null ? base : RewriteProtocol.defaults(c);
     Map<String, String> def = RewriteProtocol.defaults(c).choice;
     Map<String, String> cur = new TreeMap<String, String>(start.choice);
-    String cbo = c.path("features").path("cbo_plan").asText();
+    String cbo = featureCboFamily(c.path("features"));
     boolean pt = "P_T".equals(cbo);
     boolean pz = "P_Z".equals(cbo);
     boolean wide = wideScan(c);
@@ -216,27 +315,147 @@ public final class DualRewritePolicy {
   /**
    * One admitted rule, or one access rule paired with one resource rule. Not a global slot argmin.
    */
+  /** Advanced index plans that must not inherit legacy P_TZ/P_Z rules via alias. */
+  static boolean advancedPlan(String planId) {
+    if (planId == null || planId.isEmpty()) return false;
+    return planId.startsWith("P_XZ") || planId.startsWith("P_TS");
+  }
+
+  /** True when some admitted rule is authored for this exact {@code cbo_plan} id. */
+  static boolean authoredForPlan(JsonNode rules, String planId) {
+    if (rules == null || planId == null || planId.isEmpty()) return false;
+    for (JsonNode r : rules) {
+      if (!admitted(r)) continue;
+      for (JsonNode c : r.path("when")) {
+        if ("cbo_plan".equals(c.path(0).asText()) && "==".equals(c.path(1).asText())
+            && planId.equals(c.path(2).asText())) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Alias only when no exact-plan rules exist for this CBO plan id. */
+  static boolean allowPlanAlias(JsonNode rules, JsonNode feats) {
+    if (feats == null) return true;
+    String plan = feats.path("cbo_plan").asText();
+    return !authoredForPlan(rules, plan);
+  }
+
   public static RewriteProtocol.Program exact(JsonNode rules, JsonNode c) {
+    if (rules == null || c == null) return null;
+    return exactAllowing(rules, c, allowPlanAlias(rules, c.path("features")));
+  }
+
+  static boolean dropsAccess(JsonNode set) {
+    if (set == null || !set.has(RewriteProtocol.ACCESS)) return false;
+    String a = set.path(RewriteProtocol.ACCESS).asText();
+    return "drop_spatial_branch".equals(a) || "drop_temporal_branch".equals(a);
+  }
+
+  /**
+   * Kept-branch index rows after an access drop. Lower = more selective = prefer over FastCost
+   * when choosing drop_spatial (keep T) vs drop_temporal (keep Z).
+   */
+  static double keptBranchRows(JsonNode feats, JsonNode set) {
+    if (feats == null || set == null) return Double.POSITIVE_INFINITY;
+    String a = set.path(RewriteProtocol.ACCESS).asText();
+    if ("drop_spatial_branch".equals(a)) {
+      return feats.path("idx_rows_temporal_branch").asDouble(Double.POSITIVE_INFINITY);
+    }
+    if ("drop_temporal_branch".equals(a)) {
+      return feats.path("idx_rows_spatial_branch").asDouble(Double.POSITIVE_INFINITY);
+    }
+    return Double.POSITIVE_INFINITY;
+  }
+
+  static double keptBranchRows(JsonNode feats, RewriteProtocol.Program p) {
+    if (p == null || p.choice == null) return Double.POSITIVE_INFINITY;
+    String a = p.choice.get(RewriteProtocol.ACCESS);
+    if ("drop_spatial_branch".equals(a)) {
+      return feats.path("idx_rows_temporal_branch").asDouble(Double.POSITIVE_INFINITY);
+    }
+    if ("drop_temporal_branch".equals(a)) {
+      return feats.path("idx_rows_spatial_branch").asDouble(Double.POSITIVE_INFINITY);
+    }
+    return Double.POSITIVE_INFINITY;
+  }
+
+  /**
+   * When one branch is ≥2× more selective, emit that access drop even without an admitted rule.
+   * force-kc: c3_tz_c needs drop_temporal; rules currently only admit drop_spatial.
+   */
+  static RewriteProtocol.Program selectivityAccess(JsonNode c) {
+    if (c == null) return null;
+    JsonNode feats = c.path("features");
+    if (!"P_TZ".equals(featureCboFamily(feats))) return null;
+    if (!RewriteProtocol.slots(c).contains(RewriteProtocol.ACCESS)) return null;
+    double tRows = feats.path("idx_rows_temporal_branch").asDouble(Double.NaN);
+    double zRows = feats.path("idx_rows_spatial_branch").asDouble(Double.NaN);
+    if (!Double.isFinite(tRows) || !Double.isFinite(zRows) || tRows <= 0 || zRows <= 0) return null;
+    String acc;
+    if (zRows * 2.0 <= tRows) {
+      acc = "drop_temporal_branch";
+    } else if (tRows * 2.0 <= zRows) {
+      acc = "drop_spatial_branch";
+    } else {
+      return null;
+    }
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    if (acc.equals(def.get(RewriteProtocol.ACCESS))) return null;
+    Map<String, String> m = new TreeMap<String, String>(def);
+    m.put(RewriteProtocol.ACCESS, acc);
+    return new RewriteProtocol.Program(m, "selectivity_access");
+  }
+
+  static RewriteProtocol.Program exactAllowing(JsonNode rules, JsonNode c, boolean allowAlias) {
     RewriteProtocol.Program best = null;
     RewriteProtocol.Program atomic = null;
     double cost = 0;
-    double atomicCost = 0;
-    if (rules == null) return null;
+    // Exact-plan mode: FastCost often mis-ranks force-mined advanced multi-slot programs (e≥0).
+    double atomicCost = allowAlias ? 0 : Double.POSITIVE_INFINITY;
+    // Exact-plan mode: prefer access drops over resource-only (FastCost often ranks r256 ahead of
+    // drop_spatial even when measured e2e/exec favor drop_spatial).
+    boolean atomicDrops = false;
+    JsonNode feats = c.path("features");
     List<JsonNode> access = new ArrayList<JsonNode>();
     List<JsonNode> resource = new ArrayList<JsonNode>();
     List<JsonNode> pairFetch = new ArrayList<JsonNode>();
     List<JsonNode> pairAccess = new ArrayList<JsonNode>();
+    boolean hash = hashFamily(featureCboFamily(feats));
+    double atomicRows = Double.POSITIVE_INFINITY;
     for (JsonNode r : rules) {
       if (!admitted(r)) continue;
       JsonNode set = r.path("set");
+      // Hash plans: FastCost likes meta_probe but measured e2e prefers plain P_H.
+      if (hash && set.has(RewriteProtocol.META)) continue;
+      // relaxPlan strips cbo_plan so P_TZ drop_spatial can bind on P_T/P_Z — never when
+      // an exact advanced-plan rule is available (allowAlias=false).
+      boolean relax = relaxPlan(set) && allowAlias;
       if (set.size() > 1) {
-        JsonNode when = relaxPlan(set) ? matchWhen(r.path("when")) : r.path("when");
-        if (RewriteProtocol.holds(when, c.path("features"))) {
+        JsonNode when = relax ? matchWhen(r.path("when")) : r.path("when");
+        if (RewriteProtocol.holds(when, feats, allowAlias)) {
           RewriteProtocol.Program p = RewriteProtocol.fromSet(c, set);
           if (p.choice != null && !p.isDefault(c)) {
             double e = RewriteProtocol.estimate(c, p.choice);
-            if (Double.isFinite(e) && e < atomicCost) {
+            boolean drops = dropsAccess(set);
+            if (!Double.isFinite(e)) continue;
+            double rows = drops ? keptBranchRows(feats, set) : Double.POSITIVE_INFINITY;
+            boolean better = e < atomicCost;
+            if (!allowAlias && drops && !atomicDrops) better = true;
+            if (!allowAlias && !drops && atomicDrops) better = false;
+            // Access vs access: prefer the more selective kept branch (force-kc: P_Z beats P_T on c3_tz_c).
+            if (!allowAlias && drops && atomicDrops && Double.isFinite(rows) && rows + 1e-9 < atomicRows) {
+              better = true;
+            } else if (!allowAlias && drops && atomicDrops && Double.isFinite(atomicRows)
+                && atomicRows + 1e-9 < rows) {
+              better = false;
+            }
+            if (better) {
               atomicCost = e;
+              atomicDrops = drops;
+              atomicRows = rows;
               atomic = new RewriteProtocol.Program(p.choice, "offline_rule:" + r.path("id").asText());
             }
           }
@@ -244,20 +463,25 @@ public final class DualRewritePolicy {
         continue;
       }
       if (set.has("fetch_batch")) {
-        if (RewriteProtocol.holds(matchWhen(r.path("when")), c.path("features"))) pairFetch.add(r);
+        JsonNode fw = allowAlias ? matchWhen(r.path("when")) : r.path("when");
+        if (RewriteProtocol.holds(fw, feats, allowAlias)) pairFetch.add(r);
         continue;
       }
-      if (set.has(RewriteProtocol.ACCESS) && holdsPairAccess(r.path("when"), c.path("features"))) {
+      if (set.has(RewriteProtocol.ACCESS) && holdsPairAccess(r.path("when"), feats, allowAlias)) {
         RewriteProtocol.Program ap = RewriteProtocol.fromSet(c, set);
         if (ap.choice != null && !ap.isDefault(c)) pairAccess.add(r);
       }
-      JsonNode when = relaxPlan(set) ? matchWhen(r.path("when")) : r.path("when");
-      if (!RewriteProtocol.holds(when, c.path("features"))) continue;
+      JsonNode when = relax ? matchWhen(r.path("when")) : r.path("when");
+      if (!RewriteProtocol.holds(when, feats, allowAlias)) continue;
       RewriteProtocol.Program p = RewriteProtocol.fromSet(c, set);
       if (p.choice == null || p.isDefault(c)) continue;
+      if (!allowAlias && !set.has(RewriteProtocol.ACCESS)) {
+        resource.add(r);
+        continue;
+      }
       double e = RewriteProtocol.estimate(c, p.choice);
       // Resource-only topk on native P_TZ would occupy exact() and block related access.
-      boolean topkOnlyPtz = "P_TZ".equals(c.path("features").path("cbo_plan").asText())
+      boolean topkOnlyPtz = "P_TZ".equals(featureCboFamily(c.path("features")))
           && set.size() == 1 && set.has("topk");
       if (!topkOnlyPtz && Double.isFinite(e) && e < cost) {
         cost = e;
@@ -285,7 +509,7 @@ public final class DualRewritePolicy {
     for (JsonNode a : pairAccess) {
       for (JsonNode b : pairFetch) {
         if (!"drop_spatial_branch".equals(a.path("set").path(RewriteProtocol.ACCESS).asText())) continue;
-        if ("P_T".equals(c.path("features").path("cbo_plan").asText())) continue;
+        if ("P_T".equals(featureCboFamily(c.path("features")))) continue;
         ObjectNode set = mergeSet(a.path("set"), b.path("set"));
         if (set.size() > 2) continue;
         RewriteProtocol.Program p = RewriteProtocol.fromSet(c, set);
@@ -303,7 +527,7 @@ public final class DualRewritePolicy {
       if (!admitted(r)) continue;
       JsonNode set = r.path("set");
       if (set.has(RewriteProtocol.ACCESS) || set.has("fetch_batch")) continue;
-      if (!RewriteProtocol.holds(r.path("when"), c.path("features"))) continue;
+      if (!RewriteProtocol.holds(r.path("when"), feats, allowAlias)) continue;
       RewriteProtocol.Program p = RewriteProtocol.fromSet(c, set);
       if (p.choice == null || p.isDefault(c)) continue;
       double e = RewriteProtocol.estimate(c, p.choice);
@@ -312,7 +536,7 @@ public final class DualRewritePolicy {
       strictResE = e;
       strictRes = new RewriteProtocol.Program(p.choice, "offline_rule:" + r.path("id").asText());
     }
-    String cboPlan = c.path("features").path("cbo_plan").asText();
+    String cboPlan = featureCboFamily(feats);
     if ("P_T".equals(cboPlan)) {
       if (smallTopK(c)) {
         RewriteProtocol.Program topk = null;
@@ -322,7 +546,7 @@ public final class DualRewritePolicy {
           if (!admitted(r)) continue;
           JsonNode set = r.path("set");
           if (set.size() != 1) continue;
-          if (!RewriteProtocol.holds(r.path("when"), c.path("features"))) continue;
+          if (!RewriteProtocol.holds(r.path("when"), feats, allowAlias)) continue;
           RewriteProtocol.Program p = RewriteProtocol.fromSet(c, set);
           if (p.choice == null || p.isDefault(c)) continue;
           if (set.has("topk")) {
@@ -380,6 +604,18 @@ public final class DualRewritePolicy {
       }
       return better(c, strictRes, atomic);
     }
+    RewriteProtocol.Program sel = selectivityAccess(c);
+    if (sel != null) {
+      double selRows = keptBranchRows(feats, sel);
+      if (atomic == null || !atomicDrops || selRows + 1.0 < atomicRows) {
+        atomic = sel;
+        atomicDrops = true;
+        atomicRows = selRows;
+      }
+    }
+    if (!allowAlias && atomic != null && atomicDrops) {
+      return attachMeta(c, atomic);
+    }
     RewriteProtocol.Program raw = attachMeta(c, better(c, best, atomic));
     raw = better(c, raw, attachMeta(c, fetchPair));
     return raw;
@@ -389,10 +625,12 @@ public final class DualRewritePolicy {
   public static ArrayNode related(JsonNode rules, JsonNode c) {
     ArrayNode out = M.createArrayNode();
     if (rules == null) return out;
+    JsonNode feats = c.path("features");
+    boolean allowAlias = allowPlanAlias(rules, feats);
     for (JsonNode r : rules) {
       if (!admitted(r)) continue;
       boolean structural = false, ok = true;
-      boolean relax = relaxPlan(r.path("set"));
+      boolean relax = relaxPlan(r.path("set")) && allowAlias;
       for (JsonNode clause : r.path("when")) {
         if (relax && "cbo_plan".equals(clause.path(0).asText())) {
           structural = true;
@@ -400,13 +638,12 @@ public final class DualRewritePolicy {
         }
         if (!clause.path(2).isNumber()) {
           structural = true;
-          ok &= RewriteProtocol.clauseHolds(clause, c.path("features"));
+          ok &= RewriteProtocol.clauseHolds(clause, feats, allowAlias);
         }
       }
       RewriteProtocol.Program p = RewriteProtocol.fromSet(c, r.path("set"));
       if (structural && ok && p.choice != null && !p.isDefault(c)) out.add(r);
     }
-    // Deterministic rule order, independent of input file order.
     List<JsonNode> sorted = new ArrayList<JsonNode>();
     for (JsonNode r : out) sorted.add(r);
     sorted.sort(Comparator.comparing(r -> r.path("id").asText()));
@@ -488,6 +725,7 @@ public final class DualRewritePolicy {
     if (rules == null || c == null) return out;
     ObjectNode c2 = postAccessContext(c, base);
     JsonNode feats = c2.path("features");
+    boolean allowAlias = allowPlanAlias(rules, feats);
     Map<String, String> def = RewriteProtocol.defaults(c).choice;
     Map<String, String> have = base != null && base.choice != null ? base.choice : def;
     JsonNode best = null;
@@ -497,7 +735,7 @@ public final class DualRewritePolicy {
       JsonNode set = r.path("set");
       if (set.has(RewriteProtocol.ACCESS) || set.size() != 1) continue;
       if (set.has("fetch_batch")) continue;
-      if (!RewriteProtocol.holds(r.path("when"), feats)) continue;
+      if (!RewriteProtocol.holds(r.path("when"), feats, allowAlias)) continue;
       String slot = set.fieldNames().next();
       if (!RewriteProtocol.slots(c).contains(slot)) continue;
       String d = def.get(slot);
@@ -541,9 +779,9 @@ public final class DualRewritePolicy {
       return null;
     }
     JsonNode feats = c.path("features");
-    if ("P_T".equals(feats.path("cbo_plan").asText()) && (wideScan(c) || denseZ(c))) return null;
+    if ("P_T".equals(featureCboFamily(feats)) && (wideScan(c) || denseZ(c))) return null;
     // P_Z range_budget stays exact()-only: related r256 on the chunks_keep boundary is high-variance.
-    boolean pz = "P_Z".equals(feats.path("cbo_plan").asText());
+    boolean pz = "P_Z".equals(featureCboFamily(feats));
     for (JsonNode r : related) {
       int nfail = RewriteProtocol.fails(r.path("when"), feats);
       if (nfail != 1) {
@@ -573,7 +811,7 @@ public final class DualRewritePolicy {
    */
   public static RewriteProtocol.Program preferDetIfBetter(JsonNode c, RewriteProtocol.Program p) {
     if (p == null || p.choice == null) return p;
-    if (!"P_TZ".equals(c.path("features").path("cbo_plan").asText())) return p;
+    if (!"P_TZ".equals(featureCboFamily(c.path("features")))) return p;
     Map<String, String> def = RewriteProtocol.defaults(c).choice;
     String acc = p.choice.containsKey(RewriteProtocol.ACCESS)
         ? p.choice.get(RewriteProtocol.ACCESS) : def.get(RewriteProtocol.ACCESS);

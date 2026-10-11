@@ -434,12 +434,17 @@ public final class RewriteProtocol {
       return Double.isInfinite(estimate(ctx, m)) ? new Program(null, "near_inapplicable") : new Program(m, "near");
     }
 
-    static boolean holds(JsonNode when, JsonNode f) {
+  static boolean holds(JsonNode when, JsonNode f) {
+    return holds(when, f, true);
+  }
+
+  /** @param allowPlanAlias when false, {@code cbo_plan} clauses match the real plan id only. */
+  static boolean holds(JsonNode when, JsonNode f, boolean allowPlanAlias) {
     if (!when.isArray() || when.size() == 0) {
       return false;
     }
     for (JsonNode c : when) {
-      if (!clauseHolds(c, f)) {
+      if (!clauseHolds(c, f, allowPlanAlias)) {
         return false;
       }
     }
@@ -469,7 +474,12 @@ public final class RewriteProtocol {
   }
 
   static boolean clauseHolds(JsonNode c, JsonNode f) {
-    JsonNode v = f.get(c.path(0).asText());
+    return clauseHolds(c, f, true);
+  }
+
+  static boolean clauseHolds(JsonNode c, JsonNode f, boolean allowPlanAlias) {
+    String key = c.path(0).asText();
+    JsonNode v = f.get(key);
     JsonNode t = c.path(2);
     String op = c.path(1).asText();
     if (v == null || v.isNull()) {
@@ -480,6 +490,17 @@ public final class RewriteProtocol {
       double b = t.asDouble();
       return "<".equals(op) ? a < b : "<=".equals(op) ? a <= b : ">".equals(op) ? a > b
           : ">=".equals(op) ? a >= b : "==".equals(op) ? a == b : "!=".equals(op) && a != b;
+    }
+    if ("cbo_plan".equals(key) && ("==".equals(op) || "!=".equals(op))) {
+      String want = t.asText();
+      boolean hit = v.asText().equals(want);
+      // Alias lets legacy P_TZ rules cover P_XZTZ — but only when the caller allows it.
+      // Prefer exact plan ids when advanced-index rules are present (see DualRewritePolicy.exact).
+      if (!hit && allowPlanAlias) {
+        JsonNode alias = f.get("cbo_plan_alias");
+        hit = alias != null && !alias.isNull() && alias.asText().equals(want);
+      }
+      return "==".equals(op) ? hit : !hit;
     }
     return ("==".equals(op) && v.asText().equals(t.asText()))
         || ("!=".equals(op) && !v.asText().equals(t.asText()));

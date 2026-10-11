@@ -15,6 +15,7 @@ import picocli.CommandLine.Command;
         DoctorCmd.class,
         ProfileDataCmd.class,
         BuildSnapshotCmd.class,
+        RebuildXztCmd.class,
         VerifySnapshotCmd.class,
         BuildStatsCmd.class,
         BuildFixtureCmd.class,

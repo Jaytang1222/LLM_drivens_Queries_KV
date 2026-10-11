@@ -51,10 +51,11 @@ public final class AblationHarnessTest {
     SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
     assertEquals("ablation", s.kind);
     assertEquals("kart", s.base_arm);
-    assertEquals("experiments/workloads/bound_ir_cmp_v3.json", s.workload);
+    assertEquals("experiments/workloads/bound_ir_complex_v1.json", s.workload);
     List<String> ids = s.enabledFactorIds();
     assertTrue(ids.contains("cbo_only"));
     assertTrue(ids.contains("no_online_llm"));
+    assertTrue(ids.contains("no_offline_llm"));
     assertTrue(ids.contains("no_fast_cost"));
     assertTrue(ids.contains("no_final_cost"));
     assertTrue(ids.contains("no_coverage"));
@@ -285,10 +286,11 @@ public final class AblationHarnessTest {
     assertTrue(labels.contains("full"));
     assertTrue(labels.contains("cbo_only"));
     assertTrue(labels.contains("no_online_llm"));
+    assertTrue(labels.contains("no_offline_llm"));
     assertTrue(labels.contains("no_fast_cost"));
     assertTrue(labels.contains("no_final_cost"));
     assertFalse(labels.contains("no_coverage"));
-    assertEquals(5, labels.size(), labels.toString());
+    assertEquals(6, labels.size(), labels.toString());
   }
 
   @Test
@@ -319,6 +321,10 @@ public final class AblationHarnessTest {
         LlmRewriteArm.effectiveMode(dummyCtx("no_online_llm"), "dual-rules"));
     assertEquals("dual-offline-rules",
         LlmRewriteArm.effectiveMode(dummyCtx("dual-offline-rules"), "dual-rules"));
+    assertEquals("dual-online-only",
+        LlmRewriteArm.effectiveMode(dummyCtx("no_offline_llm"), "dual-rules"));
+    assertEquals("dual-online-only",
+        LlmRewriteArm.effectiveMode(dummyCtx("dual-online-only"), "dual-rules"));
   }
 
   private static BenchContext dummyCtx(String actionMode) {

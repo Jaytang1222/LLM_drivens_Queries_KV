@@ -1,7 +1,8 @@
 # §13.4 cost coefficients (authoritative: FitCostCmd / FeedbackCalibrator; pack experiments/results/cost_calib_pack_20260925; freeze during experiments)
 max_llm_calls: 6
 max_candidates: 8
-max_plan_ms: 5000
+# Keep headroom after advanced indexes; dimension-complete access emit restores P_TZ within budget.
+max_plan_ms: 15000
 beam_width: 3
 stagnation_steps: 2
 max_candidate_chunks: 200000

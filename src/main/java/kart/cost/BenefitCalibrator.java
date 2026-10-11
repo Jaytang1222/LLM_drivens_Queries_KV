@@ -18,13 +18,13 @@ import kart.plan.PlanEnvelope;
  */
 public final class BenefitCalibrator {
 
-  public static final String VERSION = "calib_loglin_v1";
+  public static final String VERSION = "calib_loglin_v5";
 
-  /** Intercept (cancels in S_hat). */
-  static final double B0 = -4368.95402037d;
-  static final double B_RANGES = 616.58721963d;
-  static final double B_FETCH = 211.02887576d;
-  static final double B_INDEX = 142.47608618d;
+  /** Intercept (cancels in S_hat). Refit on v2 gold force-plan + advanced indexes. */
+  static final double B0 = 8510.187833470982d;
+  static final double B_RANGES = 1467.6681693792473d;
+  static final double B_FETCH = 1334.5100786749897d;
+  static final double B_INDEX = -1413.5091024470607d;
 
   public enum FeatureStatus {
     PRESENT,

@@ -76,7 +76,7 @@ public final class Coordinator {
 
   /**
    * Inject planner CostFeatures so NodeTrace {@code estimated_*} come from the model,
-   * not mirrored actuals (§14 / §16).
+   * not mirrored actuals (搂14 / 搂16).
    */
   public void applyCostEstimates(kart.cost.CostFeatures features) {
     this.costEstimates = features;
@@ -169,6 +169,9 @@ public final class Coordinator {
       switch (n.op) {
         case TIME_RANGE_SCAN:
         case ZORDER_RANGE_SCAN:
+        case XZ_RANGE_SCAN:
+        case TSHAPE_RANGE_SCAN:
+        case XZT_RANGE_SCAN:
         case EQUALITY_LOOKUP:
         case FULL_SCAN_CHUNKS:
           nt.estimated_rows = Long.valueOf(idxRows);
@@ -280,10 +283,12 @@ public final class Coordinator {
 
   /**
    * Index access leaves that may run concurrently before INTERSECT/UNION
-   * (design.md §11: thread pool size = {@link ExecLimits#indexParallelism}).
+   * (design.md 搂11: thread pool size = {@link ExecLimits#indexParallelism}).
    */
   static boolean isIndexBranch(Op op) {
-    return op == Op.TIME_RANGE_SCAN || op == Op.ZORDER_RANGE_SCAN || op == Op.EQUALITY_LOOKUP;
+    return op == Op.TIME_RANGE_SCAN || op == Op.ZORDER_RANGE_SCAN
+        || op == Op.XZ_RANGE_SCAN || op == Op.TSHAPE_RANGE_SCAN || op == Op.XZT_RANGE_SCAN
+        || op == Op.EQUALITY_LOOKUP;
   }
 
   private void runOneNode(PlanNode n, Map<String, Object> values, PhysicalPlan phys,
@@ -447,6 +452,9 @@ public final class Coordinator {
     switch (op) {
       case TIME_RANGE_SCAN:
       case ZORDER_RANGE_SCAN:
+      case XZ_RANGE_SCAN:
+      case TSHAPE_RANGE_SCAN:
+      case XZT_RANGE_SCAN:
       case EQUALITY_LOOKUP:
       case FULL_SCAN_CHUNKS:
         trace.phase_index_ms = Long.valueOf(
@@ -488,6 +496,9 @@ public final class Coordinator {
     switch (n.op) {
       case TIME_RANGE_SCAN:
       case ZORDER_RANGE_SCAN:
+      case XZ_RANGE_SCAN:
+      case TSHAPE_RANGE_SCAN:
+      case XZT_RANGE_SCAN:
       case EQUALITY_LOOKUP:
         return scanIndex(n, phys);
       case FULL_SCAN_CHUNKS:
@@ -1147,7 +1158,7 @@ public final class Coordinator {
 
   /**
    * Exact Top-K over candidates visited in ascending lower-bound order. For a fetched point
-   * subset S of candidate A: DTW ≥ Σ_{a∈S} d(a,R); Fréchet ≥ Hausdorff ≥ max_{a∈S} d(a,R).
+   * subset S of candidate A: DTW 鈮?危_{a鈭圫} d(a,R); Fr茅chet 鈮?Hausdorff 鈮?max_{a鈭圫} d(a,R).
    * Stops only when the next bound strictly exceeds the k-th distance, so pruned candidates
    * cannot enter or tie the result.
    */

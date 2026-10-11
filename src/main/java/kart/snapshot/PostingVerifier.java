@@ -65,6 +65,9 @@ public final class PostingVerifier {
     Set<String> expectedTime = new HashSet<String>();
     Set<String> expectedZ = new HashSet<String>();
     Set<String> expectedHash = new HashSet<String>();
+    Set<String> expectedXz = new HashSet<String>();
+    Set<String> expectedTs = new HashSet<String>();
+    Set<String> expectedXzt = new HashSet<String>();
 
     int n = trajectories.size();
     long t0 = System.currentTimeMillis();
@@ -79,21 +82,15 @@ public final class PostingVerifier {
         expectedTime.addAll(exp.timeKeys);
         expectedZ.addAll(exp.zorderKeys);
         expectedHash.addAll(exp.hashKeys);
-        for (String hex : exp.timeKeys) {
-          if (kv.get(layout.tableTime, unhex(hex)).isEmpty()) {
-            report.missing.add(new Finding(layout.tableTime, t.tid, c.chunkId, "missing " + hex));
-          }
-        }
-        for (String hex : exp.zorderKeys) {
-          if (kv.get(layout.tableZorder, unhex(hex)).isEmpty()) {
-            report.missing.add(new Finding(layout.tableZorder, t.tid, c.chunkId, "missing " + hex));
-          }
-        }
-        for (String hex : exp.hashKeys) {
-          if (kv.get(layout.tableHash, unhex(hex)).isEmpty()) {
-            report.missing.add(new Finding(layout.tableHash, t.tid, c.chunkId, "missing " + hex));
-          }
-        }
+        expectedXz.addAll(exp.xzKeys);
+        expectedTs.addAll(exp.tshapeKeys);
+        expectedXzt.addAll(exp.xztKeys);
+        checkMissing(kv, layout.tableTime, exp.timeKeys, t.tid, c.chunkId, report);
+        checkMissing(kv, layout.tableZorder, exp.zorderKeys, t.tid, c.chunkId, report);
+        checkMissing(kv, layout.tableHash, exp.hashKeys, t.tid, c.chunkId, report);
+        checkMissing(kv, layout.tableXz, exp.xzKeys, t.tid, c.chunkId, report);
+        checkMissing(kv, layout.tableTshape, exp.tshapeKeys, t.tid, c.chunkId, report);
+        checkMissing(kv, layout.tableXzt, exp.xztKeys, t.tid, c.chunkId, report);
       }
       if (i == 1 || i % 200 == 0 || i == n) {
         long elapsed = System.currentTimeMillis() - t0;
@@ -101,7 +98,8 @@ public final class PostingVerifier {
         long etaSec = (long) ((n - i) / Math.max(0.001, rate));
         System.out.println("VERIFY_PROGRESS phase=get done=" + i + "/" + n
             + " missing=" + report.missing.size()
-            + " expected_keys=" + (expectedTime.size() + expectedZ.size() + expectedHash.size())
+            + " expected_keys=" + (expectedTime.size() + expectedZ.size() + expectedHash.size()
+            + expectedXz.size() + expectedTs.size() + expectedXzt.size())
             + " elapsed_s=" + (elapsed / 1000)
             + " rate_traj_s=" + String.format("%.2f", rate)
             + " eta_s=" + etaSec);
@@ -110,11 +108,16 @@ public final class PostingVerifier {
     }
 
     System.out.println("VERIFY_PHASE=scan_extra time_keys=" + expectedTime.size()
-        + " z_keys=" + expectedZ.size() + " hash_keys=" + expectedHash.size());
+        + " z_keys=" + expectedZ.size() + " hash_keys=" + expectedHash.size()
+        + " xz_keys=" + expectedXz.size() + " tshape_keys=" + expectedTs.size()
+        + " xzt_keys=" + expectedXzt.size());
     System.out.flush();
     scanForExtra(kv, layout.tableTime, expectedTime, report);
     scanForExtra(kv, layout.tableZorder, expectedZ, report);
     scanForExtra(kv, layout.tableHash, expectedHash, report);
+    scanForExtra(kv, layout.tableXz, expectedXz, report);
+    scanForExtra(kv, layout.tableTshape, expectedTs, report);
+    scanForExtra(kv, layout.tableXzt, expectedXzt, report);
     System.out.println("VERIFY_PHASE=done missing=" + report.missing.size()
         + " extra=" + report.extra.size()
         + " elapsed_s=" + ((System.currentTimeMillis() - t0) / 1000));
@@ -160,6 +163,14 @@ public final class PostingVerifier {
                 RowKeyCodec.HashKey k = RowKeyCodec.decodeHash(row.key);
                 tid = k.tid;
                 chunk = (int) k.chunkId;
+              } else if (table.equals(layout.tableXz) || table.equals(layout.tableXzt)) {
+                RowKeyCodec.XzKey k = RowKeyCodec.decodeXz(row.key);
+                tid = k.tid;
+                chunk = (int) k.chunkId;
+              } else if (table.equals(layout.tableTshape)) {
+                RowKeyCodec.TShapeKey k = RowKeyCodec.decodeTShape(row.key);
+                tid = k.tid;
+                chunk = (int) k.chunkId;
               }
             } catch (RuntimeException ignored) {
               // keep -1
@@ -181,6 +192,15 @@ public final class PostingVerifier {
     if (extras[0] > maxReport) {
       report.extra.add(new Finding(table, -1, -1,
           "extra_total=" + extras[0] + " (only first " + maxReport + " listed)"));
+    }
+  }
+
+  private void checkMissing(KvBackend kv, String table, Set<String> keys, long tid, int chunkId,
+                            Report report) throws IOException {
+    for (String hex : keys) {
+      if (kv.get(table, unhex(hex)).isEmpty()) {
+        report.missing.add(new Finding(table, tid, chunkId, "missing " + hex));
+      }
     }
   }
 

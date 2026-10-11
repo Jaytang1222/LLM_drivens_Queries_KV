@@ -1,6 +1,7 @@
 package kart.search;
 
 import kart.cost.CostCard;
+import kart.ir.BoundIr;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -100,13 +101,41 @@ public final class RulePolicy implements ProposalPolicy {
     return ActionSelection.of(legal.get(0), "rule_fallback");
   }
 
-  /** True when every IR-available index is in the access set and merge is chosen if needed. */
+  /**
+   * True when the access set covers every IR dimension (temporal/spatial/hash) and merge is
+   * chosen if needed. Alternative indexes in the same dimension (time vs xzt, z vs xz) do not
+   * all need to be present — requiring that made beams time out with only {@code P_FULL}.
+   */
   public static boolean accessComplete(SearchState state) {
     if (state == null || state.usedIndexes().isEmpty()) {
       return false;
     }
-    List<String> avail = LegalActionGenerator.availableIndexes(state.ir());
-    if (!state.usedIndexes().containsAll(avail)) {
+    BoundIr ir = state.ir();
+    if (ir.temporal != null) {
+      boolean t = false;
+      for (String idx : state.usedIndexes()) {
+        if (IndexId.isTemporal(idx)) {
+          t = true;
+          break;
+        }
+      }
+      if (!t) {
+        return false;
+      }
+    }
+    if (ir.spatial != null) {
+      boolean s = false;
+      for (String idx : state.usedIndexes()) {
+        if (IndexId.isSpatial(idx)) {
+          s = true;
+          break;
+        }
+      }
+      if (!s) {
+        return false;
+      }
+    }
+    if (kart.plan.PlanBuilder.vehicleEqPredicateIndex(ir) >= 0 && !state.uses(IndexId.HASH)) {
       return false;
     }
     return state.usedIndexes().size() < 2 || state.mergeImpl() != null;

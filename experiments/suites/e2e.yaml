@@ -1,13 +1,14 @@
 # E3 — end-to-end from gold BoundIR
 # trials: 3 is harness/smoke. Formal first-run: --cache cold --trials 1
 # Formal warm P50/P95: --cache warm --trials 5
-# Default = operating-region slice v3 (bound_ir_cmp_v3). Prior: bound_ir_advantage_v2.json.
-# BoundIR-65 remains regression / oracle-diff:
+# Default = frozen complex-level advantage set (bound_ir_complex_v1).
+# Run with KART_ADVANCED_INDEXES=0 (kart-env / Java default off).
+# Compat alias: bound_ir_cmp_v6.json. BoundIR-65 regression:
 #   --workload experiments/workloads/bound_ir_v1.json
 kind: compare
 id: e2e
-workload: experiments/workloads/bound_ir_cmp_v3.json
-oracle: experiments/workloads/bound_ir_cmp_v3.oracle.json
+workload: experiments/workloads/bound_ir_complex_v1.json
+oracle: experiments/workloads/bound_ir_complex_v1.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

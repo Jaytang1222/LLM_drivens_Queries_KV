@@ -61,6 +61,7 @@ experiments/third_party/din-sql/
 experiments/third_party/text-to-nosql/
 experiments/third_party/bao/
 experiments/third_party/llmopt/
+experiments/third_party/tman-spatial/
 
 # Bench run outputs (regenerated; keep only frozen HBase evidence in git)
 experiments/results/**

@@ -1,6 +1,7 @@
 package kart.cost;
 
 import kart.catalog.StatsSnapshot;
+import kart.codec.CodeRange;
 import kart.codec.TimeBucket;
 import kart.codec.VehicleHash;
 import kart.codec.ZOrder;
@@ -196,17 +197,41 @@ public final class CostFeaturesExtractor {
 
     long timeRows = 0L;
     long zRows = 0L;
+    long xztRows = 0L;
+    long xzRows = 0L;
+    long tsRows = 0L;
     long hashRows = 0L;
     long fullRows = 0L;
 
-    if (shape.hasTime && ir != null && ir.temporal != null) {
+    if (shape.usedXzt && ir != null && ir.temporal != null) {
+      SumResult sr = sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms);
+      xztRows = sr.sum;
+      timeRows = xztRows;
+      if (sr.missing) {
+        f.missingStats = true;
+      }
+    } else if (shape.hasTime && ir != null && ir.temporal != null) {
       SumResult sr = sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms);
       timeRows = sr.sum;
       if (sr.missing) {
         f.missingStats = true;
       }
     }
-    if (shape.hasZ && ir != null && ir.spatial != null) {
+    if (shape.usedXz && ir != null && ir.spatial != null) {
+      SumResult sr = sumXzPostings(ir.spatial);
+      xzRows = sr.sum;
+      zRows = xzRows;
+      if (sr.missing) {
+        f.missingStats = true;
+      }
+    } else if (shape.usedTshape && ir != null && ir.spatial != null) {
+      SumResult sr = sumTshapePostings(ir.spatial);
+      tsRows = sr.sum;
+      zRows = tsRows;
+      if (sr.missing) {
+        f.missingStats = true;
+      }
+    } else if (shape.hasZ && ir != null && ir.spatial != null) {
       SumResult sr = sumZPostings(ir.spatial);
       zRows = sr.sum;
       if (sr.missing) {
@@ -233,22 +258,22 @@ public final class CostFeaturesExtractor {
     if (shape.hasFull && !shape.hasTime && !shape.hasZ && !shape.hasHash) {
       cand = Math.max(1L, fullRows);
     } else if (shape.intersect && shape.hasTime && shape.hasZ && shape.hasHash) {
-      cand = estimateIntersectCandidates(ir, true, true, true);
+      cand = estimateIntersectCandidates(ir, shape, true, true, true);
     } else if (shape.intersect && shape.hasTime && shape.hasZ) {
-      cand = estimateIntersectCandidates(ir, true, true, false);
+      cand = estimateIntersectCandidates(ir, shape, true, true, false);
     } else if (shape.intersect && shape.hasTime && shape.hasHash) {
-      cand = estimateIntersectCandidates(ir, true, false, true);
+      cand = estimateIntersectCandidates(ir, shape, true, false, true);
     } else if (shape.intersect && shape.hasZ && shape.hasHash) {
-      cand = estimateIntersectCandidates(ir, false, true, true);
+      cand = estimateIntersectCandidates(ir, shape, false, true, true);
     } else if (shape.hasTime && !shape.hasZ && !shape.hasHash) {
-      cand = estimateSingleIndexCandidates(ir, true, false);
+      cand = estimateSingleIndexCandidates(ir, shape, true, false);
     } else if (shape.hasZ && !shape.hasTime && !shape.hasHash) {
-      cand = estimateSingleIndexCandidates(ir, false, true);
+      cand = estimateSingleIndexCandidates(ir, shape, false, true);
     } else if (shape.hasHash && !shape.hasTime && !shape.hasZ) {
       cand = Math.max(1L, hashRows);
     } else {
       // Remaining shapes (e.g. FULL+index): still use sample-consistent intersect when possible.
-      cand = estimateIntersectCandidates(ir, shape.hasTime, shape.hasZ, shape.hasHash);
+      cand = estimateIntersectCandidates(ir, shape, shape.hasTime, shape.hasZ, shape.hasHash);
       if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
         f.missingStats = true;
       }
@@ -316,8 +341,12 @@ public final class CostFeaturesExtractor {
       f.extras.put("scan_caching", Integer.valueOf(caching));
     }
 
-    f.extras.put("time_index_rows", Long.valueOf(timeRows));
-    f.extras.put("z_index_rows", Long.valueOf(zRows));
+    f.extras.put("time_index_rows", Long.valueOf(shape.usedXzt ? 0L : timeRows));
+    f.extras.put("z_index_rows", Long.valueOf(
+        (shape.usedXz || shape.usedTshape) ? 0L : zRows));
+    f.extras.put("xzt_index_rows", Long.valueOf(xztRows));
+    f.extras.put("xz_index_rows", Long.valueOf(xzRows));
+    f.extras.put("tshape_index_rows", Long.valueOf(tsRows));
     f.extras.put("hash_index_rows", Long.valueOf(hashRows));
     f.extras.put("access", shape.branches.toString());
   }
@@ -384,36 +413,55 @@ public final class CostFeaturesExtractor {
     return v;
   }
 
-  private long estimateIntersectCandidates(BoundIr ir) {
-    return estimateIntersectCandidates(ir, true, true, false);
-  }
-
-  private long estimateIntersectCandidates(BoundIr ir, boolean time, boolean z, boolean hash) {
+  private long estimateIntersectCandidates(BoundIr ir, AccessShape shape,
+                                           boolean time, boolean z, boolean hash) {
     if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
       // No consistent sample: do NOT use independence / geometric mean (§13.3).
       // Conservative upper bound = min(branch postings); caller marks missingStats.
       long min = Long.MAX_VALUE;
       if (time && ir != null && ir.temporal != null) {
-        min = Math.min(min, Math.max(1L,
-            sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms).sum));
+        long rows = shape != null && shape.usedXzt
+            ? sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms).sum
+            : sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms).sum;
+        min = Math.min(min, Math.max(1L, rows));
       }
       if (z && ir != null && ir.spatial != null) {
-        min = Math.min(min, Math.max(1L, sumZPostings(ir.spatial).sum));
+        long rows;
+        if (shape != null && shape.usedXz) {
+          rows = sumXzPostings(ir.spatial).sum;
+        } else if (shape != null && shape.usedTshape) {
+          rows = sumTshapePostings(ir.spatial).sum;
+        } else {
+          rows = sumZPostings(ir.spatial).sum;
+        }
+        min = Math.min(min, Math.max(1L, rows));
       }
       if (hash) {
         min = Math.min(min, Math.max(1L, sumHashPostings(ir).sum));
       }
       return min == Long.MAX_VALUE ? Math.max(1L, conservativeTotalPostings()) : min;
     }
-    Set<Long> timeBuckets = time ? timeBucketSet(ir) : null;
-    Set<Long> zCells = z ? zCellSet(ir) : null;
+    Set<Long> timeBuckets = time && (shape == null || !shape.usedXzt) ? timeBucketSet(ir) : null;
+    Set<Long> zCells = z && (shape == null || (!shape.usedXz && !shape.usedTshape))
+        ? zCellSet(ir) : null;
+    List<CodeRange> xztRanges = time && shape != null && shape.usedXzt && ir != null
+        && ir.temporal != null && layout != null
+        ? layout.xztCodec().rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms) : null;
+    List<CodeRange> xzRanges = z && shape != null && shape.usedXz && ir != null
+        && ir.spatial != null && layout != null
+        ? layout.xzSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
+            ir.spatial.max_x, ir.spatial.max_y) : null;
+    List<CodeRange> tsRanges = z && shape != null && shape.usedTshape && ir != null
+        && ir.spatial != null && layout != null
+        ? layout.tshapeSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
+            ir.spatial.max_x, ir.spatial.max_y) : null;
     String veh = hash ? vehicleEq(ir) : null;
     int hit = 0;
     for (StatsSnapshot.SampleChunk sc : stats.sample_chunks) {
-      if (time && !hitsTime(sc, timeBuckets, ir)) {
+      if (time && !hitsTemporalBranch(sc, timeBuckets, xztRanges, ir, shape)) {
         continue;
       }
-      if (z && !hitsZ(sc, zCells, ir)) {
+      if (z && !hitsSpatialBranch(sc, zCells, xzRanges, tsRanges, ir, shape)) {
         continue;
       }
       if (hash && !hitsVehicle(sc, veh)) {
@@ -428,26 +476,48 @@ public final class CostFeaturesExtractor {
     return Math.max(1L, (long) Math.ceil(hit / rate));
   }
 
-  private long estimateSingleIndexCandidates(BoundIr ir, boolean time, boolean z) {
+  private long estimateSingleIndexCandidates(BoundIr ir, AccessShape shape,
+                                             boolean time, boolean z) {
     if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
       if (time && ir != null && ir.temporal != null) {
+        if (shape != null && shape.usedXzt) {
+          return Math.max(1L, sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms).sum);
+        }
         return Math.max(1L, sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms).sum);
       }
       if (z && ir != null && ir.spatial != null) {
+        if (shape != null && shape.usedXz) {
+          return Math.max(1L, sumXzPostings(ir.spatial).sum);
+        }
+        if (shape != null && shape.usedTshape) {
+          return Math.max(1L, sumTshapePostings(ir.spatial).sum);
+        }
         return Math.max(1L, sumZPostings(ir.spatial).sum);
       }
       return conservativeTotalPostings();
     }
-    Set<Long> timeBuckets = time ? timeBucketSet(ir) : null;
-    Set<Long> zCells = z ? zCellSet(ir) : null;
+    Set<Long> timeBuckets = time && (shape == null || !shape.usedXzt) ? timeBucketSet(ir) : null;
+    Set<Long> zCells = z && (shape == null || (!shape.usedXz && !shape.usedTshape))
+        ? zCellSet(ir) : null;
+    List<CodeRange> xztRanges = time && shape != null && shape.usedXzt && ir != null
+        && ir.temporal != null && layout != null
+        ? layout.xztCodec().rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms) : null;
+    List<CodeRange> xzRanges = z && shape != null && shape.usedXz && ir != null
+        && ir.spatial != null && layout != null
+        ? layout.xzSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
+            ir.spatial.max_x, ir.spatial.max_y) : null;
+    List<CodeRange> tsRanges = z && shape != null && shape.usedTshape && ir != null
+        && ir.spatial != null && layout != null
+        ? layout.tshapeSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
+            ir.spatial.max_x, ir.spatial.max_y) : null;
     int hit = 0;
     for (StatsSnapshot.SampleChunk sc : stats.sample_chunks) {
       boolean ok = true;
       if (time) {
-        ok = hitsTime(sc, timeBuckets, ir);
+        ok = hitsTemporalBranch(sc, timeBuckets, xztRanges, ir, shape);
       }
       if (ok && z) {
-        ok = hitsZ(sc, zCells, ir);
+        ok = hitsSpatialBranch(sc, zCells, xzRanges, tsRanges, ir, shape);
       }
       if (ok) {
         hit++;
@@ -513,6 +583,48 @@ public final class CostFeaturesExtractor {
     }
     return sc.max_x >= ir.spatial.min_x && sc.min_x <= ir.spatial.max_x
         && sc.max_y >= ir.spatial.min_y && sc.min_y <= ir.spatial.max_y;
+  }
+
+  private static boolean hitsTemporalBranch(StatsSnapshot.SampleChunk sc, Set<Long> buckets,
+                                            List<CodeRange> xztRanges, BoundIr ir,
+                                            AccessShape shape) {
+    if (shape != null && shape.usedXzt) {
+      if (xztRanges != null && sc.xzt_code != null) {
+        return codeInRanges(sc.xzt_code.longValue(), xztRanges);
+      }
+      return hitsTime(sc, buckets, ir);
+    }
+    return hitsTime(sc, buckets, ir);
+  }
+
+  private static boolean hitsSpatialBranch(StatsSnapshot.SampleChunk sc, Set<Long> cells,
+                                           List<CodeRange> xzRanges, List<CodeRange> tsRanges,
+                                           BoundIr ir, AccessShape shape) {
+    if (shape != null && shape.usedXz) {
+      if (xzRanges != null && sc.xz_code != null) {
+        return codeInRanges(sc.xz_code.longValue(), xzRanges);
+      }
+      return hitsZ(sc, cells, ir);
+    }
+    if (shape != null && shape.usedTshape) {
+      if (tsRanges != null && sc.tshape_code != null) {
+        return codeInRanges(sc.tshape_code.longValue(), tsRanges);
+      }
+      return hitsZ(sc, cells, ir);
+    }
+    return hitsZ(sc, cells, ir);
+  }
+
+  private static boolean codeInRanges(long code, List<CodeRange> ranges) {
+    if (ranges == null) {
+      return false;
+    }
+    for (CodeRange r : ranges) {
+      if (r != null && code >= r.lo && code <= r.hi) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean hitsVehicle(StatsSnapshot.SampleChunk sc, String vehicleId) {
@@ -673,13 +785,76 @@ public final class CostFeaturesExtractor {
     return r;
   }
 
+  private SumResult sumXztPostings(long startMs, long endMs) {
+    if (layout == null || layout.xztCodec() == null) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    return sumCodeRangePostings(stats != null ? stats.xzt_code_posting_counts : null,
+        layout.xztCodec().rangesCovering(startMs, endMs));
+  }
+
+  private SumResult sumXzPostings(BoundIr.Spatial spatial) {
+    if (layout == null || layout.xzSfc() == null || spatial == null) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    return sumCodeRangePostings(stats != null ? stats.xz_code_posting_counts : null,
+        layout.xzSfc().ranges(spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+  }
+
+  private SumResult sumTshapePostings(BoundIr.Spatial spatial) {
+    if (layout == null || layout.tshapeSfc() == null || spatial == null) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    return sumCodeRangePostings(stats != null ? stats.tshape_code_posting_counts : null,
+        layout.tshapeSfc().ranges(spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+  }
+
+  private SumResult sumCodeRangePostings(Map<String, Long> counts, List<CodeRange> ranges) {
+    SumResult r = new SumResult();
+    if (ranges == null || ranges.isEmpty()) {
+      r.missing = true;
+      r.sum = Math.max(1L, conservativeTotalPostings());
+      return r;
+    }
+    if (counts == null || counts.isEmpty()) {
+      r.missing = true;
+      r.sum = Math.max(1L, (long) ranges.size() * 10_000L);
+      return r;
+    }
+    long maxKnown = maxMapValue(counts);
+    boolean any = false;
+    for (Map.Entry<String, Long> e : counts.entrySet()) {
+      if (e.getKey() == null || e.getValue() == null) {
+        continue;
+      }
+      long code;
+      try {
+        code = Long.parseLong(e.getKey());
+      } catch (NumberFormatException ex) {
+        continue;
+      }
+      if (codeInRanges(code, ranges)) {
+        r.sum += e.getValue().longValue();
+        any = true;
+      }
+    }
+    if (!any) {
+      r.missing = true;
+      r.sum = Math.max(1L, maxKnown);
+    }
+    return r;
+  }
+
   private long conservativeTotalPostings() {
     if (stats == null) {
       return 1_000_000L;
     }
     long t = sumMap(stats.time_bucket_posting_counts);
     long z = sumMap(stats.zorder_cell_posting_counts);
-    long v = Math.max(t, z);
+    long xz = sumMap(stats.xz_code_posting_counts);
+    long ts = sumMap(stats.tshape_code_posting_counts);
+    long xzt = sumMap(stats.xzt_code_posting_counts);
+    long v = Math.max(t, Math.max(z, Math.max(xz, Math.max(ts, xzt))));
     return v > 0 ? v : 1_000_000L;
   }
 
@@ -690,15 +865,33 @@ public final class CostFeaturesExtractor {
     AccessShape shape = accessShape(plan);
     long ranges = 0L;
     int shards = layout != null ? Math.max(1, layout.shardCount) : 4;
+    boolean usedXzt = shape.branches.contains("XZT");
+    boolean usedXz = shape.branches.contains("XZ");
+    boolean usedTs = shape.branches.contains("TSHAPE");
     if (shape.hasTime && ir != null && ir.temporal != null && layout != null) {
-      long[] buckets = TimeBucket.bucketsCovering(
-          ir.temporal.start_ms, ir.temporal.end_ms, layout.epochMs, layout.bucketMs);
-      ranges += (long) buckets.length * shards;
+      if (usedXzt) {
+        ranges += (long) layout.xztCodec()
+            .rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms).size() * shards;
+      } else {
+        long[] buckets = TimeBucket.bucketsCovering(
+            ir.temporal.start_ms, ir.temporal.end_ms, layout.epochMs, layout.bucketMs);
+        ranges += (long) buckets.length * shards;
+      }
     }
     if (shape.hasZ && ir != null && ir.spatial != null && layout != null) {
-      List<ZOrder.MortonRange> mr = new ZOrderIndexAdapter(layout).mortonRanges(
-          new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y));
-      ranges += (long) mr.size() * shards;
+      if (usedXz) {
+        ranges += (long) layout.xzSfc()
+            .ranges(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y)
+            .size() * shards;
+      } else if (usedTs) {
+        ranges += (long) layout.tshapeSfc()
+            .ranges(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y)
+            .size() * shards;
+      } else {
+        List<ZOrder.MortonRange> mr = new ZOrderIndexAdapter(layout).mortonRanges(
+            new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y));
+        ranges += (long) mr.size() * shards;
+      }
     }
     if (shape.hasHash) {
       ranges += shards;
@@ -786,9 +979,21 @@ public final class CostFeaturesExtractor {
       if (n.op == Op.TIME_RANGE_SCAN) {
         s.hasTime = true;
         s.branches.add("TIME");
+      } else if (n.op == Op.XZT_RANGE_SCAN) {
+        s.hasTime = true;
+        s.usedXzt = true;
+        s.branches.add("XZT");
       } else if (n.op == Op.ZORDER_RANGE_SCAN) {
         s.hasZ = true;
         s.branches.add("ZORDER");
+      } else if (n.op == Op.XZ_RANGE_SCAN) {
+        s.hasZ = true;
+        s.usedXz = true;
+        s.branches.add("XZ");
+      } else if (n.op == Op.TSHAPE_RANGE_SCAN) {
+        s.hasZ = true;
+        s.usedTshape = true;
+        s.branches.add("TSHAPE");
       } else if (n.op == Op.EQUALITY_LOOKUP) {
         s.hasHash = true;
         s.branches.add("HASH");
@@ -825,6 +1030,9 @@ public final class CostFeaturesExtractor {
     boolean hasHash;
     boolean hasFull;
     boolean intersect;
+    boolean usedXzt;
+    boolean usedXz;
+    boolean usedTshape;
     final List<String> branches = new ArrayList<String>();
   }
 

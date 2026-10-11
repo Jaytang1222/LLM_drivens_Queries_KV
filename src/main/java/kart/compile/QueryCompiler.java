@@ -38,6 +38,9 @@ public final class QueryCompiler {
 
     TimeIndexAdapter time = new TimeIndexAdapter(layout);
     ZOrderIndexAdapter zorder = new ZOrderIndexAdapter(layout);
+    XzIndexAdapter xz = new XzIndexAdapter(layout);
+    TShapeIndexAdapter tshape = new TShapeIndexAdapter(layout);
+    XztIndexAdapter xzt = new XztIndexAdapter(layout);
     HashIndexAdapter hash = new HashIndexAdapter(layout);
 
     for (PlanNode n : env.nodes) {
@@ -92,6 +95,45 @@ public final class QueryCompiler {
           phys.scanTasks.addAll(zorder.scanTasks(rect, n.id, maxRanges));
           break;
         }
+        case XZ_RANGE_SCAN: {
+          if (ir.spatial == null) {
+            throw new IllegalArgumentException("plan has XZ_RANGE_SCAN but IR has no spatial");
+          }
+          Rect xzRect = spatialRect(ir, n);
+          int xzMax = n.params != null && n.params.get("max_ranges") instanceof Number
+              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
+          phys.scanTasks.addAll(xz.scanTasks(xzRect, n.id, xzMax));
+          break;
+        }
+        case TSHAPE_RANGE_SCAN: {
+          if (ir.spatial == null) {
+            throw new IllegalArgumentException("plan has TSHAPE_RANGE_SCAN but IR has no spatial");
+          }
+          Rect tsRect = spatialRect(ir, n);
+          int tsMax = n.params != null && n.params.get("max_ranges") instanceof Number
+              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
+          phys.scanTasks.addAll(tshape.scanTasks(tsRect, n.id, tsMax));
+          break;
+        }
+        case XZT_RANGE_SCAN: {
+          if (ir.temporal == null) {
+            throw new IllegalArgumentException("plan has XZT_RANGE_SCAN but IR has no temporal");
+          }
+          long xztStart = ir.temporal.start_ms;
+          long xztEnd = ir.temporal.end_ms;
+          if (n.params != null) {
+            if (n.params.get("start_ms") instanceof Number) {
+              xztStart = ((Number) n.params.get("start_ms")).longValue();
+            }
+            if (n.params.get("end_ms") instanceof Number) {
+              xztEnd = ((Number) n.params.get("end_ms")).longValue();
+            }
+          }
+          int xztMax = n.params != null && n.params.get("max_ranges") instanceof Number
+              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
+          phys.scanTasks.addAll(xzt.scanTasks(xztStart, xztEnd, n.id, xztMax));
+          break;
+        }
         case EQUALITY_LOOKUP: {
           BoundIr.Predicate p = resolvePredicate(ir, n);
           phys.scanTasks.addAll(hash.scanTasks(p.value, n.id));
@@ -109,6 +151,28 @@ public final class QueryCompiler {
     phys.queryHash = sha256Hex(nullSafe(ir.query_id) + "|" + env.signature()
         + "|" + phys.layoutHash + "|" + COMPILER_VERSION);
     return phys;
+  }
+
+  private static Rect spatialRect(BoundIr ir, PlanNode n) {
+    double minX = ir.spatial.min_x;
+    double minY = ir.spatial.min_y;
+    double maxX = ir.spatial.max_x;
+    double maxY = ir.spatial.max_y;
+    if (n.params != null) {
+      if (n.params.get("min_x") instanceof Number) {
+        minX = ((Number) n.params.get("min_x")).doubleValue();
+      }
+      if (n.params.get("min_y") instanceof Number) {
+        minY = ((Number) n.params.get("min_y")).doubleValue();
+      }
+      if (n.params.get("max_x") instanceof Number) {
+        maxX = ((Number) n.params.get("max_x")).doubleValue();
+      }
+      if (n.params.get("max_y") instanceof Number) {
+        maxY = ((Number) n.params.get("max_y")).doubleValue();
+      }
+    }
+    return new Rect(minX, minY, maxX, maxY);
   }
 
   private void addFullScanTasks(PhysicalPlan phys, String nodeId) {

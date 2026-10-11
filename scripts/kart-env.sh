@@ -128,6 +128,19 @@ if [[ -z "${KART_ACTION_RULES:-}" && -f "$KART_ROOT/experiments/suites/dual_acti
   export KART_ACTION_RULES="$KART_ROOT/experiments/suites/dual_action_rules.json"
   export KART_ACTION_MODE="${KART_ACTION_MODE:-dual-rules}"
 fi
+# Classic beam (time/zorder/hash): keeps plan≪5s so dual-rules e2e is not drowned by XZT FastCost.
+# Always export (not only when rules file is present); Java defaults off when unset.
+export KART_ADVANCED_INDEXES="${KART_ADVANCED_INDEXES:-0}"
+# Formal gate (mining may set G1=-1e9); restore default when unset.
+export KART_ACTION_G1_MS="${KART_ACTION_G1_MS:-50}"
+# Prefer tracked config (full OLS coeffs incl. negative B_INDEX); results/ may be a stale clamp-to-0 copy.
+if [[ -z "${KART_ONLINE_BENEFIT_MODEL:-}" ]]; then
+  if [[ -f "$KART_ROOT/config/online_benefit_model_v5.json" ]]; then
+    export KART_ONLINE_BENEFIT_MODEL="$KART_ROOT/config/online_benefit_model_v5.json"
+  elif [[ -f "$KART_ROOT/experiments/results/online_benefit_model_v5.json" ]]; then
+    export KART_ONLINE_BENEFIT_MODEL="$KART_ROOT/experiments/results/online_benefit_model_v5.json"
+  fi
+fi
 
 kart_java() {
   kart_ensure_jar

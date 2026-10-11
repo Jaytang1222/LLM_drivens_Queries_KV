@@ -44,6 +44,9 @@ public final class SnapshotBuilder {
     public int chunkMaxPoints = 256;
     public long bucketMs = 600_000L;
     public int zorderLevel = 8;
+    public int xzLevel = 12;
+    public int tshapeMaxDepth = 12;
+    public int xztLevel = 12;
     public int maxZorderRanges = 64;
     /** {@code tdrive} (part-* MULTIPOINT) or {@code ais} (trajectories.txt). */
     public String format = "tdrive";
@@ -111,7 +114,19 @@ public final class SnapshotBuilder {
     layout.bucketMs = opt.bucketMs;
     layout.epochMs = epoch;
     layout.zorderLevel = opt.zorderLevel;
+    layout.xzLevel = opt.xzLevel;
+    layout.tshapeMaxDepth = opt.tshapeMaxDepth;
+    layout.xztLevel = opt.xztLevel;
     layout.domain = domain;
+    long dataMaxMs = epoch;
+    for (Trajectory t : withTid) {
+      if (t.size() > 0) {
+        dataMaxMs = Math.max(dataMaxMs, t.points().get(t.size() - 1).timestampMs);
+      }
+    }
+    // XZT axis = data span + 7d pad (10y default inflated SRQ holes).
+    layout.xztHorizonMs = dataMaxMs + 7L * 24L * 3600L * 1000L;
+    manifest.layout.xzt_horizon_ms = layout.xztHorizonMs;
     applyTableNames(layout, opt.tablePrefix);
 
     KvBackend kv;
@@ -126,6 +141,9 @@ public final class SnapshotBuilder {
       tables.put("time", layout.tableTime);
       tables.put("zorder", layout.tableZorder);
       tables.put("hash", layout.tableHash);
+      tables.put("xz", layout.tableXz);
+      tables.put("tshape", layout.tableTshape);
+      tables.put("xzt", layout.tableXzt);
       hbase.ensureTables(opt.shardCount, tables);
       kv = hbase;
     }
@@ -271,6 +289,9 @@ public final class SnapshotBuilder {
     m.layout.crs = opt.crs == null || opt.crs.trim().isEmpty()
         ? Projection.DEFAULT_CRS : opt.crs.trim();
     m.layout.hash_version = "murmur3_x64_128";
+    m.layout.xz_level = opt.xzLevel;
+    m.layout.tshape_max_depth = opt.tshapeMaxDepth;
+    m.layout.xzt_level = opt.xztLevel;
     m.layout.domain = new Manifest.Domain();
     m.layout.domain.xmin = domain.minX;
     m.layout.domain.xmax = domain.maxX;
@@ -281,6 +302,9 @@ public final class SnapshotBuilder {
     m.layout.tables.put("time", names.tableTime);
     m.layout.tables.put("zorder", names.tableZorder);
     m.layout.tables.put("hash", names.tableHash);
+    m.layout.tables.put("xz", names.tableXz);
+    m.layout.tables.put("tshape", names.tableTshape);
+    m.layout.tables.put("xzt", names.tableXzt);
     return m;
   }
 

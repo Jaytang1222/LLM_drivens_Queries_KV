@@ -1,13 +1,17 @@
 package kart.snapshot;
 
 import kart.catalog.StatsSnapshot;
+import kart.codec.TShapeSfc;
 import kart.codec.TimeBucket;
 import kart.codec.VehicleHash;
+import kart.codec.XzStarSfc;
+import kart.codec.XztCodec;
 import kart.codec.ZOrder;
 import kart.data.Chunk;
 import kart.data.Chunker;
 import kart.data.Trajectory;
 import kart.exec.ExactSTFilter;
+import kart.geo.Rect;
 import kart.ir.BoundIr;
 import org.apache.commons.codec.digest.MurmurHash3;
 
@@ -22,10 +26,22 @@ public final class StatsBuilder {
 
   private final IndexBuilders.LayoutParams layout;
   private final Chunker chunker;
+  private final XzStarSfc xzSfc;
+  private final TShapeSfc tshapeSfc;
+  private final XztCodec xztCodec;
 
   public StatsBuilder(IndexBuilders.LayoutParams layout) {
     this.layout = layout;
     this.chunker = new Chunker(256);
+    Rect d = layout.domain;
+    this.xzSfc = XzStarSfc.create((short) Math.max(1, layout.xzLevel),
+        d.minX, d.maxX, d.minY, d.maxY);
+    this.tshapeSfc = TShapeSfc.create((short) Math.max(1, layout.tshapeMaxDepth),
+        d.minX, d.maxX, d.minY, d.maxY);
+    long horizon = layout.xztHorizonMs > layout.epochMs
+        ? layout.xztHorizonMs
+        : layout.epochMs + 30L * 24L * 3600L * 1000L;
+    this.xztCodec = new XztCodec((short) Math.max(1, layout.xztLevel), layout.epochMs, horizon);
   }
 
   public StatsSnapshot build(String manifestId, List<Trajectory> trajectories) {
@@ -82,6 +98,21 @@ public final class StatsBuilder {
           s.vehicle_hash_posting_counts.put(hk, hc == null ? 1L : hc + 1);
         }
 
+        long xz = xzSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY, true);
+        String xzk = Long.toString(xz);
+        Long xzCnt = s.xz_code_posting_counts.get(xzk);
+        s.xz_code_posting_counts.put(xzk, xzCnt == null ? 1L : xzCnt + 1);
+
+        long ts = tshapeSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY);
+        String tsk = Long.toString(ts);
+        Long tsCnt = s.tshape_code_posting_counts.get(tsk);
+        s.tshape_code_posting_counts.put(tsk, tsCnt == null ? 1L : tsCnt + 1);
+
+        long xzt = xztCodec.indexInterval(c.tMinMs, c.tMaxMs);
+        String xztk = Long.toString(xzt);
+        Long xztCnt = s.xzt_code_posting_counts.get(xztk);
+        s.xzt_code_posting_counts.put(xztk, xztCnt == null ? 1L : xztCnt + 1);
+
         if (sample(t.tid, c.chunkId)) {
           StatsSnapshot.SampleChunk sc = new StatsSnapshot.SampleChunk();
           sc.tid = t.tid;
@@ -89,6 +120,9 @@ public final class StatsBuilder {
           sc.vehicle_id = t.vehicleId;
           sc.time_buckets = timeBuckets;
           sc.z_cells = zCells;
+          sc.xz_code = Long.valueOf(xz);
+          sc.tshape_code = Long.valueOf(ts);
+          sc.xzt_code = Long.valueOf(xzt);
           sc.t_min_ms = c.tMinMs;
           sc.t_max_ms = c.tMaxMs;
           sc.min_x = c.minX;
@@ -108,6 +142,9 @@ public final class StatsBuilder {
             + " samples=" + s.sample_chunks.size()
             + " time_buckets=" + s.time_bucket_posting_counts.size()
             + " z_cells=" + s.zorder_cell_posting_counts.size()
+            + " xz_codes=" + s.xz_code_posting_counts.size()
+            + " tshape_codes=" + s.tshape_code_posting_counts.size()
+            + " xzt_codes=" + s.xzt_code_posting_counts.size()
             + " elapsed_s=" + (elapsed / 1000)
             + " rate_traj_s=" + String.format("%.2f", rate)
             + " eta_s=" + etaSec);

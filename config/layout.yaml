@@ -2,6 +2,9 @@ shard_count: 4
 chunk_max_points: 256
 bucket_ms: 600000
 zorder_level: 8
+xz_level: 12
+tshape_max_depth: 12
+xzt_level: 12
 hash_version: murmur3_x64_128
 crs: EPSG:32650
 # domain filled by profile-data / fixture (meters in UTM 50N)

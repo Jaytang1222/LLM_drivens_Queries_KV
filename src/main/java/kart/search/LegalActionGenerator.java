@@ -35,7 +35,7 @@ public final class LegalActionGenerator {
           out.add(start(idx));
         }
       } else {
-        if (!state.uses(idx) && allowIntersect) {
+        if (!state.uses(idx) && allowIntersect && !dimensionConflict(state, idx)) {
           out.add(intersect(idx));
         }
         if (!(state.usedIndexes().size() == 1 && state.uses(idx))) {
@@ -55,11 +55,12 @@ public final class LegalActionGenerator {
 
     // System-proved partitions only (LLM cannot invent geometry).
     if (ir.temporal != null && state.partitionKind() == null
-        && (empty || state.uses(IndexId.TIME))) {
+        && (empty || state.uses(IndexId.TIME) || state.uses(IndexId.XZT))) {
       out.add(partitionUnion(SearchState.PARTITION_TIME_BIPART));
     }
     if (ir.spatial != null && state.partitionKind() == null
-        && (empty || state.uses(IndexId.ZORDER))) {
+        && (empty || state.uses(IndexId.ZORDER) || state.uses(IndexId.XZ)
+            || state.uses(IndexId.TSHAPE))) {
       out.add(partitionUnion(SearchState.PARTITION_Z_QUAD));
     }
 
@@ -71,18 +72,58 @@ public final class LegalActionGenerator {
     return out;
   }
 
+  /**
+   * @param advanced when false, omit XZT/XZ/TSHAPE (classic time/zorder/hash only). Used to keep
+   *     planning inside budget after advanced indexes inflated FastCost work per beam state.
+   */
   public static List<String> availableIndexes(BoundIr ir) {
+    return availableIndexes(ir, advancedIndexesEnabled());
+  }
+
+  public static List<String> availableIndexes(BoundIr ir, boolean advanced) {
     List<String> out = new ArrayList<String>();
     if (ir.temporal != null) {
       out.add(IndexId.TIME);
+      if (advanced) {
+        out.add(IndexId.XZT);
+      }
     }
     if (ir.spatial != null) {
       out.add(IndexId.ZORDER);
+      if (advanced) {
+        out.add(IndexId.XZ);
+        out.add(IndexId.TSHAPE);
+      }
     }
     if (PlanBuilder.vehicleEqPredicateIndex(ir) >= 0) {
       out.add(IndexId.HASH);
     }
     return out;
+  }
+
+  /**
+   * Advanced XZT/XZ/TSHAPE are off unless explicitly enabled. Matches {@code kart-env.sh}
+   * ({@code KART_ADVANCED_INDEXES:-0}); unset/empty must not re-enable them after a partial env.
+   */
+  public static boolean advancedIndexesEnabled() {
+    String v = System.getenv("KART_ADVANCED_INDEXES");
+    if (v == null || v.isEmpty()) {
+      return false;
+    }
+    v = v.trim().toLowerCase();
+    return v.equals("1") || v.equals("true") || v.equals("on") || v.equals("yes");
+  }
+
+  private static boolean dimensionConflict(SearchState state, String idx) {
+    for (String used : state.usedIndexes()) {
+      if (IndexId.isTemporal(used) && IndexId.isTemporal(idx) && !used.equals(idx)) {
+        return true;
+      }
+      if (IndexId.isSpatial(used) && IndexId.isSpatial(idx) && !used.equals(idx)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static LegalAction start(String indexId) {

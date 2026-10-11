@@ -6,6 +6,9 @@ package kart.plan;
 public enum Op {
   TIME_RANGE_SCAN,
   ZORDER_RANGE_SCAN,
+  XZ_RANGE_SCAN,
+  TSHAPE_RANGE_SCAN,
+  XZT_RANGE_SCAN,
   EQUALITY_LOOKUP,
   FULL_SCAN_CHUNKS,
   INTERSECT,
@@ -26,6 +29,9 @@ public enum Op {
     switch (this) {
       case TIME_RANGE_SCAN:
       case ZORDER_RANGE_SCAN:
+      case XZ_RANGE_SCAN:
+      case TSHAPE_RANGE_SCAN:
+      case XZT_RANGE_SCAN:
       case EQUALITY_LOOKUP:
       case INTERSECT:
       case UNION:
@@ -59,6 +65,9 @@ public enum Op {
     switch (this) {
       case TIME_RANGE_SCAN:
       case ZORDER_RANGE_SCAN:
+      case XZ_RANGE_SCAN:
+      case TSHAPE_RANGE_SCAN:
+      case XZT_RANGE_SCAN:
       case EQUALITY_LOOKUP:
       case FULL_SCAN_CHUNKS:
         return DataType.NONE;
@@ -88,6 +97,7 @@ public enum Op {
   /** True if the op is an index/table access leaf (no inputs). */
   public boolean isAccess() {
     return this == TIME_RANGE_SCAN || this == ZORDER_RANGE_SCAN
+        || this == XZ_RANGE_SCAN || this == TSHAPE_RANGE_SCAN || this == XZT_RANGE_SCAN
         || this == EQUALITY_LOOKUP || this == FULL_SCAN_CHUNKS;
   }
 

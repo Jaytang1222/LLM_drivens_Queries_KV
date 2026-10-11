@@ -66,6 +66,10 @@ public final class BuildStatsCmd implements Callable<Integer> {
     layout.bucketMs = m.layout.bucket_ms;
     layout.epochMs = m.layout.epoch_ms;
     layout.zorderLevel = m.layout.zorder_level;
+    layout.xzLevel = m.layout.xz_level > 0 ? m.layout.xz_level : 12;
+    layout.tshapeMaxDepth = m.layout.tshape_max_depth > 0 ? m.layout.tshape_max_depth : 12;
+    layout.xztLevel = m.layout.xzt_level > 0 ? m.layout.xzt_level : 12;
+    layout.xztHorizonMs = m.layout.xzt_horizon_ms;
     layout.domain = new Rect(m.layout.domain.xmin, m.layout.domain.ymin,
         m.layout.domain.xmax, m.layout.domain.ymax);
 

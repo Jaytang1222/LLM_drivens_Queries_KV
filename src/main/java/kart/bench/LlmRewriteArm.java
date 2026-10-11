@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import kart.codec.CodeRange;
 import kart.codec.ZOrder;
 import kart.compile.LayoutContext;
 import kart.compile.ZOrderIndexAdapter;
+import kart.search.IndexId;
 import kart.cost.BenefitCalibrator;
 import kart.cost.CostCard;
 import kart.cost.FastCost;
@@ -148,6 +150,10 @@ public final class LlmRewriteArm implements Arm {
     if ("no_online_llm".equals(key) || "no_online".equals(key) || key.startsWith("dual-offline")) {
       return "dual-offline-rules";
     }
+    if ("no_offline_llm".equals(key) || "no_offline_rules".equals(key)
+        || "dual-online-only".equals(key) || key.startsWith("dual-online")) {
+      return "dual-online-only";
+    }
     return s;
   }
 
@@ -220,18 +226,20 @@ public final class LlmRewriteArm implements Arm {
       return skip(x, "ablation_cbo_only", t0);
     }
     BenefitCalibrator cal = new BenefitCalibrator(Refine9ProposalArm.newFastCost(ctx), ctx.layout);
-    double cboEst = cal.predictExecMs(cal.estimate(env, ir));
+    kart.cost.CostCard cboCard = cal.estimate(env, ir);
+    // G1 is an absolute short-query gate: use FastCost ms. Benefit-model predictExecMs
+    // is relative (S_hat); with negative B_INDEX it can go below 0 and falsely skip.
+    double cboEst = cboCard != null && Double.isFinite(cboCard.estimated_ms) && cboCard.estimated_ms > 0
+        ? cboCard.estimated_ms : cal.predictExecMs(cboCard);
     x.put("gate_cbo_est_ms", finite(cboEst));
     x.put("g1_pass", Boolean.valueOf(cboEst >= g1Ms));
     if (!(cboEst >= g1Ms)) {
       return skip(x, "g1_short_query", t0);
     }
-    if (mode.startsWith("dual-offline") && "P_Z".equals(env.plan_id)) {
+    if (mode.startsWith("dual-offline") && kart.rewrite.DualRewritePolicy.spatialOnlyFamily(env.plan_id)) {
       boolean topK = ir.result != null && "TOP_K".equals(ir.result.mode);
       if (!topK && ir.spatial != null && ctx.layout != null) {
-        ZOrderIndexAdapter za = new ZOrderIndexAdapter(ctx.layout);
-        Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
-        int zr = za.mortonRanges(rect, ctx.layout.maxZorderRanges).size();
+        int zr = spatialRangeCount(env.plan_id, ir, ctx.layout);
         if (kart.rewrite.DualRewritePolicy.pzSparseOfflineSkip(false, zr)) {
           return skip(x, "offline_cheap_no_match", t0);
         }
@@ -365,8 +373,12 @@ public final class LlmRewriteArm implements Arm {
     x.put("memo_enabled", Boolean.FALSE);
     ArrayNode activeRules = kart.rewrite.DualRewritePolicy.scoped(rules, ctx.manifest);
     x.put("admitted_rule_count", Integer.valueOf(activeRules.size()));
-    RewriteProtocol.Program exact = kart.rewrite.DualRewritePolicy.exact(activeRules, c);
-    ArrayNode related = kart.rewrite.DualRewritePolicy.related(activeRules, c);
+    boolean onlineOnly = "dual-online-only".equals(mode);
+    // Leave-one-out of cloud-LLM offline rules: no exact/related/selectivityAccess apply.
+    RewriteProtocol.Program exact = onlineOnly ? null
+        : kart.rewrite.DualRewritePolicy.exact(activeRules, c);
+    ArrayNode related = onlineOnly ? MAPPER.createArrayNode()
+        : kart.rewrite.DualRewritePolicy.related(activeRules, c);
     x.put("related_rules", related);
     if (mode.startsWith("dual-offline")) {
       if (exact != null) {
@@ -382,8 +394,17 @@ public final class LlmRewriteArm implements Arm {
       }
       return skip(x, "offline_only_no_match", t0);
     }
-    RewriteProtocol.Program base = exact != null ? exact
-        : kart.rewrite.DualRewritePolicy.instantiateRelated(related, c);
+    RewriteProtocol.Program base = onlineOnly ? null
+        : (exact != null ? exact : kart.rewrite.DualRewritePolicy.instantiateRelated(related, c));
+    // Access rewrites from admitted offline rules are complete programs (force-mine atomic sets).
+    // Do not open an online residual that can drop them on LLM/proxy failure.
+    if (exact != null && exact.choice != null && !exact.isDefault(c)
+        && accessChanged(exact, c)) {
+      x.put("gate_decision", "OFFLINE_RULE");
+      x.put("offline_rule", exact.status);
+      x.put("residual_rule_count", Integer.valueOf(0));
+      return apply(ir, engine, cbo.selected.plan(), exact, "offline_llm_rule", c, x, t0);
+    }
     ArrayNode residual = kart.rewrite.DualRewritePolicy.oneOnlineResource(activeRules, c, base);
     ObjectNode schema = kart.rewrite.DualRewritePolicy.onlineSchema(c, residual, base);
     x.put("residual_rule_count", Integer.valueOf(residual.size()));
@@ -426,13 +447,21 @@ public final class LlmRewriteArm implements Arm {
     long begin = System.nanoTime();
     String raw = call(ctx.llm, msgs, schema, RewriteProtocol.options(budget, 48), budget, x);
     x.put("t_llm_ms", Long.valueOf(ms(System.nanoTime() - begin)));
-    if (raw == null) return cboFallback(x, "online_call_failed");
+    if (raw == null) {
+      if (base != null && base.choice != null && !base.isDefault(c)) {
+        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
+      }
+      return cboFallback(x, "online_call_failed");
+    }
     RewriteProtocol.Program p = kart.rewrite.DualRewritePolicy.parse(raw, c, residual, base);
     x.put("llm_program", p.choice);
     x.put("llm_parse_status", p.status);
     x.put("llm_differs_from_deterministic", Boolean.valueOf(p.choice != null && det.choice != null && !p.choice.equals(det.choice)));
     x.put("llm_differs_from_offline", Boolean.valueOf(base == null || base.choice == null || (p.choice != null && !p.choice.equals(base.choice))));
     if ("invalid_patch".equals(p.status) || "invalid_json".equals(p.status) || "invalid_combination".equals(p.status)) {
+      if (base != null && base.choice != null && !base.isDefault(c)) {
+        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
+      }
       return cboFallback(x, p.status);
     }
     if (p.choice == null || p.isDefault(c) || "online_keep".equals(p.status)) {
@@ -450,7 +479,7 @@ public final class LlmRewriteArm implements Arm {
   static ObjectNode cheapOfflineFeatures(BoundIr ir, PlanEnvelope env, BenefitCalibrator cal, LayoutContext layout) {
     ObjectNode f = MAPPER.createObjectNode();
     boolean topK = ir.result != null && "TOP_K".equals(ir.result.mode);
-    f.put("cbo_plan", env.plan_id);
+    putCboPlanFeatures(f, env.plan_id);
     if (ir.temporal != null) f.put("time_span_s", (ir.temporal.end_ms - ir.temporal.start_ms) / 1000L);
     if (ir.spatial != null) {
       f.put("rect_area_km2", round((ir.spatial.max_x - ir.spatial.min_x) * (ir.spatial.max_y - ir.spatial.min_y) / 1e6));
@@ -476,10 +505,12 @@ public final class LlmRewriteArm implements Arm {
     if (ir.temporal != null && ir.spatial != null) {
       CostCard tOnly = cal.estimate(PlanBuilder.buildForAccess(ir, true, false, false), ir);
       CostCard zOnly = cal.estimate(PlanBuilder.buildForAccess(ir, false, true, false), ir);
-      if (tOnly != null && first(env, Op.ZORDER_RANGE_SCAN) == null && !cards.containsKey("drop_spatial_branch")) {
+      if (tOnly != null && first(env, Op.ZORDER_RANGE_SCAN) == null && first(env, Op.XZ_RANGE_SCAN) == null
+          && first(env, Op.TSHAPE_RANGE_SCAN) == null && !cards.containsKey("drop_spatial_branch")) {
         cards.put("drop_spatial_branch", tOnly);
       }
-      if (zOnly != null && first(env, Op.TIME_RANGE_SCAN) == null && !cards.containsKey("drop_temporal_branch")) {
+      if (zOnly != null && first(env, Op.TIME_RANGE_SCAN) == null && first(env, Op.XZT_RANGE_SCAN) == null
+          && !cards.containsKey("drop_temporal_branch")) {
         cards.put("drop_temporal_branch", zOnly);
       }
     }
@@ -494,11 +525,7 @@ public final class LlmRewriteArm implements Arm {
       if (ch > 0) cmin = Double.isNaN(cmin) ? ch : Math.min(cmin, ch);
     }
     if (Double.isFinite(cmin)) f.put("chunks_min", round(cmin));
-    if (ir.spatial != null && layout != null) {
-      ZOrderIndexAdapter za = new ZOrderIndexAdapter(layout);
-      Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
-      f.put("z_ranges", za.mortonRanges(rect, layout.maxZorderRanges).size());
-    }
+    putSpatialRangeFeatures(f, ir, layout);
     if (topK && cboCard != null) {
       f.put("topk_work_ms", round(cboCard.l_hat_reconstruct + cboCard.l_hat_sim));
     }
@@ -514,7 +541,7 @@ public final class LlmRewriteArm implements Arm {
     double cboEst = cal.predictExecMs(cboCard);
     double fc = unitCost(1, "KART_ACTION_FETCH_MS_PER_BATCH", 13.3d) / 500.0d;
     double ic = unitCost(2, "KART_ACTION_INDEX_MS_PER_ROW", 0.00095d);
-    f.put("cbo_plan", env.plan_id);
+    putCboPlanFeatures(f, env.plan_id);
     f.put("cbo_est_ms", round(cboEst));
     f.put("has_temporal", ir.temporal != null);
     f.put("has_spatial", ir.spatial != null);
@@ -550,9 +577,11 @@ public final class LlmRewriteArm implements Arm {
       f.put("chunks_" + e.getKey(), round(feat(e.getValue(), "estimated_candidate_chunks")));
     }
     for (Map.Entry<String, String> b : branches.entrySet()) {
-      Op op = env.node(b.getValue()).op;
-      CostCard alone = cal.estimate(PlanBuilder.buildForAccess(ir,
-          op == Op.TIME_RANGE_SCAN, op == Op.ZORDER_RANGE_SCAN, op == Op.EQUALITY_LOOKUP), ir);
+      String idx = SafeRewriteBuilder.indexId(env.node(b.getValue()).op);
+      if (idx == null) {
+        continue;
+      }
+      CostCard alone = cal.estimate(PlanBuilder.buildForIndexes(ir, Collections.singletonList(idx), null, null), ir);
       f.put("idx_rows_" + b.getKey(), round(feat(alone, "estimated_index_rows")));
     }
     if (ir.temporal != null && ir.spatial != null) {
@@ -568,14 +597,19 @@ public final class LlmRewriteArm implements Arm {
         double d = cal.predictExecMs(tOnly) - cboEst;
         if (Double.isFinite(d)) {
           acc.put("drop_spatial_branch", round(d));
-          if (first(env, Op.ZORDER_RANGE_SCAN) == null) cards.put("drop_spatial_branch", tOnly);
+          if (first(env, Op.ZORDER_RANGE_SCAN) == null && first(env, Op.XZ_RANGE_SCAN) == null
+              && first(env, Op.TSHAPE_RANGE_SCAN) == null) {
+            cards.put("drop_spatial_branch", tOnly);
+          }
         }
       }
       if (!acc.has("drop_temporal_branch") && zOnly != null) {
         double d = cal.predictExecMs(zOnly) - cboEst;
         if (Double.isFinite(d)) {
           acc.put("drop_temporal_branch", round(d));
-          if (first(env, Op.TIME_RANGE_SCAN) == null) cards.put("drop_temporal_branch", zOnly);
+          if (first(env, Op.TIME_RANGE_SCAN) == null && first(env, Op.XZT_RANGE_SCAN) == null) {
+            cards.put("drop_temporal_branch", zOnly);
+          }
         }
       }
     }
@@ -606,12 +640,11 @@ public final class LlmRewriteArm implements Arm {
       }
     }
 
-    if (ir.spatial != null && layout != null && !f.has("z_ranges")) {
-      ZOrderIndexAdapter za = new ZOrderIndexAdapter(layout);
-      Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
-      f.put("z_ranges", za.mortonRanges(rect, layout.maxZorderRanges).size());
-    }
+    putSpatialRangeFeatures(f, ir, layout);
     PlanNode z = first(env, Op.ZORDER_RANGE_SCAN);
+    PlanNode xz = first(env, Op.XZ_RANGE_SCAN);
+    PlanNode ts = first(env, Op.TSHAPE_RANGE_SCAN);
+    PlanNode xzt = first(env, Op.XZT_RANGE_SCAN);
     if (z != null && ir.spatial != null && layout != null) {
       ZOrderIndexAdapter za = new ZOrderIndexAdapter(layout);
       Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
@@ -632,10 +665,48 @@ public final class LlmRewriteArm implements Arm {
         rb.put("r" + b, round(ic * rowsZ * (ratio - 1.0d) + env("KART_ACTION_SEEK_MS", 0.5d) * (rs.size() - r0.size())
             + (alone ? fc * cboChunks * (ratio - 1.0d) : 0.0d)));
       }
-      for (Map.Entry<String, String> b : branches.entrySet()) {
-        if (b.getValue().equals(z.id)) {
-          ((ObjectNode) c.path("slots").path("range_budget")).putArray("ignored_with").add("drop_" + b.getKey());
+      ignoreRangeBudgetWithDrop(c, branches, z.id);
+    } else if ((xz != null || ts != null) && ir.spatial != null && layout != null) {
+      Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
+      int d0 = layout.maxXzRanges;
+      List<CodeRange> full = xz != null
+          ? layout.xzSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY)
+          : layout.tshapeSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY);
+      int n0 = Math.min(full.size(), d0);
+      String aloneIdx = xz != null ? IndexId.XZ : IndexId.TSHAPE;
+      double rowsZ = feat(cal.estimate(PlanBuilder.buildForIndexes(ir, Collections.singletonList(aloneIdx), null, null), ir),
+          "estimated_index_rows");
+      boolean alone = first(env, Op.INTERSECT) == null;
+      ObjectNode rb = RewriteProtocol.addSlot(c, "range_budget", "r" + d0);
+      for (int b : new int[] {Math.max(1, d0 / 4), Math.min(4096, d0 * 4)}) {
+        if (b == d0) {
+          continue;
         }
+        int nb = Math.min(full.size(), b);
+        double ratio = nb / (double) Math.max(1, n0);
+        rb.put("r" + b, round(ic * rowsZ * (ratio - 1.0d) + env("KART_ACTION_SEEK_MS", 0.5d) * (nb - n0)
+            + (alone ? fc * cboChunks * (ratio - 1.0d) : 0.0d)));
+      }
+      ignoreRangeBudgetWithDrop(c, branches, (xz != null ? xz : ts).id);
+    } else if (xzt != null && ir.temporal != null && layout != null) {
+      int d0 = layout.maxXzRanges;
+      List<CodeRange> full = layout.xztCodec().rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms);
+      if (!full.isEmpty()) {
+        int n0 = Math.min(full.size(), d0);
+        double rowsT = feat(cal.estimate(PlanBuilder.buildForIndexes(ir, Collections.singletonList(IndexId.XZT), null, null), ir),
+            "estimated_index_rows");
+        boolean alone = first(env, Op.INTERSECT) == null;
+        ObjectNode rb = RewriteProtocol.addSlot(c, "range_budget", "r" + d0);
+        for (int b : new int[] {Math.max(1, d0 / 4), Math.min(4096, d0 * 4)}) {
+          if (b == d0) {
+            continue;
+          }
+          int nb = Math.min(full.size(), b);
+          double ratio = nb / (double) Math.max(1, n0);
+          rb.put("r" + b, round(ic * rowsT * (ratio - 1.0d) + env("KART_ACTION_SEEK_MS", 0.5d) * (nb - n0)
+              + (alone ? fc * cboChunks * (ratio - 1.0d) : 0.0d)));
+        }
+        ignoreRangeBudgetWithDrop(c, branches, xzt.id);
       }
     }
 
@@ -675,9 +746,9 @@ public final class LlmRewriteArm implements Arm {
         p = SafeRewriteBuilder.removeAccessBranch(p, branch, ir);
       } catch (SafeRewriteBuilder.Rejected e) {
         if ("spatial_branch".equals(branch) && ir.temporal != null) {
-          p = PlanBuilder.buildForAccess(ir, true, false, false);
+          p = buildKeeping(ir, env, true, false);
         } else if ("temporal_branch".equals(branch) && ir.spatial != null) {
-          p = PlanBuilder.buildForAccess(ir, false, true, false);
+          p = buildKeeping(ir, env, false, true);
         } else {
           throw e;
         }
@@ -687,8 +758,14 @@ public final class LlmRewriteArm implements Arm {
       p = SafeRewriteBuilder.withMetaProbe(p);
     }
     String r = prog.get("range_budget");
-    if (r != null && !r.equals(def.get("range_budget")) && first(p, Op.ZORDER_RANGE_SCAN) != null) {
-      p = SafeRewriteBuilder.withParam(p, Op.ZORDER_RANGE_SCAN, "max_ranges", Integer.valueOf(num(r)), "R" + num(r));
+    if (r != null && !r.equals(def.get("range_budget"))) {
+      Op rangeOp = first(p, Op.ZORDER_RANGE_SCAN) != null ? Op.ZORDER_RANGE_SCAN
+          : first(p, Op.XZ_RANGE_SCAN) != null ? Op.XZ_RANGE_SCAN
+          : first(p, Op.TSHAPE_RANGE_SCAN) != null ? Op.TSHAPE_RANGE_SCAN
+          : first(p, Op.XZT_RANGE_SCAN) != null ? Op.XZT_RANGE_SCAN : null;
+      if (rangeOp != null) {
+        p = SafeRewriteBuilder.withParam(p, rangeOp, "max_ranges", Integer.valueOf(num(r)), "R" + num(r));
+      }
     }
     String fb = prog.get("fetch_batch");
     if (fb != null && !fb.equals(def.get("fetch_batch"))) {
@@ -906,6 +983,15 @@ public final class LlmRewriteArm implements Arm {
     }
   }
 
+  /** True when the program changes the access slot away from the CBO default. */
+  private static boolean accessChanged(RewriteProtocol.Program p, JsonNode c) {
+    if (p == null || p.choice == null || c == null) return false;
+    String want = p.choice.get(RewriteProtocol.ACCESS);
+    if (want == null) return false;
+    String def = RewriteProtocol.defaults(c).choice.get(RewriteProtocol.ACCESS);
+    return def == null || !def.equals(want);
+  }
+
   private static RewriteProtocol.Program forced(JsonNode c) {
     Map<String, String> m = new TreeMap<String, String>(RewriteProtocol.defaults(c).choice);
     try {
@@ -1049,14 +1135,90 @@ public final class LlmRewriteArm implements Arm {
   }
 
   static JsonNode loadRules(String path) {
-    if (path == null || path.trim().isEmpty()) {
+    String p = path;
+    if (p == null || p.trim().isEmpty()) {
+      String root = System.getProperty("kart.root");
+      if (root != null && !root.isEmpty()) {
+        java.nio.file.Path def = Paths.get(root, "experiments/suites/dual_action_rules.json");
+        if (Files.isRegularFile(def)) {
+          p = def.toString();
+        }
+      }
+    }
+    if (p == null || p.trim().isEmpty()) {
       return null;
     }
     try {
-      JsonNode j = MAPPER.readTree(Paths.get(path).toFile());
+      JsonNode j = MAPPER.readTree(Paths.get(p).toFile());
       return j.has("rules") ? j.get("rules") : j;
     } catch (Exception e) {
-      throw new IllegalStateException("Invalid action rules: " + path, e);
+      throw new IllegalStateException("Invalid action rules: " + p, e);
+    }
+  }
+
+  private static void putCboPlanFeatures(ObjectNode f, String planId) {
+    f.put("cbo_plan", planId == null ? "" : planId);
+    f.put("cbo_plan_alias", kart.rewrite.DualRewritePolicy.aliasCboPlan(planId));
+  }
+
+  private static void putSpatialRangeFeatures(ObjectNode f, BoundIr ir, LayoutContext layout) {
+    if (ir == null || ir.spatial == null || layout == null) {
+      return;
+    }
+    Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
+    if (!f.has("z_ranges")) {
+      f.put("z_ranges", new ZOrderIndexAdapter(layout).mortonRanges(rect, layout.maxZorderRanges).size());
+    }
+    if (!f.has("xz_ranges")) {
+      f.put("xz_ranges", layout.xzSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY).size());
+    }
+    if (!f.has("tshape_ranges")) {
+      f.put("tshape_ranges", layout.tshapeSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY).size());
+    }
+  }
+
+  private static int spatialRangeCount(String planId, BoundIr ir, LayoutContext layout) {
+    if (ir == null || ir.spatial == null || layout == null) {
+      return -1;
+    }
+    Rect rect = new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y);
+    String core = planId == null ? "" : planId;
+    int under = core.indexOf('_', 2);
+    if (under > 0) {
+      core = core.substring(0, under);
+    }
+    if ("P_XZ".equals(core)) {
+      return layout.xzSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY).size();
+    }
+    if ("P_TS".equals(core)) {
+      return layout.tshapeSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY).size();
+    }
+    return new ZOrderIndexAdapter(layout).mortonRanges(rect, layout.maxZorderRanges).size();
+  }
+
+  private static PlanEnvelope buildKeeping(BoundIr ir, PlanEnvelope env, boolean keepTemporal, boolean keepSpatial) {
+    List<String> idxs = new ArrayList<String>();
+    for (PlanNode n : env.nodes) {
+      if (n.op == Op.TIME_RANGE_SCAN || n.op == Op.XZT_RANGE_SCAN) {
+        if (keepTemporal) {
+          idxs.add(SafeRewriteBuilder.indexId(n.op));
+        }
+      } else if (n.op == Op.ZORDER_RANGE_SCAN || n.op == Op.XZ_RANGE_SCAN || n.op == Op.TSHAPE_RANGE_SCAN) {
+        if (keepSpatial) {
+          idxs.add(SafeRewriteBuilder.indexId(n.op));
+        }
+      } else if (n.op == Op.EQUALITY_LOOKUP) {
+        idxs.add(IndexId.HASH);
+      }
+    }
+    return PlanBuilder.buildForIndexes(ir, idxs, null, null);
+  }
+
+  private static void ignoreRangeBudgetWithDrop(ObjectNode c, Map<String, String> branches, String nodeId) {
+    for (Map.Entry<String, String> b : branches.entrySet()) {
+      if (b.getValue().equals(nodeId)) {
+        ((ObjectNode) c.path("slots").path("range_budget")).putArray("ignored_with").add("drop_" + b.getKey());
+      }
     }
   }
 

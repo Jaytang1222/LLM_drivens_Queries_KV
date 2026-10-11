@@ -101,6 +101,9 @@ class IndexAndVerifyTest {
     kart.catalog.StatsSnapshot s = new StatsBuilder(layout).build("fixture_v1_ready", trajs);
     assertEquals("fixture_v1_ready", s.manifest_id);
     assertTrue(s.time_bucket_posting_counts.size() >= 1);
+    assertTrue(s.xz_code_posting_counts.size() >= 1);
+    assertTrue(s.tshape_code_posting_counts.size() >= 1);
+    assertTrue(s.xzt_code_posting_counts.size() >= 1);
   }
 
   private static void copyAll(MemoryBackend from, MemoryBackend to, String table) throws Exception {

@@ -193,16 +193,29 @@ experiments/results/<run_id>/
 | 文件 | 用于 | 内容 |
 |---|---|---|
 | `experiments/workloads/nl_ir_v2.json` | E1（默认） | 冻结 NL；金标来自 `bound_ir_cmp_v3` FullScan；含拒绝/澄清；`nl_ir_v1.json` 仅作历史 |
-| `experiments/workloads/bound_ir_cmp_v3.json` | E2、E3（默认） | 工作区 BoundIR：advantage_v2 ∪ CBO-opportunity ∪ dual `locked_td` ∪ `c3_*`；`bound_ir_v1` / `bound_ir_advantage_v2` 仍作回归 |
+| `experiments/workloads/bound_ir_simple_v1.json` | E2、E3 **简单层** | `eval_level=simple`；紧凑窗 + 与 `complex_v1` 不相交；目标 kart 不显著落后 CBO（lag≤1.15） |
+| `experiments/workloads/bound_ir_complex_v1.json` | E2、E3 **复杂层** | `eval_level=complex`；冻结的 kart≫cbo 优势集（c3 选择性族）；**禁止**经 `assemble_cmp_v6` 覆盖 |
+| `experiments/workloads/bound_ir_cmp_v3.json` | 历史 / 回归 | 旧 20 条混合切片；主表改走 simple/complex 分层 |
 | `experiments/workloads/*.oracle.json` | 正确性 | FullScan Oracle 缓存的轨迹 ID / Top-K 有序列表 |
 
-现有 smoke / docs 用例作为种子；正式实验前冻结版本号写入 meta。
+套件：`experiments/suites/e2e-simple.yaml` / `e2e.yaml`（complex）；`plan-simple.yaml` / `plan.yaml`。正式实验前冻结版本号与 `*.provenance.json` 写入 meta。
 
-### 4.2 分层建议
+### 4.2 查询复杂度分层（主）
+
+主表按 **`eval_level`** 分两层报告，**不得**把 simple 与 complex 混成单一 P50：
+
+| 层 | 工作负载 | n（约） | 入选准则 | 期望叙事 |
+|---|---|---|---|---|
+| `simple` | `bound_ir_simple_v1` | 28 | 排除 `c3_*` / `tz_hard` / `locked` / 过大 ST 窗；与 complex 不相交；cold 正式 `kart/cbo ≤ 1.25`，并剔除 offline/online 伤延迟与方差超标条目 | kart ≈ cbo（可略胜），差距可控 |
+| `complex` | `bound_ir_complex_v1` | 31 | cold：kart≫cbo（≥1.3×）且相对 fullscan/rbo 仍优；`ADVANCED_INDEXES=0` | kart 相对 cbo 大幅领先 |
+
+辅助切片（层内披露，不作第二主轴）：
 
 - 谓词：仅 T / 仅 Z / 仅 H / TZ / 组合 / Top-K（DTW 等）
-- 选择率：小窗 / 大窗
+- 选择率：小窗 / 大窗（complex 层以选择性变体为主）
 - E1 另含拒绝类（COUNT、连续路径、未知 metric、未注册地名等）
+
+组装入口：`admit_dual_rules.py --assemble-simple-v1`；矿池 `bound_ir_simple_mine` + `e2e-mine-simple.yaml`。
 
 ### 4.3 Oracle
 

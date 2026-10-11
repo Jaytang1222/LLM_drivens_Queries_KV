@@ -18,5 +18,11 @@
     "url": "https://github.com/lucifer12346/LLMOpt",
     "commit": "bdc3a3b0085f48cc7b4e61e3acd61098b9bf859f",
     "path": "experiments/third_party/llmopt"
+  },
+  "tman_spatial": {
+    "url": "file:///F:/Projects/TMan-spatial",
+    "commit": "2ee61fd3ff30655cdcdabe256c070c74a1167a5e",
+    "path": "experiments/third_party/tman-spatial",
+    "note": "Local copy for XZ*/TShape port; delete after rewrite. XZT reuses XZStarSFC on time embedding."
   }
 }

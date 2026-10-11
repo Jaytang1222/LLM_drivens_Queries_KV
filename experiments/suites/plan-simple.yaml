@@ -1,0 +1,15 @@
+# Simple-level plan stage. Complex stays on plan.yaml.
+kind: compare
+id: plan-simple
+workload: experiments/workloads/bound_ir_simple_v1.json
+oracle: experiments/workloads/bound_ir_simple_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - plan
+arms:
+  - kart
+  - cbo
+  - rbo
+  - fullscan

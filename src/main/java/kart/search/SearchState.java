@@ -168,10 +168,13 @@ public final class SearchState {
           throw new IllegalArgumentException("PARTITION_UNION requires system partition kind");
         }
         nextPart = action.partitionKind;
-        if (SearchState.PARTITION_TIME_BIPART.equals(nextPart) && !next.contains(IndexId.TIME)) {
+        if (SearchState.PARTITION_TIME_BIPART.equals(nextPart)
+            && !next.contains(IndexId.TIME) && !next.contains(IndexId.XZT)) {
           next.add(IndexId.TIME);
         }
-        if (SearchState.PARTITION_Z_QUAD.equals(nextPart) && !next.contains(IndexId.ZORDER)) {
+        if (SearchState.PARTITION_Z_QUAD.equals(nextPart)
+            && !next.contains(IndexId.ZORDER) && !next.contains(IndexId.XZ)
+            && !next.contains(IndexId.TSHAPE)) {
           next.add(IndexId.ZORDER);
         }
         break;
@@ -188,11 +191,8 @@ public final class SearchState {
    * (FINISH is illegal until {@link ActionKind#CHOOSE_MERGE}).
    */
   public PlanEnvelope completePlan() {
-    boolean t = usedIndexes.contains(IndexId.TIME);
-    boolean z = usedIndexes.contains(IndexId.ZORDER);
-    boolean h = usedIndexes.contains(IndexId.HASH);
     // Do not silently invent HASH_SET: pass null so PlanBuilder tags provisional_merge.
-    return PlanBuilder.buildForAccess(ir, t, z, h, mergeImpl, partitionKind);
+    return PlanBuilder.buildForIndexes(ir, usedIndexes, mergeImpl, partitionKind);
   }
 
   public double estimatedMsOrMax() {

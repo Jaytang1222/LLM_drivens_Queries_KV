@@ -1,0 +1,11 @@
+kind: compare
+id: e2e
+workload: experiments/workloads/bound_ir_dual_train_expand.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - e2e
+arms:
+  - kart
+  - cbo

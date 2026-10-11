@@ -53,6 +53,9 @@ public final class VerifySnapshotCmd implements Callable<Integer> {
     layout.bucketMs = m.layout.bucket_ms;
     layout.epochMs = m.layout.epoch_ms;
     layout.zorderLevel = m.layout.zorder_level;
+    layout.xzLevel = m.layout.xz_level > 0 ? m.layout.xz_level : 12;
+    layout.tshapeMaxDepth = m.layout.tshape_max_depth > 0 ? m.layout.tshape_max_depth : 12;
+    layout.xztLevel = m.layout.xzt_level > 0 ? m.layout.xzt_level : 12;
     layout.domain = new Rect(m.layout.domain.xmin, m.layout.domain.ymin,
         m.layout.domain.xmax, m.layout.domain.ymax);
     if (m.layout.tables != null) {
@@ -61,6 +64,9 @@ public final class VerifySnapshotCmd implements Callable<Integer> {
       if (m.layout.tables.containsKey("time")) layout.tableTime = m.layout.tables.get("time");
       if (m.layout.tables.containsKey("zorder")) layout.tableZorder = m.layout.tables.get("zorder");
       if (m.layout.tables.containsKey("hash")) layout.tableHash = m.layout.tables.get("hash");
+      if (m.layout.tables.containsKey("xz")) layout.tableXz = m.layout.tables.get("xz");
+      if (m.layout.tables.containsKey("tshape")) layout.tableTshape = m.layout.tables.get("tshape");
+      if (m.layout.tables.containsKey("xzt")) layout.tableXzt = m.layout.tables.get("xzt");
     }
 
     Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);

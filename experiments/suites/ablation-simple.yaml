@@ -1,0 +1,37 @@
+# Simple-level dual-rewrite leave-one-out. Complex stays on ablation.yaml.
+kind: ablation
+id: ablation-simple
+workload: experiments/workloads/bound_ir_simple_v1.json
+oracle: experiments/workloads/bound_ir_simple_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+base_arm: kart
+factors:
+  - id: cbo_only
+    enabled: true
+    overrides:
+      action_mode: cbo_only
+  - id: no_online_llm
+    enabled: true
+    overrides:
+      action_mode: dual-offline-rules
+  - id: no_offline_llm
+    enabled: true
+    overrides:
+      action_mode: dual-online-only
+  - id: no_fast_cost
+    enabled: true
+    overrides:
+      use_fast_cost: false
+  - id: no_final_cost
+    enabled: true
+    overrides:
+      final_select: plan_id
+  - id: no_coverage
+    enabled: true
+    unsafe: true
+    overrides:
+      skip_coverage_check: true

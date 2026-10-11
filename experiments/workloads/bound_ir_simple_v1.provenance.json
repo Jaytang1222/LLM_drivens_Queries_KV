@@ -1,0 +1,317 @@
+{
+  "path": "experiments/workloads/bound_ir_simple_v1.json",
+  "oracle_path": "experiments/workloads/bound_ir_simple_v1.oracle.json",
+  "evaluation_role": "simple_parity_eval_v1",
+  "eval_level": "simple",
+  "n_queries": 28,
+  "n_oracle": 28,
+  "ids": [
+    "st_ls_2",
+    "st_ls_1",
+    "t_grid_2",
+    "t_mid_1",
+    "topk_s_1",
+    "t_small_1",
+    "t_shift_1h",
+    "empty_far_1",
+    "h2_h_easy_a",
+    "h_eq_1",
+    "h_eq_2",
+    "s_pad_3",
+    "h2_t_easy_b",
+    "t_grid_4",
+    "t_mid_2",
+    "s_mid_2",
+    "a2_zh_unc_b",
+    "t_grid_1",
+    "s_small_2",
+    "topk_s_k5",
+    "h_t_mid",
+    "h_s_2",
+    "s_small_1",
+    "a2_zh_unc_a",
+    "empty_far_4",
+    "h_s_small",
+    "h_t_large",
+    "h_t_small"
+  ],
+  "oracle_status": "frozen",
+  "frozen": true,
+  "freeze_note": "Canonical simple-level set after campus formal2 cold. Disjoint from complex_v1. Dropped variance outliers s_pad_1/t_grid_3.",
+  "criteria": "formal2 cold kart/cbo lag<=1.25; ban offline/online-hurt",
+  "max_lag": 1.25,
+  "measured_lag_p50": 1.01325,
+  "p50": {
+    "kart": 68.0,
+    "cbo": 71.5,
+    "fullscan": 456.5,
+    "rbo": 179.5
+  },
+  "kart_over_cbo_p50": 0.951048951048951,
+  "per_query": {
+    "st_ls_2": {
+      "kart": 73.0,
+      "cbo": 259.0,
+      "lag": 0.2819,
+      "ratio": 3.5479,
+      "gate": "OFFLINE_RULE",
+      "fs": 298.0,
+      "rbo": 199.0
+    },
+    "st_ls_1": {
+      "kart": 70.0,
+      "cbo": 217.0,
+      "lag": 0.3226,
+      "ratio": 3.1,
+      "gate": "OFFLINE_RULE",
+      "fs": 333.0,
+      "rbo": 180.0
+    },
+    "t_grid_2": {
+      "kart": 176.0,
+      "cbo": 208.0,
+      "lag": 0.8462,
+      "ratio": 1.1818,
+      "gate": "SKIP",
+      "fs": 418.0,
+      "rbo": 179.0
+    },
+    "t_mid_1": {
+      "kart": 409.0,
+      "cbo": 448.0,
+      "lag": 0.9129,
+      "ratio": 1.0954,
+      "gate": "SKIP",
+      "fs": 614.0,
+      "rbo": 414.0
+    },
+    "topk_s_1": {
+      "kart": 92.0,
+      "cbo": 100.0,
+      "lag": 0.92,
+      "ratio": 1.087,
+      "gate": "SKIP",
+      "fs": 335.0,
+      "rbo": 83.0
+    },
+    "t_small_1": {
+      "kart": 197.0,
+      "cbo": 201.0,
+      "lag": 0.9801,
+      "ratio": 1.0203,
+      "gate": "SKIP",
+      "fs": 468.0,
+      "rbo": 202.0
+    },
+    "t_shift_1h": {
+      "kart": 191.0,
+      "cbo": 194.0,
+      "lag": 0.9845,
+      "ratio": 1.0157,
+      "gate": "SKIP",
+      "fs": 429.0,
+      "rbo": 192.0
+    },
+    "empty_far_1": {
+      "kart": 5.0,
+      "cbo": 5.0,
+      "lag": 1.0,
+      "ratio": 1.0,
+      "gate": "SKIP",
+      "fs": 323.0,
+      "rbo": 2.0
+    },
+    "h2_h_easy_a": {
+      "kart": 8.0,
+      "cbo": 8.0,
+      "lag": 1.0,
+      "ratio": 1.0,
+      "gate": "SKIP",
+      "fs": 4943.0,
+      "rbo": 7.0
+    },
+    "h_eq_1": {
+      "kart": 9.0,
+      "cbo": 9.0,
+      "lag": 1.0,
+      "ratio": 1.0,
+      "gate": "SKIP",
+      "fs": 4943.0,
+      "rbo": 7.0
+    },
+    "h_eq_2": {
+      "kart": 8.0,
+      "cbo": 8.0,
+      "lag": 1.0,
+      "ratio": 1.0,
+      "gate": "SKIP",
+      "fs": 4967.0,
+      "rbo": 7.0
+    },
+    "s_pad_3": {
+      "kart": 189.0,
+      "cbo": 189.0,
+      "lag": 1.0,
+      "ratio": 1.0,
+      "gate": "SKIP",
+      "fs": 399.0,
+      "rbo": 151.0
+    },
+    "h2_t_easy_b": {
+      "kart": 190.0,
+      "cbo": 189.0,
+      "lag": 1.0053,
+      "ratio": 0.9947,
+      "gate": "SKIP",
+      "fs": 452.0,
+      "rbo": 194.0
+    },
+    "t_grid_4": {
+      "kart": 151.0,
+      "cbo": 150.0,
+      "lag": 1.0067,
+      "ratio": 0.9934,
+      "gate": "SKIP",
+      "fs": 427.0,
+      "rbo": 182.0
+    },
+    "t_mid_2": {
+      "kart": 412.0,
+      "cbo": 404.0,
+      "lag": 1.0198,
+      "ratio": 0.9806,
+      "gate": "SKIP",
+      "fs": 611.0,
+      "rbo": 398.0
+    },
+    "s_mid_2": {
+      "kart": 89.0,
+      "cbo": 85.0,
+      "lag": 1.0471,
+      "ratio": 0.9551,
+      "gate": "SKIP",
+      "fs": 335.0,
+      "rbo": 86.0
+    },
+    "a2_zh_unc_b": {
+      "kart": 17.0,
+      "cbo": 16.0,
+      "lag": 1.0625,
+      "ratio": 0.9412,
+      "gate": "SKIP",
+      "fs": 4976.0,
+      "rbo": 240.0
+    },
+    "t_grid_1": {
+      "kart": 230.0,
+      "cbo": 216.0,
+      "lag": 1.0648,
+      "ratio": 0.9391,
+      "gate": "SKIP",
+      "fs": 461.0,
+      "rbo": 183.0
+    },
+    "s_small_2": {
+      "kart": 49.0,
+      "cbo": 46.0,
+      "lag": 1.0652,
+      "ratio": 0.9388,
+      "gate": "SKIP",
+      "fs": 302.0,
+      "rbo": 40.0
+    },
+    "topk_s_k5": {
+      "kart": 91.0,
+      "cbo": 85.0,
+      "lag": 1.0706,
+      "ratio": 0.9341,
+      "gate": "SKIP",
+      "fs": 338.0,
+      "rbo": 81.0
+    },
+    "h_t_mid": {
+      "kart": 10.0,
+      "cbo": 9.0,
+      "lag": 1.1111,
+      "ratio": 0.9,
+      "gate": "SKIP",
+      "fs": 5018.0,
+      "rbo": 426.0
+    },
+    "h_s_2": {
+      "kart": 18.0,
+      "cbo": 16.0,
+      "lag": 1.125,
+      "ratio": 0.8889,
+      "gate": "SKIP",
+      "fs": 4943.0,
+      "rbo": 174.0
+    },
+    "s_small_1": {
+      "kart": 66.0,
+      "cbo": 58.0,
+      "lag": 1.1379,
+      "ratio": 0.8788,
+      "gate": "SKIP",
+      "fs": 316.0,
+      "rbo": 55.0
+    },
+    "a2_zh_unc_a": {
+      "kart": 23.0,
+      "cbo": 20.0,
+      "lag": 1.15,
+      "ratio": 0.8696,
+      "gate": "SKIP",
+      "fs": 4988.0,
+      "rbo": 198.0
+    },
+    "empty_far_4": {
+      "kart": 6.0,
+      "cbo": 5.0,
+      "lag": 1.2,
+      "ratio": 0.8333,
+      "gate": "SKIP",
+      "fs": 290.0,
+      "rbo": 2.0
+    },
+    "h_s_small": {
+      "kart": 18.0,
+      "cbo": 15.0,
+      "lag": 1.2,
+      "ratio": 0.8333,
+      "gate": "SKIP",
+      "fs": 4965.0,
+      "rbo": 175.0
+    },
+    "h_t_large": {
+      "kart": 12.0,
+      "cbo": 10.0,
+      "lag": 1.2,
+      "ratio": 0.8333,
+      "gate": "SKIP",
+      "fs": 4889.0,
+      "rbo": 1378.0
+    },
+    "h_t_small": {
+      "kart": 11.0,
+      "cbo": 9.0,
+      "lag": 1.2222,
+      "ratio": 0.8182,
+      "gate": "SKIP",
+      "fs": 4933.0,
+      "rbo": 198.0
+    }
+  },
+  "formal_ref": "simple-formal2-cold-20261011-114314",
+  "cold_status": "formal_ok",
+  "n_measured": 28,
+  "n_structural_pad": 0,
+  "dropped_variance": [
+    "s_pad_1",
+    "t_grid_3"
+  ],
+  "sibling_complex": "experiments/workloads/bound_ir_complex_v1.json",
+  "generator": "reselect_after_formal2",
+  "sha256": "c3059fcee9fac2e536929bdf36e35212dc4a1b9f8afe7428d6b26d7f723b272c",
+  "oracle_sha256": "5567ab416dbe873acaf45a87a689c0fd50be14ea1a2d2075d4cc08a9ef8887ef"
+}

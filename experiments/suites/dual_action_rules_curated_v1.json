@@ -1,0 +1,1460 @@
+{
+  "version": "dual_rule_admission_v1",
+  "origin_model": "deepseek-v4-pro",
+  "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+  "training_queries": [
+    "a2_th_unc_a",
+    "a2_th_unc_b",
+    "a2_topk_dtw_k3",
+    "a2_topk_dtw_k7",
+    "a2_topk_dtw_wide",
+    "a2_topk_frechet_k3",
+    "a2_topk_frechet_k7",
+    "a2_topk_haus_k3",
+    "a2_topk_haus_k5",
+    "a2_tz_hard_b",
+    "a2_tz_hard_c",
+    "a2_tz_hard_e",
+    "a2_tz_hard_f",
+    "a2_tz_hard_g",
+    "a2_tz_hard_h",
+    "h2_t_easy_a",
+    "topk_st_3",
+    "wj_hst4_wide3x_pad5k",
+    "wj_joint_tzhard_topk_k12_wide2x",
+    "wj_joint_tzhard_topk_k8",
+    "wj_stll_wide2x_pad6k",
+    "wj_topk_dtw_k10_pad2k",
+    "wj_topk_dtw_k15_pad4k",
+    "wj_topk_dtw_k20_wide2x",
+    "wj_topk_dtw_k7_wide4x",
+    "wj_topk_dtw_pad8k_k12",
+    "wj_topk_dtw_wide3x_pad5k",
+    "wj_topk_frechet_k12_pad3k",
+    "wj_topk_frechet_wide2x_k15",
+    "wj_topk_haus_k10_wide2x",
+    "wj_topk_haus_k15_pad5k",
+    "wj_tz_a_wide3x_pad4k",
+    "wj_tz_wide2x_pad3k",
+    "wj_tz_wide4x_pad5k",
+    "wj_tzhg_wide2x_pad4k"
+  ],
+  "rules": [
+    {
+      "id": "adm_p_xztz_5196a129",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTXZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          9000
+        ],
+        [
+          "z_ranges",
+          ">=",
+          64
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch",
+        "fetch_batch": "b2000",
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 1469,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 1082,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 1553,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k8",
+          "saving_ms": 1249,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_d7ed9154",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          16
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 1606,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 1706,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 1915,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 242,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k15_pad5k",
+          "saving_ms": 125,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_z_3ad90986",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_Z"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          14600
+        ],
+        [
+          "z_ranges",
+          ">=",
+          64
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide4x_pad5k",
+          "saving_ms": 2582,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k8",
+          "saving_ms": 1604,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k12_wide2x",
+          "saving_ms": 1819,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_3b944249",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          16
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch",
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 1701,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 1707,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 2035,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 234,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k15_pad5k",
+          "saving_ms": 134,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_8d382c12",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch",
+        "fetch_batch": "b2000",
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "topk_st_3",
+          "saving_ms": 62,
+          "trials": 1
+        },
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 9,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k20_wide2x",
+          "saving_ms": 68,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 214,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_7b78eb42",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          16
+        ]
+      ],
+      "set": {
+        "access": "drop_spatial_branch",
+        "fetch_batch": "b2000",
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 1651,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 1714,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 1959,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 265,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k15_pad5k",
+          "saving_ms": 144,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_46ae195f",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000",
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "topk_st_frechet_1",
+          "saving_ms": 14,
+          "trials": 1
+        },
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 18,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k20_wide2x",
+          "saving_ms": 13,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 156,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k10_wide2x",
+          "saving_ms": 14,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_da9cbbc6",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          36
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000",
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 280,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 340,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 30,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_h_c1c60678",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_H"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          24
+        ],
+        [
+          "z_ranges",
+          ">=",
+          28
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "a2_tzh_b",
+          "saving_ms": 45,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_f",
+          "saving_ms": 8,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_h",
+          "saving_ms": 15,
+          "trials": 1
+        },
+        {
+          "query_id": "h2_tzh_a",
+          "saving_ms": 10,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_122116b9",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          36
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 248,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 236,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 103,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 27,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_z_58f26ffa",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_Z"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          14600
+        ],
+        [
+          "z_ranges",
+          ">=",
+          64
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide4x_pad5k",
+          "saving_ms": 186,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k8",
+          "saving_ms": 325,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k12_wide2x",
+          "saving_ms": 515,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_519f4a10",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ]
+      ],
+      "set": {
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 13,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_topk_frechet_wide",
+          "saving_ms": 22,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k20_wide2x",
+          "saving_ms": 24,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 122,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k10_wide2x",
+          "saving_ms": 14,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_cb97dc22",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ],
+        [
+          "metric",
+          "==",
+          "FRECHET"
+        ]
+      ],
+      "set": {
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 14,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_topk_frechet_wide",
+          "saving_ms": 19,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 54,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_h_9c411dbd",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_H"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          24
+        ],
+        [
+          "z_ranges",
+          ">=",
+          28
+        ]
+      ],
+      "set": {
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/tdrive",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1201930200000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1203068359000,
+          "domain": {
+            "xmin": 368126.04280156386,
+            "xmax": 572312.212152737,
+            "ymin": 4321415.863787895,
+            "ymax": 4563988.491498032
+          },
+          "crs": "EPSG:32650",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_v1",
+            "xzt": "idx_xzt_v1",
+            "zorder": "idx_zorder_v1",
+            "meta": "traj_meta_v1",
+            "raw": "traj_raw_v1",
+            "tshape": "idx_tshape_v1",
+            "time": "idx_time_v1",
+            "hash": "idx_hash_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "a2_tzh_b",
+          "saving_ms": 24,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_h",
+          "saving_ms": 12,
+          "trials": 1
+        },
+        {
+          "query_id": "h2_tzh_a",
+          "saving_ms": 8,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    }
+  ],
+  "audit": [
+    {
+      "id": "pz_range_budget_r256",
+      "accepted": true,
+      "support": 3,
+      "failures": []
+    },
+    {
+      "id": "ptz_large_fetch_batch",
+      "accepted": true,
+      "support": 4,
+      "failures": []
+    },
+    {
+      "id": "ptz_fetch_batch_chunks_gt_1000",
+      "accepted": true,
+      "support": 4,
+      "failures": []
+    },
+    {
+      "id": "ptz_drop_spatial_branch",
+      "accepted": true,
+      "support": 11,
+      "failures": []
+    },
+    {
+      "id": "ptz_drop_temporal_branch",
+      "accepted": true,
+      "support": 4,
+      "failures": []
+    }
+  ],
+  "ignored_nontraining_queries": [
+    "wj_tz_wide4x_pad5k"
+  ],
+  "limitations": [
+    "historical development evidence, not unseen generalization",
+    "scope bound to supplied manifest; source measurement identity must be checked separately",
+    "offline proposal generation reused; no new LLM call made by admission"
+  ],
+  "inputs_sha256": {
+    "docs/dual_llm_local/proposal_v4.json": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+    "catalog/tdrive_v1_ready.manifest.json": "7e552787e770ee636488357183f2336218981264ba68694cce55697eb8baf479",
+    "docs/llm_action_results/labels_train_td.jsonl": "cede7a6b228df5592a232b4acaf9f5e18b203d9b39fbabc8c392c68528d0cefc",
+    "docs/llm_action_results/labels_train2_td.jsonl": "634ccf9a30f8dc07c65336a5fd18fc84f3e4cd8c842a7b9714d2a516d33000a3"
+  },
+  "origin_note": "force-mine-div-20261010 curated; legacy baseline rules excluded to avoid harmful merges; pruned toxic lb8/drop_temporal_b2000"
+}

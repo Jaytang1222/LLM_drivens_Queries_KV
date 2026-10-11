@@ -1,0 +1,15 @@
+# Simple-level four-arm e2e (eval_level=simple). Complex stays on e2e.yaml.
+kind: compare
+id: e2e-simple
+workload: experiments/workloads/bound_ir_simple_v1.json
+oracle: experiments/workloads/bound_ir_simple_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 3
+stages:
+  - e2e
+arms:
+  - kart
+  - cbo
+  - rbo
+  - fullscan

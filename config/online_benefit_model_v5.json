@@ -1,0 +1,13 @@
+{
+  "basis": "log",
+  "intercept": 8510.187833470982,
+  "coefficients": [
+    1467.6681693792473,
+    1334.5100786749897,
+    -1413.5091024470607
+  ],
+  "margin_ms": 772.4609482613014,
+  "training_queries": 20,
+  "version": "calib_loglin_v5",
+  "note": "Matches BenefitCalibrator B0/B_RANGES/B_FETCH/B_INDEX; intercept needed for absolute G1 gate"
+}

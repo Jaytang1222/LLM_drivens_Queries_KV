@@ -37,6 +37,9 @@ public final class FixtureBuilder {
   public static final String TABLE_TIME = "fixture_idx_time_v1";
   public static final String TABLE_ZORDER = "fixture_idx_zorder_v1";
   public static final String TABLE_HASH = "fixture_idx_hash_v1";
+  public static final String TABLE_XZ = "fixture_idx_xz_v1";
+  public static final String TABLE_TSHAPE = "fixture_idx_tshape_v1";
+  public static final String TABLE_XZT = "fixture_idx_xzt_v1";
   public static final int SHARD_COUNT = 4;
 
   /** 2008-02-02 08:00:00 Asia/Shanghai as epoch millis. */
@@ -132,6 +135,9 @@ public final class FixtureBuilder {
     m.layout.bucket_ms = 600_000L;
     m.layout.epoch_ms = T0;
     m.layout.zorder_level = 8;
+    m.layout.xz_level = 12;
+    m.layout.tshape_max_depth = 12;
+    m.layout.xzt_level = 12;
     m.layout.crs = "EPSG:32650";
     m.layout.hash_version = "murmur3_x64_128";
     m.layout.domain = new Manifest.Domain();
@@ -144,6 +150,9 @@ public final class FixtureBuilder {
     m.layout.tables.put("time", TABLE_TIME);
     m.layout.tables.put("zorder", TABLE_ZORDER);
     m.layout.tables.put("hash", TABLE_HASH);
+    m.layout.tables.put("xz", TABLE_XZ);
+    m.layout.tables.put("tshape", TABLE_TSHAPE);
+    m.layout.tables.put("xzt", TABLE_XZT);
     m.build_report = new Manifest.BuildReport();
     m.build_report.trajectories = 4;
     m.build_report.points = 11;
@@ -163,6 +172,9 @@ public final class FixtureBuilder {
     lp.tableTime = TABLE_TIME;
     lp.tableZorder = TABLE_ZORDER;
     lp.tableHash = TABLE_HASH;
+    lp.tableXz = TABLE_XZ;
+    lp.tableTshape = TABLE_TSHAPE;
+    lp.tableXzt = TABLE_XZT;
     return lp;
   }
 
@@ -173,6 +185,9 @@ public final class FixtureBuilder {
     tables.put("time", TABLE_TIME);
     tables.put("zorder", TABLE_ZORDER);
     tables.put("hash", TABLE_HASH);
+    tables.put("xz", TABLE_XZ);
+    tables.put("tshape", TABLE_TSHAPE);
+    tables.put("xzt", TABLE_XZT);
     return tables;
   }
 

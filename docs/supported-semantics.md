@@ -30,6 +30,6 @@ COUNT / 聚合、连续路径、连续 Fréchet、Quadtree、CD-Taxi、未注册
 
 ## Indexes
 
-`idx_time` / `idx_zorder` / `idx_hash` + `P_FULL`。覆盖硬约束；代价只排 SafePlan。
+`idx_time` / `idx_zorder` / `idx_hash` + 先进索引 `idx_xz`（XZ\*）/ `idx_tshape`（TShape）/ `idx_xzt`（XZT-style）+ `P_FULL`。同维互斥（TIME↔XZT，ZORDER↔XZ↔TSHAPE）。覆盖硬约束；代价只排 SafePlan。
 
 验证用例：[`easy_query_example.md`](easy_query_example.md)、[`hard_query_example.md`](hard_query_example.md)。

@@ -604,6 +604,139 @@ public final class PlanValidator {
           }
           break;
         }
+        case XZ_RANGE_SCAN:
+        case TSHAPE_RANGE_SCAN: {
+          if (ir.spatial == null) {
+            cert.unresolved_obligations.add("missing_spatial");
+            report.addCertificate(cert);
+            report.fail(C, n.op + " without IR spatial");
+            return false;
+          }
+          double minX = ir.spatial.min_x;
+          double minY = ir.spatial.min_y;
+          double maxX = ir.spatial.max_x;
+          double maxY = ir.spatial.max_y;
+          if (n.params != null) {
+            if (n.params.get("min_x") instanceof Number) {
+              minX = ((Number) n.params.get("min_x")).doubleValue();
+            }
+            if (n.params.get("min_y") instanceof Number) {
+              minY = ((Number) n.params.get("min_y")).doubleValue();
+            }
+            if (n.params.get("max_x") instanceof Number) {
+              maxX = ((Number) n.params.get("max_x")).doubleValue();
+            }
+            if (n.params.get("max_y") instanceof Number) {
+              maxY = ((Number) n.params.get("max_y")).doubleValue();
+            }
+          }
+          String table = n.op == Op.XZ_RANGE_SCAN ? layout.tableXz : layout.tableTshape;
+          if (indexed) {
+            index = RangeCoverageIndex.buildForTable(decoded, table, timing);
+          }
+          java.util.List<kart.codec.CodeRange> codeRanges = n.op == Op.XZ_RANGE_SCAN
+              ? layout.xzSfc().ranges(minX, minY, maxX, maxY)
+              : layout.tshapeSfc().ranges(minX, minY, maxX, maxY);
+          if (!spatialOverlapSound(n.op, minX, minY, maxX, maxY, codeRanges, cert, report)) {
+            return false;
+          }
+          long tProbe0 = System.nanoTime();
+          for (kart.codec.CodeRange cr : codeRanges) {
+            for (int shard = 0; shard < layout.shardCount; shard++) {
+              if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                cert.required_shards.add(Integer.valueOf(shard));
+              }
+              cert.required_bucket_or_cell_cover.add(n.op + ":shard=" + shard + ":lo=" + cr.lo);
+              byte[] probeLo = n.op == Op.XZ_RANGE_SCAN
+                  ? RowKeyCodec.encodeXz(shard, cr.lo, 0, 0)
+                  : RowKeyCodec.encodeTShape(shard, cr.lo, 0, 0);
+              byte[] probeHi = n.op == Op.XZ_RANGE_SCAN
+                  ? RowKeyCodec.encodeXz(shard, cr.hi, 0, 0)
+                  : RowKeyCodec.encodeTShape(shard, cr.hi, 0, 0);
+              if (timing != null) {
+                timing.coverage_probe_count += 2;
+              }
+              boolean hitLo = indexed ? index.covers(probeLo)
+                  : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, table, timing);
+              boolean hitHi = indexed ? index.covers(probeHi)
+                  : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, table, timing);
+              if (!hitLo || !hitHi) {
+                if (timing != null) {
+                  timing.t_coverage_probe_ms +=
+                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                }
+                cert.unresolved_obligations.add(n.op + ":shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
+                report.addCertificate(cert);
+                report.fail(C, n.op + " range [" + cr.lo + "," + cr.hi + "] shard " + shard
+                    + " not covered by node " + n.id);
+                return false;
+              }
+            }
+          }
+          if (timing != null) {
+            timing.t_coverage_probe_ms += Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+          }
+          break;
+        }
+        case XZT_RANGE_SCAN: {
+          if (ir.temporal == null) {
+            cert.unresolved_obligations.add("missing_temporal");
+            report.addCertificate(cert);
+            report.fail(C, "XZT_RANGE_SCAN without IR temporal");
+            return false;
+          }
+          long winStart = ir.temporal.start_ms;
+          long winEnd = ir.temporal.end_ms;
+          if (n.params != null) {
+            if (n.params.get("start_ms") instanceof Number) {
+              winStart = ((Number) n.params.get("start_ms")).longValue();
+            }
+            if (n.params.get("end_ms") instanceof Number) {
+              winEnd = ((Number) n.params.get("end_ms")).longValue();
+            }
+          }
+          if (indexed) {
+            index = RangeCoverageIndex.buildForTable(decoded, layout.tableXzt, timing);
+          }
+          java.util.List<kart.codec.CodeRange> xztRanges =
+              layout.xztCodec().rangesCovering(winStart, winEnd);
+          if (!xztOverlapSound(winStart, winEnd, xztRanges, cert, report)) {
+            return false;
+          }
+          long tProbe0 = System.nanoTime();
+          for (kart.codec.CodeRange cr : xztRanges) {
+            for (int shard = 0; shard < layout.shardCount; shard++) {
+              if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                cert.required_shards.add(Integer.valueOf(shard));
+              }
+              cert.required_bucket_or_cell_cover.add("xzt:shard=" + shard + ":lo=" + cr.lo);
+              byte[] probeLo = RowKeyCodec.encodeXzt(shard, cr.lo, 0, 0);
+              byte[] probeHi = RowKeyCodec.encodeXzt(shard, cr.hi, 0, 0);
+              if (timing != null) {
+                timing.coverage_probe_count += 2;
+              }
+              boolean hitLo = indexed ? index.covers(probeLo)
+                  : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, layout.tableXzt, timing);
+              boolean hitHi = indexed ? index.covers(probeHi)
+                  : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, layout.tableXzt, timing);
+              if (!hitLo || !hitHi) {
+                if (timing != null) {
+                  timing.t_coverage_probe_ms +=
+                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                }
+                cert.unresolved_obligations.add("xzt:shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
+                report.addCertificate(cert);
+                report.fail(C, "xzt range [" + cr.lo + "," + cr.hi + "] shard " + shard
+                    + " not covered by node " + n.id);
+                return false;
+              }
+            }
+          }
+          if (timing != null) {
+            timing.t_coverage_probe_ms += Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+          }
+          break;
+        }
         case EQUALITY_LOOKUP: {
           BoundIr.Predicate p;
           try {
@@ -686,12 +819,94 @@ public final class PlanValidator {
     return true;
   }
 
+  /** Independent soundness: overlapping sample intervals must land in SRQ ranges. */
+  private boolean xztOverlapSound(long winStart, long winEnd,
+                                  java.util.List<kart.codec.CodeRange> ranges,
+                                  CoverageCertificate cert, ValidationReport report) {
+    if (layout == null || layout.xztCodec() == null || ranges == null) {
+      return true;
+    }
+    long span = Math.max(1L, winEnd - winStart);
+    long[][] samples = new long[][] {
+        {winStart, winEnd},
+        {winStart, winStart + Math.max(1L, span / 4)},
+        {winEnd - Math.max(1L, span / 4), winEnd},
+        {winStart - span / 10, winStart + span / 10},
+        {winEnd - span / 10, winEnd + span / 10},
+        {winStart + span / 3, winStart + 2 * span / 3}
+    };
+    for (long[] s : samples) {
+      long a = Math.min(s[0], s[1]);
+      long b = Math.max(s[0], s[1]);
+      if (b < winStart || a > winEnd) {
+        continue; // non-overlapping with query
+      }
+      long code = layout.xztCodec().indexInterval(a, b);
+      if (!codeInRanges(code, ranges)) {
+        cert.unresolved_obligations.add("xzt_overlap_miss:code=" + code);
+        report.addCertificate(cert);
+        report.fail("CoverageCheck", "XZT SRQ misses overlapping interval code=" + code
+            + " for window [" + winStart + "," + winEnd + "]");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean spatialOverlapSound(Op op, double minX, double minY, double maxX, double maxY,
+                                      java.util.List<kart.codec.CodeRange> ranges,
+                                      CoverageCertificate cert, ValidationReport report) {
+    if (layout == null || ranges == null) {
+      return true;
+    }
+    double cx = (minX + maxX) / 2.0;
+    double cy = (minY + maxY) / 2.0;
+    double hx = Math.max(1e-6, (maxX - minX) / 4.0);
+    double hy = Math.max(1e-6, (maxY - minY) / 4.0);
+    double[][] boxes = new double[][] {
+        {minX, minY, maxX, maxY},
+        {cx - hx, cy - hy, cx + hx, cy + hy},
+        {minX, minY, minX + hx, minY + hy},
+        {maxX - hx, maxY - hy, maxX, maxY}
+    };
+    for (double[] b : boxes) {
+      long code = op == Op.XZ_RANGE_SCAN
+          ? layout.xzSfc().indexMbr(b[0], b[1], b[2], b[3], true)
+          : layout.tshapeSfc().indexMbr(b[0], b[1], b[2], b[3]);
+      if (!codeInRanges(code, ranges)) {
+        cert.unresolved_obligations.add(op + "_overlap_miss:code=" + code);
+        report.addCertificate(cert);
+        report.fail("CoverageCheck", op + " SRQ misses overlapping MBR code=" + code);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean codeInRanges(long code, java.util.List<kart.codec.CodeRange> ranges) {
+    for (kart.codec.CodeRange r : ranges) {
+      if (code >= r.lo && code <= r.hi) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static String indexIdFor(Op op) {
     if (op == Op.TIME_RANGE_SCAN) {
       return "idx_time";
     }
     if (op == Op.ZORDER_RANGE_SCAN) {
       return "idx_zorder";
+    }
+    if (op == Op.XZ_RANGE_SCAN) {
+      return "idx_xz";
+    }
+    if (op == Op.TSHAPE_RANGE_SCAN) {
+      return "idx_tshape";
+    }
+    if (op == Op.XZT_RANGE_SCAN) {
+      return "idx_xzt";
     }
     if (op == Op.EQUALITY_LOOKUP) {
       return "idx_hash";

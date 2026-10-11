@@ -24,6 +24,7 @@ import kart.exec.QueryResult;
 import kart.ir.BoundIr;
 import kart.llm.LlmClient;
 import kart.llm.LlmUsageAccumulator;
+import kart.plan.PlanBuilder;
 import kart.plan.PlanEnvelope;
 import kart.search.BeamSearch;
 import kart.search.BestFirstPolicy;
@@ -254,6 +255,42 @@ public final class QueryEngine {
     StatusLog.info("ENGINE", "candidates=" + rr.candidates.size()
         + " safe=" + rr.safe.size()
         + " stop=" + (rr.searchStopReason == null ? "OK" : rr.searchStopReason));
+
+    // Gold / bench force-plan: inject target among SafePlans even if search timed out.
+    if (forcePlanId != null && !forcePlanId.trim().isEmpty()) {
+      String want = forcePlanId.trim();
+      boolean present = false;
+      for (SafePlanHandle h : rr.safe) {
+        if (h != null && h.plan() != null && want.equals(h.plan().plan_id)) {
+          present = true;
+          break;
+        }
+      }
+      if (!present) {
+        PlanEnvelope forced = null;
+        for (PlanEnvelope e : PlanBuilder.buildCandidates(ir)) {
+          if (e != null && want.equals(e.plan_id)) {
+            forced = e;
+            break;
+          }
+        }
+        if (forced != null) {
+          PhysicalPlan phys = new QueryCompiler(layout).compile(forced, ir);
+          ValidationReport report = new ValidationReport();
+          Optional<SafePlanHandle> checked =
+              new PlanValidator(layout).validate(forced, ir, phys, report);
+          if (checked.isPresent()) {
+            rr.safe.add(checked.get());
+            rr.candidates.add(forced);
+            StatusLog.info("ENGINE", "force-injected SAFE plan_id=" + want);
+          } else {
+            rr.rejections.add(new SearchResult.Rejection(forced.plan_id, forced.signature(), report));
+            rr.rejectionReports.add(report);
+            StatusLog.info("ENGINE", "force-inject REJECTED plan_id=" + want);
+          }
+        }
+      }
+    }
 
     CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
         planner.cost != null && planner.cost.soft_memory_bytes > 0

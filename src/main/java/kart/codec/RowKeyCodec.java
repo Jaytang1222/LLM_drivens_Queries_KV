@@ -1,7 +1,7 @@
 package kart.codec;
 
 /**
- * RowKey encode/decode for the five MVP tables (design.md §4).
+ * RowKey encode/decode for MVP tables plus XZ-star / TShape / XZT advanced indexes.
  */
 public final class RowKeyCodec {
 
@@ -89,6 +89,40 @@ public final class RowKeyCodec {
         Bytes.readU32(key, 26));
   }
 
+  // --- idx_xz / idx_xzt: U8 shard | U64 code | U64 tid | U32 chunk (21 B) ---
+
+  public static byte[] encodeXz(int shard, long xzCode, long tid, long chunkId) {
+    return Bytes.concat(Bytes.u8(shard), Bytes.u64(xzCode), Bytes.u64(tid), Bytes.u32(chunkId));
+  }
+
+  public static byte[] encodeXzt(int shard, long xztCode, long tid, long chunkId) {
+    return encodeXz(shard, xztCode, tid, chunkId);
+  }
+
+  public static XzKey decodeXz(byte[] key) {
+    requireLen(key, 21, "xz");
+    return new XzKey(
+        Bytes.readU8(key, 0),
+        Bytes.readU64(key, 1),
+        Bytes.readU64(key, 9),
+        Bytes.readU32(key, 17));
+  }
+
+  // --- idx_tshape: U8 shard | U64 code | U64 tid | U32 chunk (21 B) ---
+
+  public static byte[] encodeTShape(int shard, long tshapeCode, long tid, long chunkId) {
+    return Bytes.concat(Bytes.u8(shard), Bytes.u64(tshapeCode), Bytes.u64(tid), Bytes.u32(chunkId));
+  }
+
+  public static TShapeKey decodeTShape(byte[] key) {
+    requireLen(key, 21, "tshape");
+    return new TShapeKey(
+        Bytes.readU8(key, 0),
+        Bytes.readU64(key, 1),
+        Bytes.readU64(key, 9),
+        Bytes.readU32(key, 17));
+  }
+
   private static void requireLen(byte[] key, int n, String name) {
     if (key == null || key.length != n) {
       throw new IllegalArgumentException(name + " key length must be " + n
@@ -157,6 +191,34 @@ public final class RowKeyCodec {
       this.shard = shard;
       this.fieldTag = fieldTag;
       this.hash128 = hash128;
+      this.tid = tid;
+      this.chunkId = chunkId;
+    }
+  }
+
+  public static final class XzKey {
+    public final int shard;
+    public final long code;
+    public final long tid;
+    public final long chunkId;
+
+    public XzKey(int shard, long code, long tid, long chunkId) {
+      this.shard = shard;
+      this.code = code;
+      this.tid = tid;
+      this.chunkId = chunkId;
+    }
+  }
+
+  public static final class TShapeKey {
+    public final int shard;
+    public final long code;
+    public final long tid;
+    public final long chunkId;
+
+    public TShapeKey(int shard, long code, long tid, long chunkId) {
+      this.shard = shard;
+      this.code = code;
       this.tid = tid;
       this.chunkId = chunkId;
     }

@@ -1,0 +1,14 @@
+kind: compare
+id: e2e-simple-pad
+workload: experiments/workloads/bound_ir_simple_pad.json
+oracle: experiments/workloads/bound_ir_simple_pad.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - e2e
+arms:
+  - kart
+  - cbo
+  - rbo
+  - fullscan

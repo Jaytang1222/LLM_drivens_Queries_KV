@@ -4,18 +4,22 @@ import kart.ir.BoundIr;
 import kart.plan.PlanBuilder;
 import kart.plan.PlanEnvelope;
 import kart.query.QueryEngine;
+import kart.search.IndexId;
 import kart.search.PlannerMode;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Deterministic rule based optimizer baseline.  The public rule is deliberately
- * simple and fixed: TZ, then T, then Z, then H, then FULL.  No candidate
- * enumeration or cost based argmin is performed by this arm.
+ * simple and fixed: TZ, then T, then Z, then H, then advanced XZT/XZ/TShape
+ * families, then FULL.  No candidate enumeration or cost based argmin is
+ * performed by this arm.
  *
  * <p>If an earlier template is rejected by the shared validator (e.g. empty
  * pre-epoch time coverage), the arm advances to the next template in the same
@@ -32,18 +36,14 @@ public final class RboFixedArm implements Arm {
   public TrialResult run(BoundIr ir, BenchContext ctx) throws Exception {
     QueryEngine engine = ctx.newEngine(PlannerMode.RULE);
     Path artifactDir = ctx.artifactDir(id(), ir.query_id);
-    boolean hasT = ir.temporal != null;
-    boolean hasZ = ir.spatial != null;
-    boolean hasH = PlanBuilder.vehicleEqPredicateIndex(ir) >= 0;
-    List<boolean[]> templates = templatePriority(hasT, hasZ, hasH);
+    List<PlanEnvelope> templates = templatePlans(ir);
     List<String> rejected = new ArrayList<String>();
     List<Map<String, Object>> rejectedTrace = new ArrayList<Map<String, Object>>();
     long planStart = System.currentTimeMillis();
     long planAcc = 0L;
     QueryEngine.RunResult rr = null;
     PlanEnvelope chosen = null;
-    for (boolean[] flags : templates) {
-      PlanEnvelope plan = PlanBuilder.buildForAccess(ir, flags[0], flags[1], flags[2]);
+    for (PlanEnvelope plan : templates) {
       // Rejected templates return before artifact IO. Accepted t_plan_ms is stamped
       // before writeArtifacts, so summing t_plan_ms excludes artifact time.
       QueryEngine.RunResult attempt = engine.runFixed(ir, artifactDir, ctx.planOnly, plan);
@@ -76,7 +76,7 @@ public final class RboFixedArm implements Arm {
     applyPlanClock(tr, planStart, planAcc);
     tr.extras.put("baseline_protocol", "fixed_rule_template");
     tr.extras.put("candidate_search", Boolean.FALSE);
-    tr.extras.put("selection", "fixed_priority_TZ_T_Z_H_FULL");
+    tr.extras.put("selection", "fixed_priority_TZ_T_Z_H_ADV_FULL");
     tr.extras.put("template_plan_id", chosen != null ? chosen.plan_id : null);
     tr.extras.put("rbo_plan_includes_rejected_templates", Boolean.TRUE);
     if (!rejected.isEmpty()) {
@@ -123,7 +123,7 @@ public final class RboFixedArm implements Arm {
 
   /**
    * Preferred first template only (TZ → T → Z → H → FULL). Used by unit tests;
-   * runtime walks {@link #templatePriority} when earlier templates are unsafe.
+   * runtime walks {@link #templatePlans} when earlier templates are unsafe.
    * @return {useT, useZ, useH}
    */
   static boolean[] accessFlags(boolean hasT, boolean hasZ, boolean hasH) {
@@ -131,7 +131,7 @@ public final class RboFixedArm implements Arm {
   }
 
   /**
-   * Public RBO order: TZ → T → Z → H → FULL. Never consults CostModel.
+   * Classic RBO boolean order: TZ → T → Z → H → FULL. Never consults CostModel.
    * Each entry is {useT, useZ, useH}; all-false is {@code P_FULL}.
    */
   static List<boolean[]> templatePriority(boolean hasT, boolean hasZ, boolean hasH) {
@@ -150,5 +150,59 @@ public final class RboFixedArm implements Arm {
     }
     out.add(new boolean[] { false, false, false });
     return out;
+  }
+
+  /**
+   * Full RBO template walk: classic boolean templates excluding FULL, then
+   * advanced XZT/XZ/TShape families, then FULL last.
+   */
+  static List<PlanEnvelope> templatePlans(BoundIr ir) {
+    boolean hasT = ir != null && ir.temporal != null;
+    boolean hasZ = ir != null && ir.spatial != null;
+    boolean hasH = PlanBuilder.vehicleEqPredicateIndex(ir) >= 0;
+    List<boolean[]> classic = templatePriority(hasT, hasZ, hasH);
+    List<PlanEnvelope> out = new ArrayList<PlanEnvelope>();
+    for (int i = 0; i < classic.size() - 1; i++) {
+      boolean[] f = classic.get(i);
+      out.add(PlanBuilder.buildForAccess(ir, f[0], f[1], f[2]));
+    }
+    appendAdvanced(out, ir, hasT, hasZ, hasH);
+    out.add(PlanBuilder.buildForAccess(ir, false, false, false));
+    return out;
+  }
+
+  private static void appendAdvanced(List<PlanEnvelope> out, BoundIr ir,
+                                     boolean hasT, boolean hasZ, boolean hasH) {
+    if (hasT && hasZ) {
+      out.add(idx(ir, IndexId.XZT, IndexId.XZ));
+      out.add(idx(ir, IndexId.XZT, IndexId.TSHAPE));
+    }
+    if (hasT) {
+      out.add(idx(ir, IndexId.XZT));
+    }
+    if (hasZ) {
+      out.add(idx(ir, IndexId.XZ));
+      out.add(idx(ir, IndexId.TSHAPE));
+    }
+    if (hasH) {
+      if (hasT && hasZ) {
+        out.add(idx(ir, IndexId.XZT, IndexId.XZ, IndexId.HASH));
+        out.add(idx(ir, IndexId.XZT, IndexId.TSHAPE, IndexId.HASH));
+      }
+      if (hasT) {
+        out.add(idx(ir, IndexId.XZT, IndexId.HASH));
+      }
+      if (hasZ) {
+        out.add(idx(ir, IndexId.XZ, IndexId.HASH));
+        out.add(idx(ir, IndexId.TSHAPE, IndexId.HASH));
+      }
+    }
+  }
+
+  private static PlanEnvelope idx(BoundIr ir, String... indexes) {
+    List<String> list = indexes == null || indexes.length == 0
+        ? Collections.<String>emptyList()
+        : Arrays.asList(indexes);
+    return PlanBuilder.buildForIndexes(ir, list, null, null);
   }
 }

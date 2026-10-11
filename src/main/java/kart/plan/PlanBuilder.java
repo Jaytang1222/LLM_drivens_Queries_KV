@@ -1,11 +1,14 @@
 package kart.plan;
 
 import kart.ir.BoundIr;
+import kart.search.IndexId;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds the deterministic candidate plan family from a BoundIr:
@@ -34,9 +37,15 @@ public final class PlanBuilder {
     // single-index plans
     if (hasT) {
       out.add(buildIndexed(ir, "P_T", true, false, false, vehicleIdx));
+      out.add(buildIndexed(ir, "P_XZT", true, false, false, vehicleIdx,
+          Op.XZT_RANGE_SCAN, Op.ZORDER_RANGE_SCAN, null, null));
     }
     if (hasZ) {
       out.add(buildIndexed(ir, "P_Z", false, true, false, vehicleIdx));
+      out.add(buildIndexed(ir, "P_XZ", false, true, false, vehicleIdx,
+          Op.TIME_RANGE_SCAN, Op.XZ_RANGE_SCAN, null, null));
+      out.add(buildIndexed(ir, "P_TS", false, true, false, vehicleIdx,
+          Op.TIME_RANGE_SCAN, Op.TSHAPE_RANGE_SCAN, null, null));
     }
     if (hasH) {
       out.add(buildIndexed(ir, "P_H", false, false, true, vehicleIdx));
@@ -44,15 +53,29 @@ public final class PlanBuilder {
     if (allowIntersect) {
       if (hasT && hasZ) {
         out.add(buildIndexed(ir, "P_TZ", true, true, false, vehicleIdx));
+        out.add(buildIndexed(ir, "P_XZTXZ", true, true, false, vehicleIdx,
+            Op.XZT_RANGE_SCAN, Op.XZ_RANGE_SCAN, null, null));
+        out.add(buildIndexed(ir, "P_XZTTS", true, true, false, vehicleIdx,
+            Op.XZT_RANGE_SCAN, Op.TSHAPE_RANGE_SCAN, null, null));
       }
       if (hasT && hasH) {
         out.add(buildIndexed(ir, "P_TH", true, false, true, vehicleIdx));
+        out.add(buildIndexed(ir, "P_XZTH", true, false, true, vehicleIdx,
+            Op.XZT_RANGE_SCAN, Op.ZORDER_RANGE_SCAN, null, null));
       }
       if (hasZ && hasH) {
         out.add(buildIndexed(ir, "P_ZH", false, true, true, vehicleIdx));
+        out.add(buildIndexed(ir, "P_XZH", false, true, true, vehicleIdx,
+            Op.TIME_RANGE_SCAN, Op.XZ_RANGE_SCAN, null, null));
+        out.add(buildIndexed(ir, "P_TSH", false, true, true, vehicleIdx,
+            Op.TIME_RANGE_SCAN, Op.TSHAPE_RANGE_SCAN, null, null));
       }
       if (hasT && hasZ && hasH) {
         out.add(buildIndexed(ir, "P_TZH", true, true, true, vehicleIdx));
+        out.add(buildIndexed(ir, "P_XZTXZH", true, true, true, vehicleIdx,
+            Op.XZT_RANGE_SCAN, Op.XZ_RANGE_SCAN, null, null));
+        out.add(buildIndexed(ir, "P_XZTTSH", true, true, true, vehicleIdx,
+            Op.XZT_RANGE_SCAN, Op.TSHAPE_RANGE_SCAN, null, null));
       }
     }
     // full scan fallback, always present
@@ -119,31 +142,102 @@ public final class PlanBuilder {
 
   public static PlanEnvelope buildForAccess(BoundIr ir, boolean useT, boolean useZ, boolean useH,
                                             String mergeImpl, String partitionKind) {
+    return buildForAccess(ir, useT, useZ, useH, Op.TIME_RANGE_SCAN, Op.ZORDER_RANGE_SCAN,
+        mergeImpl, partitionKind);
+  }
+
+  /** Build from search used_indexes (supports XZT / XZ / TSHAPE). */
+  public static PlanEnvelope buildForIndexes(BoundIr ir, Collection<String> indexes,
+                                             String mergeImpl, String partitionKind) {
+    boolean useT = false;
+    boolean useZ = false;
+    boolean useH = false;
+    Op tOp = Op.TIME_RANGE_SCAN;
+    Op zOp = Op.ZORDER_RANGE_SCAN;
+    StringBuilder name = new StringBuilder("P_");
+    if (indexes != null) {
+      if (indexes.contains(IndexId.XZT)) {
+        useT = true;
+        tOp = Op.XZT_RANGE_SCAN;
+        name.append("XZT");
+      } else if (indexes.contains(IndexId.TIME)) {
+        useT = true;
+        name.append('T');
+      }
+      if (indexes.contains(IndexId.TSHAPE)) {
+        useZ = true;
+        zOp = Op.TSHAPE_RANGE_SCAN;
+        name.append("TS");
+      } else if (indexes.contains(IndexId.XZ)) {
+        useZ = true;
+        zOp = Op.XZ_RANGE_SCAN;
+        name.append("XZ");
+      } else if (indexes.contains(IndexId.ZORDER)) {
+        useZ = true;
+        name.append('Z');
+      }
+      if (indexes.contains(IndexId.HASH)) {
+        useH = true;
+        name.append('H');
+      }
+    }
     int vehicleIdx = vehicleEqPredicateIndex(ir);
     if (!useT && !useZ && !useH) {
       return buildFull(ir, vehicleIdx);
     }
-    String name = planName(useT, useZ, useH);
+    String planId = name.toString();
+    if (partitionKind != null) {
+      planId = planId + "_" + partitionKind;
+    }
+    int dims = (useT ? 1 : 0) + (useZ ? 1 : 0) + (useH ? 1 : 0);
+    if (mergeImpl != null && !"HASH_SET".equals(mergeImpl) && dims >= 2) {
+      planId = planId + "_" + mergeImpl;
+    }
+    return buildIndexed(ir, planId, useT, useZ, useH, vehicleIdx, mergeImpl, partitionKind, tOp, zOp);
+  }
+
+  public static PlanEnvelope buildForAccess(BoundIr ir, boolean useT, boolean useZ, boolean useH,
+                                            Op temporalOp, Op spatialOp,
+                                            String mergeImpl, String partitionKind) {
+    int vehicleIdx = vehicleEqPredicateIndex(ir);
+    if (!useT && !useZ && !useH) {
+      return buildFull(ir, vehicleIdx);
+    }
+    // Build tokens directly — String.replace("T","XZT") turns P_TZ into P_XZTZ
+    // and then replace("Z","XZ") can corrupt XZT into XXZT.
+    String name = planName(useT, useZ, useH, temporalOp, spatialOp);
     if (partitionKind != null) {
       name = name + "_" + partitionKind;
     }
     if (mergeImpl != null
         && !"HASH_SET".equals(mergeImpl)
         && (useT ? 1 : 0) + (useZ ? 1 : 0) + (useH ? 1 : 0) >= 2) {
-      // HASH_SET is the default family name (P_TZ); only suffix non-default merges.
       name = name + "_" + mergeImpl;
     }
-    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx, mergeImpl, partitionKind);
+    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx, mergeImpl, partitionKind,
+        temporalOp, spatialOp);
   }
 
-  /** Plan id for an index combination: P_T, P_Z, P_H, P_TZ, … */
+  /** Plan id for legacy TIME/ZORDER: P_T, P_Z, P_H, P_TZ, … */
   public static String planName(boolean useT, boolean useZ, boolean useH) {
+    return planName(useT, useZ, useH, Op.TIME_RANGE_SCAN, Op.ZORDER_RANGE_SCAN);
+  }
+
+  /** Plan id including advanced ops: P_XZT, P_XZ, P_XZTXZ, P_XZTZ (XZT+Z), … */
+  public static String planName(boolean useT, boolean useZ, boolean useH,
+                                Op temporalOp, Op spatialOp) {
     StringBuilder sb = new StringBuilder("P_");
     if (useT) {
-      sb.append('T');
+      sb.append(temporalOp == Op.XZT_RANGE_SCAN ? "XZT" : "T");
     }
     if (useZ) {
-      sb.append('Z');
+      if (spatialOp == Op.XZ_RANGE_SCAN) {
+        sb.append("XZ");
+      } else if (spatialOp == Op.TSHAPE_RANGE_SCAN) {
+        sb.append("TS");
+      } else {
+        sb.append('Z');
+      }
     }
     if (useH) {
       sb.append('H');
@@ -154,17 +248,35 @@ public final class PlanBuilder {
   private static PlanEnvelope buildIndexed(BoundIr ir, String name,
                                            boolean useT, boolean useZ, boolean useH,
                                            int vehicleIdx) {
-    // Published candidate families use an explicit merge (HASH_SET), never provisional.
+    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx,
+        Op.TIME_RANGE_SCAN, Op.ZORDER_RANGE_SCAN, null, null);
+  }
+
+  private static PlanEnvelope buildIndexed(BoundIr ir, String name,
+                                           boolean useT, boolean useZ, boolean useH,
+                                           int vehicleIdx, Op temporalOp, Op spatialOp,
+                                           String mergeImpl, String partitionKind) {
     int dims = (useT ? 1 : 0) + (useZ ? 1 : 0) + (useH ? 1 : 0);
-    String merge = dims >= 2 ? "HASH_SET" : null;
-    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx, merge, null);
+    String merge = mergeImpl != null ? mergeImpl : (dims >= 2 ? "HASH_SET" : null);
+    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx, merge, partitionKind,
+        temporalOp, spatialOp);
   }
 
   private static PlanEnvelope buildIndexed(BoundIr ir, String name,
                                            boolean useT, boolean useZ, boolean useH,
                                            int vehicleIdx, String mergeImpl, String partitionKind) {
+    return buildIndexed(ir, name, useT, useZ, useH, vehicleIdx, mergeImpl, partitionKind,
+        Op.TIME_RANGE_SCAN, Op.ZORDER_RANGE_SCAN);
+  }
+
+  private static PlanEnvelope buildIndexed(BoundIr ir, String name,
+                                           boolean useT, boolean useZ, boolean useH,
+                                           int vehicleIdx, String mergeImpl, String partitionKind,
+                                           Op temporalOp, Op spatialOp) {
     Builder b = new Builder(ir, name);
     List<String> accessIds = new ArrayList<String>();
+    Op tScan = temporalOp != null ? temporalOp : Op.TIME_RANGE_SCAN;
+    Op zScan = spatialOp != null ? spatialOp : Op.ZORDER_RANGE_SCAN;
 
     if (useT) {
       if ("TIME_BIPART".equals(partitionKind) && ir.temporal != null) {
@@ -177,15 +289,15 @@ public final class PlanBuilder {
         p1.put("start_ms", Long.valueOf(mid));
         p1.put("end_ms", Long.valueOf(ir.temporal.end_ms));
         p1.put("partition", "TIME_BIPART_1");
-        String t0 = b.add(Op.TIME_RANGE_SCAN, noInputs(), p0);
-        String t1 = b.add(Op.TIME_RANGE_SCAN, noInputs(), p1);
+        String t0 = b.add(tScan, noInputs(), p0);
+        String t1 = b.add(tScan, noInputs(), p1);
         accessIds.add(b.add(Op.UNION, two(t0, t1), params("partition_proof", "TIME_BIPART")));
       } else {
-        accessIds.add(b.add(Op.TIME_RANGE_SCAN, noInputs(), params("predicate_ref", "/temporal")));
+        accessIds.add(b.add(tScan, noInputs(), params("predicate_ref", "/temporal")));
       }
     }
     if (useZ) {
-      if ("Z_QUAD".equals(partitionKind) && ir.spatial != null) {
+      if ("Z_QUAD".equals(partitionKind) && ir.spatial != null && zScan == Op.ZORDER_RANGE_SCAN) {
         double mx = (ir.spatial.min_x + ir.spatial.max_x) / 2.0;
         double my = (ir.spatial.min_y + ir.spatial.max_y) / 2.0;
         List<String> parts = new ArrayList<String>();
@@ -195,7 +307,7 @@ public final class PlanBuilder {
         parts.add(zPart(b, ir, mx, my, ir.spatial.max_x, ir.spatial.max_y, "Z_QUAD_3"));
         accessIds.add(b.add(Op.UNION, parts, params("partition_proof", "Z_QUAD")));
       } else {
-        accessIds.add(b.add(Op.ZORDER_RANGE_SCAN, noInputs(), params("predicate_ref", "/spatial")));
+        accessIds.add(b.add(zScan, noInputs(), params("predicate_ref", "/spatial")));
       }
     }
     if (useH) {

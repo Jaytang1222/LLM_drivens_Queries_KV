@@ -1,0 +1,14 @@
+kind: compare
+id: e2e-mine-simple
+workload: experiments/workloads/bound_ir_simple_mine.json
+oracle: experiments/workloads/bound_ir_simple_mine.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - e2e
+arms:
+  - kart
+  - cbo
+  - rbo
+  - fullscan

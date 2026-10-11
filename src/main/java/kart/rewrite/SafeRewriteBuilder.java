@@ -5,6 +5,7 @@ import kart.plan.Op;
 import kart.plan.PlanBuilder;
 import kart.plan.PlanEnvelope;
 import kart.plan.PlanNode;
+import kart.search.IndexId;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,8 +26,11 @@ public final class SafeRewriteBuilder {
   /** Stable, order-independent id for an access branch node. */
   public static String branchId(PlanNode n) {
     switch (n.op) {
-      case TIME_RANGE_SCAN: return "temporal_branch";
-      case ZORDER_RANGE_SCAN: return "spatial_branch";
+      case TIME_RANGE_SCAN:
+      case XZT_RANGE_SCAN: return "temporal_branch";
+      case ZORDER_RANGE_SCAN:
+      case XZ_RANGE_SCAN:
+      case TSHAPE_RANGE_SCAN: return "spatial_branch";
       case EQUALITY_LOOKUP: return "vehicle_branch";
       default: return null;
     }
@@ -79,19 +83,41 @@ public final class SafeRewriteBuilder {
     if (!exactRefsBelowRoot(out, kept.get(0)).equals(before)) {
       throw new Rejected("exact_predicates_changed");
     }
-    boolean t = false, z = false, h = false;
+    List<String> idxs = new ArrayList<String>();
     for (String k : kept) {
-      Op op = p.node(k).op;
-      t |= op == Op.TIME_RANGE_SCAN;
-      z |= op == Op.ZORDER_RANGE_SCAN;
-      h |= op == Op.EQUALITY_LOOKUP;
+      String idx = indexId(p.node(k).op);
+      if (idx != null) {
+        idxs.add(idx);
+      }
     }
-    PlanEnvelope template = PlanBuilder.buildForAccess(ir, t, z, h);
+    PlanEnvelope template = PlanBuilder.buildForIndexes(ir, idxs, null, null);
     if (!template.signature().equals(out.signature())) {
       throw new Rejected("no_supported_template");
     }
     out.plan_id = template.plan_id;
     return out;
+  }
+
+  public static String indexId(Op op) {
+    if (op == Op.TIME_RANGE_SCAN) {
+      return IndexId.TIME;
+    }
+    if (op == Op.XZT_RANGE_SCAN) {
+      return IndexId.XZT;
+    }
+    if (op == Op.ZORDER_RANGE_SCAN) {
+      return IndexId.ZORDER;
+    }
+    if (op == Op.XZ_RANGE_SCAN) {
+      return IndexId.XZ;
+    }
+    if (op == Op.TSHAPE_RANGE_SCAN) {
+      return IndexId.TSHAPE;
+    }
+    if (op == Op.EQUALITY_LOOKUP) {
+      return IndexId.HASH;
+    }
+    return null;
   }
 
   /** Inserts CHUNK_META_FILTER directly before the sole FETCH_TRAJECTORY_CHUNK. */

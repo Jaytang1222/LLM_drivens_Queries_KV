@@ -1,0 +1,103 @@
+{
+  "path": "experiments/workloads/bound_ir_cmp_v5.json",
+  "oracle_path": "experiments/workloads/bound_ir_cmp_v5.oracle.json",
+  "evaluation_role": "kart_gt_cbo_new_index_v5",
+  "n_queries": 24,
+  "n_oracle_copied": 24,
+  "layers": {
+    "paired_advantage": 2,
+    "census_search_miss": 3,
+    "census_advanced_cbo": 0,
+    "locked_fill": 4,
+    "advantage_fill": 15
+  },
+  "layer_ids": {
+    "paired_advantage": [
+      "h_s_small",
+      "topk_st_1"
+    ],
+    "census_search_miss": [
+      "topk_st_k1",
+      "topk_st_frechet_k5",
+      "a2_topk_frechet_wide"
+    ],
+    "census_advanced_cbo": [],
+    "locked_fill": [
+      "r9_locked_td_1",
+      "c3_tz_a",
+      "c3_tz_b",
+      "c3_tz_c"
+    ],
+    "advantage_fill": [
+      "st_sl_1",
+      "st_ll_1",
+      "h_t_large",
+      "h_st_1",
+      "topk_st_2",
+      "topk_st_frechet_1",
+      "topk_st_hausdorff_1",
+      "h_st_2",
+      "h_st_3",
+      "h_t_mid",
+      "topk_st_k5",
+      "topk_st_hausdorff_k1",
+      "h_st_4",
+      "topk_st_k10",
+      "topk_st_2_k1"
+    ]
+  },
+  "excluded_train": [
+    "a2_th_unc_a",
+    "a2_th_unc_b",
+    "a2_topk_dtw_k3",
+    "a2_topk_dtw_k7",
+    "a2_topk_dtw_wide",
+    "a2_topk_frechet_k3",
+    "a2_topk_frechet_k7",
+    "a2_topk_haus_k3",
+    "a2_topk_haus_k5",
+    "a2_tz_hard_b",
+    "a2_tz_hard_c",
+    "a2_tz_hard_e",
+    "a2_tz_hard_f",
+    "a2_tz_hard_g",
+    "a2_tz_hard_h",
+    "h2_t_easy_a",
+    "topk_st_3",
+    "wj_hst4_wide3x_pad5k",
+    "wj_joint_tzhard_topk_k12_wide2x",
+    "wj_joint_tzhard_topk_k8",
+    "wj_stll_wide2x_pad6k",
+    "wj_topk_dtw_k10_pad2k",
+    "wj_topk_dtw_k15_pad4k",
+    "wj_topk_dtw_k20_wide2x",
+    "wj_topk_dtw_k7_wide4x",
+    "wj_topk_dtw_pad8k_k12",
+    "wj_topk_dtw_wide3x_pad5k",
+    "wj_topk_frechet_k12_pad3k",
+    "wj_topk_frechet_wide2x_k15",
+    "wj_topk_haus_k10_wide2x",
+    "wj_topk_haus_k15_pad5k",
+    "wj_tz_a_wide3x_pad4k",
+    "wj_tz_wide2x_pad3k",
+    "wj_tz_wide4x_pad5k",
+    "wj_tzhg_wide2x_pad4k"
+  ],
+  "excluded_holdout": [
+    "h2_boundary_a",
+    "h2_empty_a",
+    "h2_t_hard_a",
+    "h2_t_hard_b",
+    "h2_th_mid_a",
+    "h2_topk_frechet_a",
+    "h2_topk_hausdorff_a",
+    "h2_tz_hard_a",
+    "h2_tz_hard_b",
+    "h2_tzh_test_a",
+    "h2_z_easy_a",
+    "h2_z_easy_b"
+  ],
+  "sha256": "fdfa1e69b26b9e6bd086ff6f25b3e64a3b01741242c9fe13f5bcb55e2c1c5cd7",
+  "oracle_sha256": "b25aed20cc00304d1597aa8e738cc7bb6c07da67d6af7eef7ce546dc57423ad3",
+  "generator": "admit_dual_rules.assemble_cmp_v5"
+}

@@ -39,15 +39,17 @@ public final class IncrementalValidator {
   public static List<String> predicateObligations(SearchState state) {
     BoundIr ir = state.ir();
     List<String> out = new ArrayList<String>();
-    if (ir.temporal != null && !state.uses(IndexId.TIME) && !state.hasFullCoveringPartition()) {
-      // Covered only when TIME is in the access set, or a proved TIME partition is active,
+    if (ir.temporal != null && !state.uses(IndexId.TIME) && !state.uses(IndexId.XZT)
+        && !state.hasFullCoveringPartition()) {
+      // Covered only when TIME/XZT is in the access set, or a proved TIME partition is active,
       // or the plan will be P_FULL (empty access) — empty access clears index obligations
       // because ExactSTFilter + FULL_SCAN covers all predicates.
       if (!state.usedIndexes().isEmpty()) {
         out.add("cover:/temporal");
       }
     }
-    if (ir.spatial != null && !state.uses(IndexId.ZORDER) && !state.hasSpatialPartition()) {
+    if (ir.spatial != null && !state.uses(IndexId.ZORDER) && !state.uses(IndexId.XZ)
+        && !state.uses(IndexId.TSHAPE) && !state.hasSpatialPartition()) {
       if (!state.usedIndexes().isEmpty()) {
         out.add("cover:/spatial");
       }
@@ -71,13 +73,25 @@ public final class IncrementalValidator {
     BoundIr ir = state.ir();
     for (String idx : state.usedIndexes()) {
       List<String> avail = kart.search.LegalActionGenerator.availableIndexes(ir);
-      if (!avail.contains(idx) && !IndexId.TIME.equals(idx) && !IndexId.ZORDER.equals(idx)
-          && !IndexId.HASH.equals(idx)) {
-        return Result.fail("INFEASIBLE_EXTENSION:unknown_index:" + idx);
-      }
       if (!avail.contains(idx)) {
         return Result.fail("INFEASIBLE_EXTENSION:index_not_implied_by_ir:" + idx);
       }
+    }
+    int temporalCount = 0;
+    int spatialCount = 0;
+    for (String idx : state.usedIndexes()) {
+      if (IndexId.isTemporal(idx)) {
+        temporalCount++;
+      }
+      if (IndexId.isSpatial(idx)) {
+        spatialCount++;
+      }
+    }
+    if (temporalCount > 1) {
+      return Result.fail("INFEASIBLE_EXTENSION:multiple_temporal_indexes");
+    }
+    if (spatialCount > 1) {
+      return Result.fail("INFEASIBLE_EXTENSION:multiple_spatial_indexes");
     }
     if (state.mergeImpl() != null
         && !"HASH_SET".equals(state.mergeImpl())
@@ -93,7 +107,7 @@ public final class IncrementalValidator {
       if (ir.temporal == null) {
         return Result.fail("INFEASIBLE_EXTENSION:time_partition_without_temporal");
       }
-      if (!state.uses(IndexId.TIME)) {
+      if (!state.uses(IndexId.TIME) && !state.uses(IndexId.XZT)) {
         return Result.fail("INFEASIBLE_EXTENSION:time_partition_requires_time_access");
       }
     }
@@ -101,8 +115,8 @@ public final class IncrementalValidator {
       if (ir.spatial == null) {
         return Result.fail("INFEASIBLE_EXTENSION:z_partition_without_spatial");
       }
-      if (!state.uses(IndexId.ZORDER)) {
-        return Result.fail("INFEASIBLE_EXTENSION:z_partition_requires_zorder_access");
+      if (!state.uses(IndexId.ZORDER) && !state.uses(IndexId.XZ) && !state.uses(IndexId.TSHAPE)) {
+        return Result.fail("INFEASIBLE_EXTENSION:z_partition_requires_spatial_access");
       }
     }
     if (state.usedIndexes().size() >= 2 && state.mergeImpl() == null) {

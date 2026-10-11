@@ -65,6 +65,18 @@ public final class HBaseBackend implements KvBackend {
     }
   }
 
+  /** Drop all rows while preserving splits/CF (for targeted index rebuilds). */
+  public void truncateTable(String table) throws IOException {
+    TableName tn = TableName.valueOf(table);
+    try (Admin admin = connection.getAdmin()) {
+      if (!admin.tableExists(tn)) {
+        throw new IOException("table missing: " + table);
+      }
+      admin.disableTable(tn);
+      admin.truncateTable(tn, true);
+    }
+  }
+
   static byte[][] splitKeys(int shardCount) {
     // Regions for shard prefixes 0x00..0x(S-1): S-1 split keys 0x01, 0x02, ...
     if (shardCount <= 1) {

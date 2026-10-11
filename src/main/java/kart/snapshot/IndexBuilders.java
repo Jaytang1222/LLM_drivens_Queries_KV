@@ -2,8 +2,11 @@ package kart.snapshot;
 
 import kart.codec.Bytes;
 import kart.codec.RowKeyCodec;
+import kart.codec.TShapeSfc;
 import kart.codec.TimeBucket;
 import kart.codec.VehicleHash;
+import kart.codec.XzStarSfc;
+import kart.codec.XztCodec;
 import kart.codec.ZOrder;
 import kart.data.Chunk;
 import kart.data.Trajectory;
@@ -22,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Writes traj_raw / traj_meta and three index posting tables.
+ * Writes traj_raw / traj_meta and index posting tables (legacy + XZ-star / TShape / XZT).
  */
 public final class IndexBuilders {
 
@@ -31,24 +34,48 @@ public final class IndexBuilders {
     public long bucketMs = 600_000L;
     public long epochMs;
     public int zorderLevel = 8;
+    public int xzLevel = 12;
+    public int tshapeMaxDepth = 12;
+    public int xztLevel = 12;
+    /** End of XZT time axis (exclusive-ish clamp); default epoch+10y. */
+    public long xztHorizonMs = -1L;
     public Rect domain;
     public String tableRaw = "traj_raw_v1";
     public String tableMeta = "traj_meta_v1";
     public String tableTime = "idx_time_v1";
     public String tableZorder = "idx_zorder_v1";
     public String tableHash = "idx_hash_v1";
+    public String tableXz = "idx_xz_v1";
+    public String tableTshape = "idx_tshape_v1";
+    public String tableXzt = "idx_xzt_v1";
   }
 
   public static final class ExpectedPostings {
     public final Set<String> timeKeys = new HashSet<String>();
     public final Set<String> zorderKeys = new HashSet<String>();
     public final Set<String> hashKeys = new HashSet<String>();
+    public final Set<String> xzKeys = new HashSet<String>();
+    public final Set<String> tshapeKeys = new HashSet<String>();
+    public final Set<String> xztKeys = new HashSet<String>();
   }
 
   private final LayoutParams layout;
+  private final XzStarSfc xzSfc;
+  private final TShapeSfc tshapeSfc;
+  private final XztCodec xztCodec;
 
   public IndexBuilders(LayoutParams layout) {
     this.layout = layout;
+    Rect d = layout.domain;
+    short xzG = (short) Math.max(1, layout.xzLevel);
+    short tsG = (short) Math.max(1, layout.tshapeMaxDepth);
+    short xztG = (short) Math.max(1, layout.xztLevel);
+    this.xzSfc = XzStarSfc.create(xzG, d.minX, d.maxX, d.minY, d.maxY);
+    this.tshapeSfc = TShapeSfc.create(tsG, d.minX, d.maxX, d.minY, d.maxY);
+    long horizon = layout.xztHorizonMs > layout.epochMs
+        ? layout.xztHorizonMs
+        : layout.epochMs + 30L * 24L * 3600L * 1000L;
+    this.xztCodec = new XztCodec(xztG, layout.epochMs, horizon);
   }
 
   public void writeTrajectory(KvBackend kv, Trajectory t, List<Chunk> chunks) throws IOException {
@@ -78,6 +105,9 @@ public final class IndexBuilders {
       writeTimePostings(kv, shard, t.tid, c, rawKey);
       writeZorderPostings(kv, shard, t.tid, c, rawKey);
       writeHashPosting(kv, shard, t.tid, c, rawKey, hash, t.vehicleId);
+      writeXzPosting(kv, shard, t.tid, c, rawKey);
+      writeTshapePosting(kv, shard, t.tid, c, rawKey);
+      writeXztPosting(kv, shard, t.tid, c, rawKey);
     }
   }
 
@@ -117,6 +147,39 @@ public final class IndexBuilders {
     kv.put(layout.tableHash, key, cols);
   }
 
+  private void writeXzPosting(KvBackend kv, int shard, long tid, Chunk c, byte[] rawKey) throws IOException {
+    long code = xzSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY, true);
+    byte[] key = RowKeyCodec.encodeXz(shard, code, tid, c.chunkId);
+    Map<String, byte[]> cols = new HashMap<String, byte[]>();
+    cols.put("d:r", rawKey);
+    kv.put(layout.tableXz, key, cols);
+  }
+
+  private void writeTshapePosting(KvBackend kv, int shard, long tid, Chunk c, byte[] rawKey) throws IOException {
+    long code = tshapeSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY);
+    byte[] key = RowKeyCodec.encodeTShape(shard, code, tid, c.chunkId);
+    Map<String, byte[]> cols = new HashMap<String, byte[]>();
+    cols.put("d:r", rawKey);
+    kv.put(layout.tableTshape, key, cols);
+  }
+
+  private void writeXztPosting(KvBackend kv, int shard, long tid, Chunk c, byte[] rawKey) throws IOException {
+    long code = xztCodec.indexInterval(c.tMinMs, c.tMaxMs);
+    byte[] key = RowKeyCodec.encodeXzt(shard, code, tid, c.chunkId);
+    Map<String, byte[]> cols = new HashMap<String, byte[]>();
+    cols.put("d:r", rawKey);
+    kv.put(layout.tableXzt, key, cols);
+  }
+
+  /** Rewrite XZT postings only (assumes raw keys already exist). */
+  public void rewriteXztPostings(KvBackend kv, Trajectory t, List<Chunk> chunks) throws IOException {
+    int shard = RowKeyCodec.shardOf(t.tid, layout.shardCount) & 0xFF;
+    for (Chunk c : chunks) {
+      byte[] rawKey = RowKeyCodec.encodeRaw(shard, t.tid, c.chunkId);
+      writeXztPosting(kv, shard, t.tid, c, rawKey);
+    }
+  }
+
   /** Compute expected posting key hex sets for one chunk (for verifier / tests). */
   public ExpectedPostings expectedForChunk(Trajectory t, Chunk c) {
     ExpectedPostings exp = new ExpectedPostings();
@@ -138,6 +201,12 @@ public final class IndexBuilders {
     }
     byte[] hash = VehicleHash.hash128(t.vehicleId);
     exp.hashKeys.add(hex(RowKeyCodec.encodeHash(shard, RowKeyCodec.HASH_FIELD_VEHICLE, hash, t.tid, c.chunkId)));
+    long xz = xzSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY, true);
+    exp.xzKeys.add(hex(RowKeyCodec.encodeXz(shard, xz, t.tid, c.chunkId)));
+    long ts = tshapeSfc.indexMbr(c.minX, c.minY, c.maxX, c.maxY);
+    exp.tshapeKeys.add(hex(RowKeyCodec.encodeTShape(shard, ts, t.tid, c.chunkId)));
+    long xzt = xztCodec.indexInterval(c.tMinMs, c.tMaxMs);
+    exp.xztKeys.add(hex(RowKeyCodec.encodeXzt(shard, xzt, t.tid, c.chunkId)));
     return exp;
   }
 

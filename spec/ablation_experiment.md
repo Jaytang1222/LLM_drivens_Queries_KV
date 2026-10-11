@@ -4,7 +4,7 @@
 - 状态：规范已锁定；规划侧 leave-one-out 开关与 `experiments/suites/ablation.yaml` 已按本文落地。正式主表仍须 HBase 冷跑与 Oracle 门禁，不得以「脚本能启动」代替。
 - 上游：`spec/design.md` §8–10、`spec/IMPLEMENTATION_PLAN.md` §19.2、`docs/environment-lock.md`
 - 正交规范：[`spec/comparative_experiment.md`](comparative_experiment.md)（外部方法 / HBase 基线横比；**不**在消融中复用为臂）
-- 数据与用例：与对比实验 E2/E3 同一 `experiments/workloads/bound_ir_cmp_v3.json`（当前冻结 20 条 rewrite≥10% 切片）及对应 Oracle
+- 数据与用例：与对比实验同一 **复杂度分层** 工作负载——`bound_ir_simple_v1`（简单层）与 `bound_ir_complex_v1`（复杂层）；套件 `ablation-simple.yaml` / `ablation.yaml`。旧 `bound_ir_cmp_v3` 仅回归
 
 ---
 
@@ -152,13 +152,14 @@ experiments/results/<run_id>/
 | `full` | — | `kart` 默认 `action_mode=dual-rules` | 参照 |
 | `cbo_only` | −离线规则 −在线残差 | 同一 `LlmRewriteArm` / 同一 CBO 搜索后跳过 rewrite（`action_mode=cbo_only`）；**不**换成 `RulePolicy` | e2e + Oracle |
 | `no_online_llm` | −在线残差 | `action_mode=dual-offline-rules`：CBO + 离线规则，不调在线 LLM | e2e + Oracle |
+| `no_offline_llm` | −云端 LLM 离线改写 | `action_mode=dual-online-only`：关闭 exact/related/selectivityAccess 离线 apply；仍可走由准入规则导出的在线残差；无残差时退回 CBO | e2e + Oracle |
 | `no_fast_cost` | −搜索中 Fast Cost | `use_fast_cost=false`；rewrite 路径不变 | e2e |
 | `no_final_cost` | −Final Cost 选优 | `final_select=plan_id`；rewrite 路径不变 | e2e |
 | `no_coverage` | −CoverageCheck | 见 §4.3；**仅风险表** | Oracle |
 
 说明：
 
-- `cbo_only` 与 `no_online_llm` 都留在 `kart` 臂上，只改 `action_mode`，避免整臂替换成 Native policy。
+- `cbo_only` / `no_online_llm` / `no_offline_llm` 都留在 `kart` 臂上，只改 `action_mode`，避免整臂替换成 Native policy。
 - `no_fast_cost` / `no_final_cost` 只改 CBO 的 `PlannerConfig`，不改 Dual rewrite 的 G1/规则逻辑。
 - 旧因子 `no_llm_rule` / `llm_direct` / `single_index` / `uncalibrated` **不进本主表**。
 
@@ -176,7 +177,7 @@ experiments/results/<run_id>/
 
 | 因子 | 现有能力 | 规范要求 |
 |---|---|---|
-| `full` / `cbo_only` / `no_online_llm` | `LlmRewriteArm` + `action_mode` overlay（经 `BenchContext.extras`） | 已落地；因子不得用 `policy:` 整臂替换 |
+| `full` / `cbo_only` / `no_online_llm` / `no_offline_llm` | `LlmRewriteArm` + `action_mode` overlay（经 `BenchContext.extras`） | 已落地；因子不得用 `policy:` 整臂替换 |
 | `no_fast_cost` | `PlannerConfig.use_fast_cost` | 已落地：关闭 CBO 搜索按 Fast Cost 排序/停滞剪枝 |
 | `no_final_cost` | `PlannerConfig.final_select=plan_id` | 已落地：SafePlan 按 `plan_id` 字典序选取 |
 | `no_coverage` | `PlannerConfig.skip_coverage_check` | 已落地；须 `--allow-unsafe` |
@@ -191,19 +192,22 @@ experiments/results/<run_id>/
 
 | 文件 | 用途 |
 |---|---|
-| `experiments/workloads/bound_ir_cmp_v3.json` | 金标 BoundIR（与对比实验 E2/E3 **同一冻结版本**，当前 20 条） |
-| `experiments/workloads/bound_ir_cmp_v3.oracle.json` | FullScan Oracle 缓存 |
+| `experiments/workloads/bound_ir_simple_v1.json` | 简单层金标（与对比 `eval_level=simple` 同一冻结） |
+| `experiments/workloads/bound_ir_complex_v1.json` | 复杂层金标（与对比 `eval_level=complex` 同一冻结；**勿覆盖**） |
+| `experiments/workloads/bound_ir_cmp_v3.json` | 历史 20 条；仅回归 |
 | `experiments/workloads/bound_ir_v1.json` | 历史 BoundIR-65；仅回归 / oracle-diff，**不是**消融主表 |
 
 正式实验前冻结版本号与校验和写入 `meta.json`。Smoke（如 `tdrive_smoke.json`）仅用于连通性，**不得**单独作为论文主表。
 
 ### 5.2 分层
 
-与对比实验一致，至少覆盖：
+与对比实验一致，主轴为 **`eval_level` ∈ {simple, complex}**（见 `comparative_experiment.md` §4.2）；两层分别出消融表，禁止混池 P50。
+
+层内至少覆盖：
 
 - 谓词：仅 T / 仅 Z / 仅 H / TZ / 组合 / Top-K
-- 选择率：小窗 / 大窗
-- 含 CBO 易错 / rewrite 有机会改写的样例，以便 `cbo_only` 与代价相关臂可解释
+- 选择率：小窗 / 大窗（complex 以选择性变体为主）
+- complex 层含 rewrite 有机会改写的样例，以便 `cbo_only` / `no_offline_llm` / `no_online_llm` 可解释；simple 层预期各因子接近（kart≈cbo）
 
 ### 5.3 Oracle
 
@@ -243,7 +247,7 @@ experiments/results/<run_id>/
 
 ### 6.3 辅助（解释与规划开销）
 
-- LLM calls / tokens（`full` 可能调用在线残差；`cbo_only` / `no_online_llm` 应为 `null` 或 0）
+- LLM calls / tokens（`full` / `no_offline_llm` 可能调用在线残差；`cbo_only` / `no_online_llm` 应为 `null` 或 0）
 - `n_candidates`、验证拒绝次数、`plan_regret_ms`（有则报）
 - 扫描 ranges、索引行、回表 chunk、bytes、`dtw_cells`
 
@@ -310,7 +314,7 @@ experiments/results/<run_id>/
 
 ## 11. 与需求 / 设计 / 实现计划的关系
 
-- `IMPLEMENTATION_PLAN.md` §19.2「必做消融」由本文操作化为 Dual rewrite leave-one-out（`cbo_only` / `no_online_llm` / cost / coverage）
+- `IMPLEMENTATION_PLAN.md` §19.2「必做消融」由本文操作化为 Dual rewrite leave-one-out（`cbo_only` / `no_online_llm` / `no_offline_llm` / cost / coverage）
 - 计划搜索、验证器、代价模型行为以 `design.md` §8–10 为准；rewrite 语义以 `DualRewritePolicy` 为准
 - 对比实验规范定义外部公平横比；本文定义内部因果消融；二者互补，互不替代
 - 套件文件 `experiments/suites/ablation.yaml`：`base_arm: kart`（Full Dual rewrite），factors 对齐 §4.2–4.3；`no_coverage` 为 `unsafe`，默认跳过
@@ -320,8 +324,8 @@ experiments/results/<run_id>/
 ## 12. 实现阶段建议顺序
 
 1. ~~修正 suite：`base_arm=kart`（Dual rewrite），因子对齐 §4~~ 已落地
-2. ~~`cbo_only` / `no_online_llm` 经 `action_mode` overlay，不换 Native policy 臂~~ 已落地
+2. ~~`cbo_only` / `no_online_llm` / `no_offline_llm` 经 `action_mode` overlay，不换 Native policy 臂~~ 已落地
 3. ~~`no_fast_cost` / `no_final_cost` / `no_coverage`~~ 已落地
-4. 与对比实验同一 `bound_ir_cmp_v3`（当前 20 条）跑正式 cold 主表 + 风险表
+4. 与对比实验同一 `bound_ir_complex_v1` 跑正式 cold 主表 + 风险表
 
 入口：`scripts/bench-ablation.sh`。因子语义未按 §4 执行的 run 仍不得进论文主表。

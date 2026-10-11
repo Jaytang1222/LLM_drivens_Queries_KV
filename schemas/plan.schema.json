@@ -24,6 +24,9 @@
             "enum": [
               "TIME_RANGE_SCAN",
               "ZORDER_RANGE_SCAN",
+              "XZ_RANGE_SCAN",
+              "TSHAPE_RANGE_SCAN",
+              "XZT_RANGE_SCAN",
               "EQUALITY_LOOKUP",
               "FULL_SCAN_CHUNKS",
               "INTERSECT",
