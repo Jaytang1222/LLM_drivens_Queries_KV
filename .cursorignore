@@ -1,0 +1,37 @@
+# Build output
+target/
+*.class
+*.jar
+
+# Raw datasets (T-Drive / AIS, ~180 MB)
+datasets/
+
+# Cloned third-party baselines (~160 MB); keep pinned commit list
+experiments/third_party/*
+!experiments/third_party/commits.json
+
+# Generated catalog statistics (manifests stay visible)
+catalog/*.stats.json
+catalog/.stats_stamp
+
+# Regenerated bench outputs and scratch pulls
+experiments/results/
+experiments/tmp_pull/
+runs/
+
+# Raw server pulls from superseded refine iterations (summaries live in docs/refine_*)
+experiments/refine_pull/
+experiments/refine_2_pull/
+experiments/refine_3_pull/
+experiments/refine_4_pull/
+experiments/refine_5_pull/
+experiments/refine_6_pull/
+
+# Logs, caches, tool state
+*.log
+*.out
+.jqwik-database
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/

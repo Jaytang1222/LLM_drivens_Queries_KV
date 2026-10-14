@@ -5,10 +5,11 @@
 # Enable sag-mql only after a snapshot-aligned HBase/Mongo WorldAccess is verified.
 kind: compare
 id: parse
-# Default = nl_ir_v2 (kart-advantage slice; gold from FullScan of bound_ir_cmp_v3).
-# History: experiments/workloads/nl_ir_v1.json
-workload: experiments/workloads/nl_ir_v2.json
-oracle: experiments/workloads/nl_ir_v2.json
+# Default = nl_ir_v3 (nl_ir_v2 + registered POI NL: 国贸/首都机场/中关村/…).
+# History: experiments/workloads/nl_ir_v1.json, nl_ir_v2.json
+# Gold for added POI rows = FullScan of bound_ir_poi_e1 (regions.yaml → EPSG:32650).
+workload: experiments/workloads/nl_ir_v3.json
+oracle: experiments/workloads/nl_ir_v3.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

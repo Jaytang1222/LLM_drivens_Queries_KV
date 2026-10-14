@@ -1,0 +1,29 @@
+{
+  "path": "experiments/workloads/nl_ir_v3.json",
+  "evaluation_role": "e1_parse_poi_v3",
+  "parent_nl_ir": "nl_ir_v2",
+  "poi_bound_ir": "bound_ir_poi_e1",
+  "poi_oracle": "bound_ir_poi_e1.oracle.json",
+  "generator": "experiments/adapters/expand_nl_ir_poi.py",
+  "n_queries": 160,
+  "n_from_v2": 80,
+  "n_added": 80,
+  "added_layers": {
+    "poi_spatial_temporal": 48,
+    "poi_st_vehicle": 8,
+    "clarify_missing_time": 8,
+    "clarify_vague": 8,
+    "clarify_relative_time": 8
+  },
+  "poi_regions": [
+    "zhongguancun",
+    "wangjing",
+    "guomao",
+    "beijing_cbd",
+    "tiananmen",
+    "capital_airport",
+    "haidian_central",
+    "chaoyang_central"
+  ],
+  "note": "Supported POI gold = FullScan of regions.yaml envelopes (EPSG:32650). Chinese NL uses 国贸/首都机场/中关村/望京/天安门/海淀/朝阳; English uses registered region_name."
+}

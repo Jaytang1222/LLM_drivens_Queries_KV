@@ -5,7 +5,7 @@ KART 是 HBase 上基于 LLM 的轨迹查询整系统（NL→IR、CBO+dual 优�
 ```bash
 ./scripts/kart.sh up && ./scripts/kart.sh rebuild
 
-# E1 — nl_ir_v2.json
+# E1 — nl_ir_v3.json (POI NL + prior v2)
 ./scripts/bench-parse.sh --run-id r1 \
   --arm kart,direct-draftir,din-sql-spider,din-sql-bird,sag-mql-nofeedback
 
@@ -17,7 +17,8 @@ KART 是 HBase 上基于 LLM 的轨迹查询整系统（NL→IR、CBO+dual 优�
 ```
 
 Workloads kept for formal runs:
-- `nl_ir_v2.json` — E1
+- `nl_ir_v3.json` — E1（含国贸/首都机场等 POI；历史 `nl_ir_v2.json`）
+- `bound_ir_poi_e1.json` (+ oracle) — E1 POI BoundIR / FullScan 金标
 - `bound_ir_cmp_v3.json` (+ oracle) — E2/E3 与消融主表
 - `bound_ir_v1.json` (+ oracle) — oracle-diff-65 / 回归
 - `tdrive_smoke.json` (+ oracle) — smoke

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Full comparative batch (background). Logs + PID under experiments/results/<run-id>/.
-# Stages: E1 parse → E2 plan → E2 shared-pool → E3 warm → E3 cold
+# Stages: E1 parse → E2 plan complex/simple → E2 shared-pool → E3 warm/cold complex+simple
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/kart-env.sh"
 cd "$ROOT"
 
-RUN_ID="${RUN_ID:-cmp-full-adv2-$(date +%Y%m%d-%H%M%S)}"
+RUN_ID="${RUN_ID:-cmp-full-cs-$(date +%Y%m%d-%H%M%S)}"
 OUT="$ROOT/experiments/results/$RUN_ID"
 mkdir -p "$OUT"
 LOG="$OUT/batch.log"
@@ -68,10 +68,9 @@ run_step() {
   return 0
 }
 
-log "=== batch start run_id=$RUN_ID root=$ROOT ==="
+log "=== batch start run_id=$RUN_ID root=$ROOT ADV=${KART_ADVANCED_INDEXES:-} ==="
 write_status "init" "running" "batch started"
 
-# Ensure LLM env for E1 / conditional LLM arms
 set +e
 kart_load_llm_env >>"$LOG" 2>&1
 LLM_EC=$?
@@ -82,51 +81,82 @@ fi
 
 kart_ensure_jar >>"$LOG" 2>&1
 
-# Sync check: advantage workload must exist
-if [[ ! -f experiments/workloads/bound_ir_advantage_v2.json ]]; then
-  log "ERROR: missing bound_ir_advantage_v2.json — sync required"
-  write_status "all" "failed" "missing advantage_v2 workload"
-  exit 2
-fi
+for f in \
+  experiments/workloads/nl_ir_v3.json \
+  experiments/workloads/bound_ir_complex_v1.json \
+  experiments/workloads/bound_ir_complex_v1.oracle.json \
+  experiments/workloads/bound_ir_simple_v1.json \
+  experiments/workloads/bound_ir_simple_v1.oracle.json \
+  experiments/suites/plan-simple.yaml \
+  experiments/suites/e2e-simple.yaml
+do
+  if [[ ! -f "$f" ]]; then
+    log "ERROR: missing $f"
+    write_status "all" "failed" "missing $f"
+    exit 2
+  fi
+done
 
-# E1 formal deep arms, trials=5
+# E1 formal deep arms (nl_ir_v3), trials=5
 run_step e1_parse \
   bash "$ROOT/scripts/bench-parse.sh" \
     --run-id "$RUN_ID" \
     --arm kart,direct-draftir,din-sql-spider,din-sql-bird,sag-mql-nofeedback \
     --trials 5
 
-# E2 native plan (suite default = advantage_v2)
-run_step e2_plan \
+# E2 native plan — complex
+run_step e2_plan_complex \
   bash "$ROOT/scripts/bench-plan.sh" \
-    --run-id "$RUN_ID" \
+    --run-id "${RUN_ID}-plan-complex" \
     --suite experiments/suites/plan.yaml \
     --trials 5
 
-# E2 shared-pool (separate suite/table)
+# E2 native plan — simple
+run_step e2_plan_simple \
+  bash "$ROOT/scripts/bench-plan.sh" \
+    --run-id "${RUN_ID}-plan-simple" \
+    --suite experiments/suites/plan-simple.yaml \
+    --trials 5
+
+# E2 shared-pool (complex only; separate table)
 run_step e2_shared_pool \
   bash "$ROOT/scripts/bench-plan.sh" \
     --run-id "${RUN_ID}-shared-pool" \
     --suite experiments/suites/plan-shared-pool.yaml \
     --trials 5
 
-# E3 warm formal
-run_step e3_warm \
+# E3 warm — complex
+run_step e3_warm_complex \
   bash "$ROOT/scripts/bench-e2e.sh" \
-    --run-id "${RUN_ID}-e3-warm" \
+    --run-id "${RUN_ID}-e3-warm-complex" \
     --suite experiments/suites/e2e.yaml \
     --cache warm \
     --trials 5
 
-# E3 cold first-run (may be cache_enforced=false without sudo drop_caches)
-run_step e3_cold \
+# E3 warm — simple
+run_step e3_warm_simple \
   bash "$ROOT/scripts/bench-e2e.sh" \
-    --run-id "${RUN_ID}-e3-cold" \
+    --run-id "${RUN_ID}-e3-warm-simple" \
+    --suite experiments/suites/e2e-simple.yaml \
+    --cache warm \
+    --trials 5
+
+# E3 cold first-run — complex
+run_step e3_cold_complex \
+  bash "$ROOT/scripts/bench-e2e.sh" \
+    --run-id "${RUN_ID}-e3-cold-complex" \
     --suite experiments/suites/e2e.yaml \
     --cache cold \
     --trials 1
 
-# Summarize stage outcomes
+# E3 cold first-run — simple
+run_step e3_cold_simple \
+  bash "$ROOT/scripts/bench-e2e.sh" \
+    --run-id "${RUN_ID}-e3-cold-simple" \
+    --suite experiments/suites/e2e-simple.yaml \
+    --cache cold \
+    --trials 1
+
 python3 - "$STATUS" <<'PY' >>"$LOG" 2>&1
 import json, sys
 from pathlib import Path
