@@ -36,6 +36,7 @@ public final class ClarificationDetector {
       {"tdrive_smoke_anchor", "tdrive_smoke_anchor", "smoke_anchor", "锚点区"},
       {"tdrive_topk_box", "tdrive_topk_box", "topk_box"},
       {"tdrive_topk_wide", "tdrive_topk_wide", "topk_wide"},
+      {"tdrive_topk_mid", "tdrive_topk_mid", "topk_mid"},
       {"tdrive_topk_s1", "tdrive_topk_s1", "topk_s1"},
   };
 
@@ -179,6 +180,30 @@ public final class ClarificationDetector {
       }
     }
 
+    if (draft.spatial_parts != null && !draft.spatial_parts.isEmpty()) {
+      List<DraftIr.Spatial> kept = new ArrayList<DraftIr.Spatial>();
+      for (DraftIr.Spatial part : draft.spatial_parts) {
+        if (part == null) {
+          continue;
+        }
+        if (!isBlank(part.region_name)
+            && !regionGroundedInUtteranceOrContext(part.region_name.trim(), utt, context)) {
+          continue;
+        }
+        boolean hasGeom = part.geometry != null
+            && part.geometry.min_lon != null && part.geometry.min_lat != null
+            && part.geometry.max_lon != null && part.geometry.max_lat != null;
+        if (isBlank(part.region_name) && !hasGeom) {
+          continue;
+        }
+        kept.add(part);
+      }
+      draft.spatial_parts = kept.isEmpty() ? null : kept;
+      if (draft.spatial_parts == null && !hasSpatialSpec(draft)) {
+        m.add("spatial");
+      }
+    }
+
     draft.missing = new ArrayList<String>(m);
   }
 
@@ -300,6 +325,21 @@ public final class ClarificationDetector {
   }
 
   private static boolean hasSpatialSpec(DraftIr d) {
+    if (d.spatial_parts != null) {
+      for (DraftIr.Spatial part : d.spatial_parts) {
+        if (part == null) {
+          continue;
+        }
+        if (!isBlank(part.region_name)) {
+          return true;
+        }
+        if (part.geometry != null
+            && part.geometry.min_lon != null && part.geometry.min_lat != null
+            && part.geometry.max_lon != null && part.geometry.max_lat != null) {
+          return true;
+        }
+      }
+    }
     if (d.spatial == null) {
       return false;
     }

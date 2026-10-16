@@ -76,6 +76,10 @@ public final class BenchContext {
   }
 
   public QueryEngine newEngine(kart.search.PlannerMode mode) {
+    return newEngine(mode, kart.search.LegalActionGenerator.advancedIndexesEnabled());
+  }
+
+  public QueryEngine newEngine(kart.search.PlannerMode mode, boolean advancedIndexesEnabled) {
     kart.exec.ExecLimits limits = kart.exec.ExecLimits.defaults();
     limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE, planner.max_candidate_chunks);
     limits.maxDtwCells = planner.max_dtw_cells;
@@ -84,6 +88,7 @@ public final class BenchContext {
     if (mode != kart.search.PlannerMode.LLM && mode != kart.search.PlannerMode.LLM_DIRECT) {
       useLlm = null;
     }
-    return new QueryEngine(kv, layout, limits, stats, planner, useLlm, mode);
+    return new QueryEngine(kv, layout, limits, stats, planner, useLlm, mode,
+        advancedIndexesEnabled);
   }
 }

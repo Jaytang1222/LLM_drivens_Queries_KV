@@ -4,6 +4,8 @@ import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
 import kart.compile.QueryCompiler;
 import kart.compile.ScanTask;
+import kart.compile.CodeRangeBudget;
+import kart.codec.CodeRange;
 import kart.ir.BoundIr;
 import kart.plan.Op;
 import kart.plan.PlanBuilder;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -38,6 +41,27 @@ class PlanValidatorTest {
     layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
     validator = new PlanValidator(layout);
     compiler = new QueryCompiler(layout);
+  }
+
+  @Test
+  void indexedSfcMembershipMatchesNormalizedInclusiveRangeUnion() {
+    List<CodeRange> unsorted = Arrays.asList(
+        new CodeRange(40L, 49L, true),
+        new CodeRange(10L, 19L, true),
+        new CodeRange(18L, 30L, false),
+        new CodeRange(60L, 60L, true));
+    List<CodeRange> normalized = CodeRangeBudget.mergeOverlapping(unsorted);
+
+    for (long code = 0; code <= 70; code++) {
+      boolean expected = false;
+      for (CodeRange range : unsorted) {
+        if (code >= range.lo && code <= range.hi) {
+          expected = true;
+          break;
+        }
+      }
+      assertEquals(expected, PlanValidator.codeInRanges(code, normalized), "code=" + code);
+    }
   }
 
   // ---------------------------------------------------------------- structure
@@ -155,7 +179,7 @@ class PlanValidatorTest {
   // ---------------------------------------------------------- physical / coverage
 
   @Test
-  void physicalSafetyRejectsStartGeStop() {
+  void invalidEmptyRangeIsRejectedBeforeSafePlan() {
     BoundIr ir = stIdsQuery();
     PlanEnvelope env = findPlan(ir, "P_T");
     PhysicalPlan phys = compiler.compile(env, ir);
@@ -173,8 +197,13 @@ class PlanValidatorTest {
     ValidationReport report = new ValidationReport();
     Optional<SafePlanHandle> h = validator.validate(env, ir, phys, report);
     assertFalse(h.isPresent());
-    assertTrue(hasFail(report, "PhysicalSafetyCheck"), report.toString());
-    assertTrue(findingContains(report, "start >= stop"), report.toString());
+    // Indexed CoverageCheck decodes and rejects malformed ranges before the later
+    // PhysicalSafetyCheck. Either stage must fail closed; the earliest rejection
+    // is the expected path for the current validator.
+    assertTrue(hasFail(report, "CoverageCheck") || hasFail(report, "PhysicalSafetyCheck"),
+        report.toString());
+    assertTrue(findingContains(report, "start_ge_stop")
+        || findingContains(report, "start >= stop"), report.toString());
   }
 
   @Test

@@ -26,6 +26,19 @@
         "end_ms": { "type": "integer" }
       }
     },
+    "temporal_parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["start_ms", "end_ms"],
+        "properties": {
+          "start_ms": { "type": "integer" },
+          "end_ms": { "type": "integer" }
+        }
+      }
+    },
     "spatial": {
       "type": "object",
       "additionalProperties": false,
@@ -38,6 +51,24 @@
         "relation": { "type": "string", "enum": ["INTERSECTS"] },
         "boundary": { "type": "string", "enum": ["INCLUDED"] },
         "region_name": { "type": "string" }
+      }
+    },
+    "spatial_parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["min_x", "min_y", "max_x", "max_y", "relation", "boundary"],
+        "properties": {
+          "min_x": { "type": "number" },
+          "min_y": { "type": "number" },
+          "max_x": { "type": "number" },
+          "max_y": { "type": "number" },
+          "relation": { "type": "string", "enum": ["INTERSECTS"] },
+          "boundary": { "type": "string", "enum": ["INCLUDED"] },
+          "region_name": { "type": "string" }
+        }
       }
     },
     "predicates": {

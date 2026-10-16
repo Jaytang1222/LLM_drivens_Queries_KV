@@ -1,0 +1,12 @@
+{
+  "path": "experiments/workloads/nl_ir_v4.json",
+  "bound_ir": "bound_ir_e1_v4",
+  "oracle": "bound_ir_e1_v4.oracle.json",
+  "generator": "experiments/adapters/gen_nl_ir_v4.py",
+  "n_queries": 40,
+  "empty_gold_refs": [],
+  "supersedes": [
+    "nl_ir_v3",
+    "nl_ir_v2"
+  ]
+}

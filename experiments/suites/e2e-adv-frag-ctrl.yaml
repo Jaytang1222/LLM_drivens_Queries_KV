@@ -1,0 +1,14 @@
+# Frag + control shapes; data unchanged. Warm paired four arms.
+kind: compare
+id: e2e-adv-frag-ctrl
+workload: experiments/workloads/bound_ir_adv_frag_ctrl_v1.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - kart

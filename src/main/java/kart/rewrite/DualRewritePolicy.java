@@ -316,7 +316,7 @@ public final class DualRewritePolicy {
    * One admitted rule, or one access rule paired with one resource rule. Not a global slot argmin.
    */
   /** Advanced index plans that must not inherit legacy P_TZ/P_Z rules via alias. */
-  static boolean advancedPlan(String planId) {
+  public static boolean advancedPlan(String planId) {
     if (planId == null || planId.isEmpty()) return false;
     return planId.startsWith("P_XZ") || planId.startsWith("P_TS");
   }
@@ -336,11 +336,45 @@ public final class DualRewritePolicy {
     return false;
   }
 
-  /** Alias only when no exact-plan rules exist for this CBO plan id. */
+  /**
+   * Legacy-family aliases may bind classic plans only. Advanced plans have different
+   * access semantics and must not inherit a P_T/P_Z/P_TZ rule just because their
+   * indexes are spatial or temporal in a coarse family mapping.
+   */
   static boolean allowPlanAlias(JsonNode rules, JsonNode feats) {
     if (feats == null) return true;
     String plan = feats.path("cbo_plan").asText();
+    if (advancedPlan(plan)) return false;
     return !authoredForPlan(rules, plan);
+  }
+
+  /**
+   * Cheap conservative precheck used before building the full rewrite feature context.
+   * For advanced plans, return false only when every admitted rule is explicitly tied
+   * to a different exact classic plan id. Rules without a plan constraint, alias-based
+   * rules, and unfamiliar predicates keep the slow path enabled.
+   */
+  public static boolean mayHaveRuleForPlan(JsonNode rules, String planId) {
+    if (!advancedPlan(planId)) return true;
+    if (rules == null || !rules.isArray()) return false;
+    for (JsonNode rule : rules) {
+      if (!admitted(rule)) continue;
+      JsonNode when = rule.path("when");
+      boolean exactPlanConstraint = false;
+      for (JsonNode clause : when) {
+        if (!clause.isArray() || clause.size() < 3) return true;
+        String field = clause.path(0).asText("");
+        if ("cbo_plan_alias".equals(field)) return true;
+        if (!"cbo_plan".equals(field)) continue;
+        if (!"==".equals(clause.path(1).asText()) || !clause.path(2).isTextual()) {
+          return true;
+        }
+        exactPlanConstraint = true;
+        if (planId.equals(clause.path(2).asText())) return true;
+      }
+      if (!exactPlanConstraint) return true;
+    }
+    return false;
   }
 
   public static RewriteProtocol.Program exact(JsonNode rules, JsonNode c) {
@@ -352,6 +386,14 @@ public final class DualRewritePolicy {
     if (set == null || !set.has(RewriteProtocol.ACCESS)) return false;
     String a = set.path(RewriteProtocol.ACCESS).asText();
     return "drop_spatial_branch".equals(a) || "drop_temporal_branch".equals(a);
+  }
+
+  /** True when the program drops the spatial (Z) branch → P_T. */
+  public static boolean dropsSpatial(RewriteProtocol.Program p) {
+    if (p == null || p.choice == null) {
+      return false;
+    }
+    return "drop_spatial_branch".equals(p.choice.get(RewriteProtocol.ACCESS));
   }
 
   /**

@@ -131,7 +131,47 @@ public final class IrBinder {
         }
       }
 
-      if (draft.spatial != null) {
+      if (draft.spatial_parts != null && !draft.spatial_parts.isEmpty()) {
+        List<BoundIr.Spatial> parts = new ArrayList<BoundIr.Spatial>();
+        for (DraftIr.Spatial part : draft.spatial_parts) {
+          if (part == null) {
+            continue;
+          }
+          if (part.region_name != null && !part.region_name.trim().isEmpty()
+              && findRegion(part.region_name.trim()) == null) {
+            out.status = STATUS_NEED_CLARIFICATION;
+            out.error = "unknown region_name: " + part.region_name.trim()
+                + "; provide a registered region or lon/lat rectangle";
+            out.clarifyField = "spatial";
+            return out;
+          }
+          Rect rect = resolveSpatial(part);
+          if (rect == null) {
+            out.status = STATUS_NEED_CLARIFICATION;
+            out.error = "incomplete spatial_parts entry; provide region_name or rectangle";
+            out.clarifyField = "spatial";
+            return out;
+          }
+          BoundIr.Spatial bs = new BoundIr.Spatial();
+          bs.min_x = rect.minX;
+          bs.min_y = rect.minY;
+          bs.max_x = rect.maxX;
+          bs.max_y = rect.maxY;
+          bs.relation = "INTERSECTS";
+          bs.boundary = "INCLUDED";
+          if (part.region_name != null && !part.region_name.trim().isEmpty()) {
+            bs.region_name = part.region_name.trim();
+          }
+          parts.add(bs);
+        }
+        if (parts.isEmpty()) {
+          out.status = STATUS_NEED_CLARIFICATION;
+          out.error = "spatial_parts empty after resolve";
+          out.clarifyField = "spatial";
+          return out;
+        }
+        b.spatial_parts = parts;
+      } else if (draft.spatial != null) {
         if (draft.spatial.region_name != null && !draft.spatial.region_name.trim().isEmpty()
             && findRegion(draft.spatial.region_name.trim()) == null) {
           out.status = STATUS_NEED_CLARIFICATION;

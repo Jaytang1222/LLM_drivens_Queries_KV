@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>KART Experiment Setup</title>
+<style>
+  :root {
+    --hdr: #2f6b4f;
+    --hdr2: #3a7d5c;
+    --border: #2f6b4f;
+    --alt: #f3f6f4;
+    --bg: #ffffff;
+    --text: #1a1a1a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 24px;
+    font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    color: var(--text);
+    background: #e8ebe9;
+  }
+  .sheet {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: var(--bg);
+    border: 2px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    vertical-align: top;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .sec {
+    background: var(--hdr);
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    padding: 8px 10px;
+  }
+  .method-name {
+    text-align: center;
+    font-weight: 700;
+    background: #eaf2ed;
+    font-size: 14px;
+  }
+  .method-name .tag {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+    color: #355;
+    margin-top: 2px;
+  }
+  .metric-name {
+    text-align: center;
+    font-weight: 700;
+    background: #eaf2ed;
+    width: 20%;
+  }
+  .param-name {
+    text-align: center;
+    font-weight: 700;
+    background: #eaf2ed;
+    width: 18%;
+  }
+  .zebra td { background: var(--alt); }
+  .left-block {
+    width: 58%;
+  }
+  .right-block {
+    width: 42%;
+  }
+  .subhdr {
+    background: var(--hdr2);
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+  }
+  .cfg {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .cfg th, .cfg td {
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .cfg th {
+    background: #d9e8df;
+    width: 42%;
+    text-align: left;
+  }
+  .note {
+    max-width: 1180px;
+    margin: 10px auto 0;
+    font-size: 12px;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+<table>
+  <!-- 对比方法 -->
+  <tr><td class="sec" colspan="4">对比方法</td></tr>
+  <tr>
+    <td class="method-name" style="width:25%">KART <span class="tag">(ours · 默认)</span></td>
+    <td class="method-name" style="width:25%">CBO</td>
+    <td class="method-name" style="width:25%">RBO</td>
+    <td class="method-name" style="width:25%">FullScan</td>
+  </tr>
+  <tr>
+    <td>基于 BeamSearch + Final 代价模型（<code>cost_v2_rs_sched</code>）选择 SafePlan；叠加 Dual Rewrite（离线已接纳规则 + 在线残差 LLM）；可选启用高级索引 XZ* / TShape / XZT。</td>
+    <td>Best-first / Beam 代价优化器；在经典索引（Time / Z-Order / Hash）与 FullScan 上做覆盖约束下的代价排序；当前对比臂关闭高级索引，且无 LLM 改写。</td>
+    <td>固定模板优先级：TZ → T → Z → H →（高级族）→ FULL；不做候选枚举与代价 argmin，仅按顺序取第一个通过验证的计划。</td>
+    <td>强制 <code>P_FULL</code> 全表扫描基线；无索引剪枝；用于 Oracle 对齐与上界延迟对照。</td>
+  </tr>
+
+  <!-- 评估指标 -->
+  <tr><td class="sec" colspan="5" style="display:none"></td></tr>
+</table>
+<table>
+  <tr><td class="sec" colspan="5">评估指标</td></tr>
+  <tr>
+    <td class="metric-name">E2E Latency<br/>(ms)</td>
+    <td class="metric-name">Planning Time<br/><code>t_plan</code> (ms)</td>
+    <td class="metric-name">Execution Time<br/><code>t_exec</code> (ms)</td>
+    <td class="metric-name">Candidates / Postings<br/>(CT)</td>
+    <td class="metric-name">Emitted Ranges<br/>(RKI)</td>
+  </tr>
+  <tr>
+    <td><code>t_e2e = t_plan + t_exec</code>；报告均值与 P50/P95。制品落盘不计时。</td>
+    <td>从规划开始到选出 SafePlan；含搜索 / 验证 / Final 代价，不含执行与制品 IO。</td>
+    <td>物理计划执行墙钟时间；可拆分索引扫描、精确过滤、回表 Fetch。</td>
+    <td>进入精确阶段的候选轨迹数 / posting 数（区分合并前 raw 与码过滤后）。反映索引过滤效率。</td>
+    <td>实际发出的 ScanTask / 行键区间数；反映扫描范围与剪枝后残留单元量。</td>
+  </tr>
+  <tr class="zebra">
+    <td colspan="5" style="font-size:12.5px">
+      附加披露：<b>Oracle 正确性</b>（相对冻结 FullScanOracle 的轨迹 ID 集合一致）、
+      <b>Plan Regret</b>（相对同查询最优安全计划的执行差距）、
+      <b>高级计划占比</b>（XZ / TS / XZT 被选中比例）、
+      <b>LLM 调用次数</b>（max_llm_calls 预算内）。
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr><td class="sec" colspan="5">参数</td></tr>
+  <tr>
+    <td class="param-name">beam_width</td>
+    <td class="param-name">max_candidates</td>
+    <td class="param-name">max_llm_calls</td>
+    <td class="param-name">cache</td>
+    <td class="param-name">query type</td>
+  </tr>
+  <tr>
+    <td>BeamSearch 宽度；控制 frontier 宽度。默认 <b>3</b>。</td>
+    <td>进入验证 / Final 的候选上限。默认 <b>8</b>。</td>
+    <td>单查询 LLM 调用预算；耗尽则 <code>LLM_BUDGET</code> 停搜。默认 <b>6</b>（规则臂为 0）。</td>
+    <td>冷/热缓存协议：<b>cold</b>（正式首轮）或 <b>warm</b>（warmup 后计时）。</td>
+    <td>空间/时空范围查询（SRQ / ST-Range）、相似度 Top-K（DTW / Frechet / Hausdorff）。默认以范围查询为主。</td>
+  </tr>
+</table>
+
+<table>
+  <tr><td class="sec" colspan="2">数据集 &amp; 参数配置</td></tr>
+  <tr>
+    <td class="left-block" style="padding:0">
+      <table style="border:none">
+        <tr><td class="subhdr">数据集</td></tr>
+        <tr>
+          <td>
+            <b>T-Drive</b>（manifest <code>tdrive_v1_ready</code>）：北京出租车轨迹快照，实验就绪集约 <b>47,102</b> 条轨迹；单机 HBase 默认数据集。<br/><br/>
+            <b>Query Workload</b>：冻结 BoundIR + FullScanOracle。<br/>
+            · Simple：<code>bound_ir_simple_v1</code>（28 条；含纯时 / 纯空 / 时空 / Top-K）<br/>
+            · Complex：<code>bound_ir_complex_v1</code>（31 条；默认 E2E 主集，时空范围）<br/>
+            · 诊断旁路：ADV frag / mix / complex-diag（不并入主表，除非单独声明）<br/><br/>
+            <span style="font-size:12px;color:#444">不支持：CD-Taxi、连续路径、连续 Fréchet、Quadtree（见 supported-semantics）。</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+    <td class="right-block" style="padding:0;vertical-align:top">
+      <table class="cfg">
+        <tr><td class="subhdr" colspan="2">参数配置</td></tr>
+        <tr><th>Parameters</th><th>Settings</th></tr>
+        <tr><th>beam_width</th><td>1, 3</td></tr>
+        <tr><th>max_candidates</th><td>4, 8</td></tr>
+        <tr><th>max_llm_calls</th><td>0, 6</td></tr>
+        <tr><th>cache</th><td>cold, warm</td></tr>
+        <tr><th>advanced_indexes</th><td>0, 1</td></tr>
+        <tr><th>query type</th><td>SRQ / ST-Range, Top-K</td></tr>
+        <tr><th>trials</th><td>cold: 1；warm P50/P95: 5</td></tr>
+        <tr><th>默认对比臂</th><td>fullscan, rbo, cbo, kart</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</div>
+<p class="note">
+  来源对齐：<code>experiments/suites/e2e.yaml</code> / <code>e2e-simple.yaml</code> / <code>ablation.yaml</code> / <code>param.yaml</code>、<code>config/planner.yaml</code>、<code>docs/supported-semantics.md</code>。
+  消融臂（cbo_only / no_online_llm / no_offline_llm / no_fast_cost / no_final_cost）见 ablation suite，正式主表默认四臂。
+</p>
+</body>
+</html>

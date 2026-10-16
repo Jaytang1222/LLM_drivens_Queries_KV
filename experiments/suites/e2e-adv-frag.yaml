@@ -1,0 +1,16 @@
+# Frag AOI / multi-window ADV proof (no oracle until FullScan freeze).
+# Warm paired: fullscan / rbo / classic CBO / ADV-KART.
+kind: compare
+id: e2e-adv-frag
+workload: experiments/workloads/bound_ir_adv_frag_v1.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+# Warm paired: pass --cache warm on the CLI (SuiteRunner CacheProtocol).
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - kart

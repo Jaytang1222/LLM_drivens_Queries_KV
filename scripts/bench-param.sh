@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Parameter sweep suite entry (thin wrapper → kart bench-suite)
+# Parameter OAT sweep (thin wrapper → kart bench-suite).
+# Default: complex layer (experiments/suites/param.yaml).
+# Simple layer: --suite experiments/suites/param-simple.yaml
+# Formal: --cache cold --trials 1  (complex needs KART_ADVANCED_INDEXES=1)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091

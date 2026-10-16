@@ -14,7 +14,10 @@ public final class CostFeatures {
   public String planId;
   /** Exact scan range count (Final) or estimated (Fast). */
   public long scanRanges;
+  /** Index postings read by the physical ranges, including coarsened-gap postings. */
   public long estIndexRows;
+  /** Postings retained after an advanced-index precise-code filter; -1 = unavailable. */
+  public long estIndexRowsAfterCodeFilter = -1L;
   public long estCandidateChunks;
   public long estRawBytes;
   public long estEligibleTrajs;
@@ -68,6 +71,7 @@ public final class CostFeatures {
     Map<String, Object> m = new LinkedHashMap<String, Object>();
     m.put("scan_ranges", Long.valueOf(scanRanges));
     m.put("estimated_index_rows", Long.valueOf(estIndexRows));
+    m.put("estimated_index_rows_after_code_filter", Long.valueOf(estIndexRowsAfterCodeFilter));
     m.put("estimated_candidate_chunks", Long.valueOf(estCandidateChunks));
     m.put("estimated_raw_bytes", Long.valueOf(estRawBytes));
     m.put("estimated_eligible_trajectories", Long.valueOf(estEligibleTrajs));
@@ -100,6 +104,9 @@ public final class CostFeatures {
     }
     if (simMetric != null) {
       m.put("sim_metric", simMetric);
+    }
+    if (extras != null && !extras.isEmpty()) {
+      m.putAll(extras);
     }
     return m;
   }

@@ -177,6 +177,29 @@ class DialogGateTest {
   }
 
   @Test
+  void multiAoiSpatialPartsStayGrounded() {
+    ClarificationDetector c = new ClarificationDetector();
+    DraftIr d = new DraftIr();
+    d.result = new DraftIr.Result();
+    d.result.mode = "TRAJECTORY_IDS";
+    d.temporal = new DraftIr.Temporal();
+    d.temporal.start = "2008-02-03T21:20:00+08:00";
+    d.temporal.end = "2008-02-03T21:30:00+08:00";
+    DraftIr.Spatial a = new DraftIr.Spatial();
+    a.region_name = "zhongguancun";
+    DraftIr.Spatial b = new DraftIr.Spatial();
+    b.region_name = "wangjing";
+    d.spatial_parts = java.util.Arrays.asList(a, b);
+    String utt = "查找 2008-02-03T21:20:00+08:00 至 2008-02-03T21:30:00+08:00 期间经过"
+        + "【中关村、望京】任一注册区域的轨迹ID（多AOI取并/OR，对应 region: zhongguancun, wangjing）";
+    c.applyUtteranceGrounding(d, utt, new LinkedHashMap<String, String>());
+    assertNotNull(d.spatial_parts);
+    assertEquals(2, d.spatial_parts.size());
+    assertTrue(d.missing == null || d.missing.isEmpty()
+        || !d.missing.contains("spatial"));
+  }
+
+  @Test
   void topKKeepsExplicitVehicleCandidateFilter() {
     ClarificationDetector c = new ClarificationDetector();
     DraftIr d = new DraftIr();

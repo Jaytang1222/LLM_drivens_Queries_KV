@@ -83,10 +83,10 @@ kart_ensure_jar >>"$LOG" 2>&1
 
 for f in \
   experiments/workloads/nl_ir_v3.json \
-  experiments/workloads/bound_ir_complex_v1.json \
-  experiments/workloads/bound_ir_complex_v1.oracle.json \
-  experiments/workloads/bound_ir_simple_v1.json \
-  experiments/workloads/bound_ir_simple_v1.oracle.json \
+  experiments/workloads/bound_ir_complex_v2.json \
+  experiments/workloads/bound_ir_complex_v2.oracle.json \
+  experiments/workloads/bound_ir_simple_v2.json \
+  experiments/workloads/bound_ir_simple_v2.oracle.json \
   experiments/suites/plan-simple.yaml \
   experiments/suites/e2e-simple.yaml
 do

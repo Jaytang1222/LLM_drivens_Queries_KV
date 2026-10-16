@@ -13,6 +13,7 @@ import kart.cost.CostFeaturesExtractor;
 import kart.cost.CostModel;
 import kart.cost.FastCost;
 import kart.cost.HBaseRegionMapping;
+import kart.cost.AdvFinalCalibrator;
 import kart.cost.PlanSelector;
 import kart.cost.RegionMapping;
 import kart.exec.Coordinator;
@@ -28,6 +29,7 @@ import kart.plan.PlanBuilder;
 import kart.plan.PlanEnvelope;
 import kart.search.BeamSearch;
 import kart.search.BestFirstPolicy;
+import kart.search.LegalActionGenerator;
 import kart.search.LlmDirectPlanPlanner;
 import kart.search.LlmProposalPolicy;
 import kart.search.PlannerMode;
@@ -47,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +80,12 @@ public final class QueryEngine {
     public String searchStopReason;
     /** Wall ms: search start → select end (E2 {@code t_plan}). */
     public Long t_plan_ms;
+    /** Beam expansion, FastCost ranking, and candidate pruning. */
+    public Long t_search_ms;
+    /** Safety checks for the retained candidate shortlist. */
+    public Long t_validation_ms;
+    /** Final feature extraction and plan scoring after safety validation. */
+    public Long t_final_cost_ms;
     /** Wall ms: Coordinator execute only (E3 {@code t_exec}); null when plan-only. */
     public Long t_exec_ms;
     public long planStartEpochMs;
@@ -84,6 +93,8 @@ public final class QueryEngine {
     public boolean llmRequested;
     public boolean llmFallback;
     public String fallbackReason;
+    /** Whether XZT/XZ/TSHAPE plan candidates were available in this run. */
+    public boolean advanced_indexes_enabled;
     /** Failed HTTP/chat attempts observed during this plan (0/null if none). */
     public Integer llmFailedAttempts;
     public Integer llmHttpStatus;
@@ -127,6 +138,9 @@ public final class QueryEngine {
   private final AppConfig.PlannerConfig planner;
   private final LlmClient llm;
   private final RegionMapping regionMapping;
+  private final boolean advancedIndexesEnabled;
+  /** When false, ADV plans stay in the menu but Final uses CostModel only (CBO arm). */
+  private boolean useAdvFinalCalibrator = true;
   private PlannerMode plannerMode;
   private LlmUsageAccumulator usage = new LlmUsageAccumulator();
 
@@ -152,8 +166,20 @@ public final class QueryEngine {
   public QueryEngine(KvBackend kv, LayoutContext layout, ExecLimits limits,
                      StatsSnapshot stats, AppConfig.PlannerConfig planner, LlmClient llm,
                      PlannerMode mode) {
+    this(kv, layout, limits, stats, planner, llm, mode,
+        LegalActionGenerator.advancedIndexesEnabled());
+  }
+
+  /**
+   * Explicit per-engine advanced-index policy. Benchmark arms use this to keep
+   * the unchanged CBO baseline classical while KART can evaluate ADV indexes.
+   */
+  public QueryEngine(KvBackend kv, LayoutContext layout, ExecLimits limits,
+                     StatsSnapshot stats, AppConfig.PlannerConfig planner, LlmClient llm,
+                     PlannerMode mode, boolean advancedIndexesEnabled) {
     this.kv = kv;
-    this.layout = layout;
+    this.layout = layout != null ? layout.withPostingCounts(stats) : null;
+    this.advancedIndexesEnabled = advancedIndexesEnabled;
     this.planner = planner != null ? planner : AppConfig.PlannerConfig.defaults();
     ExecLimits fromCost = ExecLimits.fromCostCoeffs(this.planner.cost);
     if (limits == null) {
@@ -182,6 +208,10 @@ public final class QueryEngine {
       return new HBaseRegionMapping(((HBaseBackend) kv).connection());
     }
     return new RegionMapping.ShardFallback();
+  }
+
+  public void setUseAdvFinalCalibrator(boolean enabled) {
+    this.useAdvFinalCalibrator = enabled;
   }
 
   public void setPlannerMode(PlannerMode mode) {
@@ -228,7 +258,7 @@ public final class QueryEngine {
    */
   public RunResult run(BoundIr ir, Path runsRoot, boolean planOnly, String forcePlanId)
       throws IOException {
-    RunResult rr = new RunResult();
+    RunResult rr = newRunResult();
     rr.ir = ir;
     rr.plannerMode = plannerMode;
     rr.planOnly = planOnly;
@@ -241,6 +271,8 @@ public final class QueryEngine {
     SearchBudget budget = SearchBudget.from(planner);
     FastCost fastCost = new FastCost(layout, stats, planner.cost, regionMapping);
     SearchResult searchResult = runSearch(ir, budget, fastCost);
+    rr.t_search_ms = Long.valueOf(searchResult.tSearchMs);
+    rr.t_validation_ms = Long.valueOf(searchResult.tValidationMs);
     rr.candidates = searchResult.candidates;
     rr.safe = new ArrayList<SafePlanHandle>(searchResult.safePlans);
     rr.searchLog = searchResult.log;
@@ -295,12 +327,24 @@ public final class QueryEngine {
     CostFeaturesExtractor extractor = new CostFeaturesExtractor(layout, stats, regionMapping,
         planner.cost != null && planner.cost.soft_memory_bytes > 0
             ? planner.cost.soft_memory_bytes : limits.softMemoryBytes);
+    long finalCostStartMs = System.currentTimeMillis();
     List<PlanSelector.Scored> scored = new ArrayList<PlanSelector.Scored>();
+    Map<SafePlanHandle, CostFeatures> featuresByHandle =
+        new IdentityHashMap<SafePlanHandle, CostFeatures>();
     CostFeatures selectedFeatures = null;
     double bestMs = Double.POSITIVE_INFINITY;
+    // Classic-only Final: skip Final-cost extract on ADV plans (saves t_plan when
+    // router already forbids ADV admit / inject).
+    boolean skipAdvFinalCost = forcePlanId == null
+        && advancedIndexesEnabled
+        && kart.cost.AdvQueryRouter.forceClassic(ir);
     for (SafePlanHandle h : rr.safe) {
       String pid = h.plan() == null || h.plan().plan_id == null ? "?" : h.plan().plan_id;
+      if (skipAdvFinalCost && kart.cost.AdvFinalCalibrator.isAdvId(pid)) {
+        continue;
+      }
       CostFeatures features = extractor.extractFinal(h.physicalPlan(), h.plan(), ir);
+      featuresByHandle.put(h, features);
       CostCard card = costModel.estimateFinal(features);
       rr.costCards.add(card);
       scored.add(new PlanSelector.Scored(h, card));
@@ -351,19 +395,26 @@ public final class QueryEngine {
       best = scored.get(0);
       // Regret vs best SafePlan in the constructor family (baseline #5 metric).
       refineDirectRegret(ir, extractor, rr, best);
+    } else if (advancedIndexesEnabled && useAdvFinalCalibrator && AdvFinalCalibrator.enabled()) {
+      best = AdvFinalCalibrator.select(scored, ir);
     } else {
       best = PlanSelector.selectScored(scored);
     }
     rr.selected = best == null ? null : best.handle;
     rr.selectedCost = best == null ? null : best.card;
     if (rr.selected != null) {
-      selectedFeatures = extractor.extractFinal(
-          rr.selected.physicalPlan(), rr.selected.plan(), ir);
+      selectedFeatures = featuresByHandle.get(rr.selected);
+      if (selectedFeatures == null) {
+        selectedFeatures = extractor.extractFinal(
+            rr.selected.physicalPlan(), rr.selected.plan(), ir);
+      }
     }
     if (rr.selectedCost != null && rr.best_safe_estimated_ms != null) {
       rr.plan_regret_ms = Double.valueOf(
           rr.selectedCost.estimated_ms - rr.best_safe_estimated_ms.doubleValue());
     }
+
+    rr.t_final_cost_ms = Long.valueOf(System.currentTimeMillis() - finalCostStartMs);
 
     stampPlanClock(rr, planStart);
 
@@ -451,7 +502,7 @@ public final class QueryEngine {
   public RunResult runFixed(BoundIr ir, Path runsRoot, boolean planOnly,
                             PlanEnvelope envelope, PrepareMode prepareMode) throws IOException {
     PrepareMode mode = prepareMode == null ? PrepareMode.FULL : prepareMode;
-    RunResult rr = new RunResult();
+    RunResult rr = newRunResult();
     rr.ir = ir;
     rr.plannerMode = plannerMode;
     rr.planOnly = planOnly;
@@ -592,6 +643,12 @@ public final class QueryEngine {
     return Math.max(0L, nanos / 1_000_000L);
   }
 
+  private RunResult newRunResult() {
+    RunResult rr = new RunResult();
+    rr.advanced_indexes_enabled = advancedIndexesEnabled;
+    return rr;
+  }
+
   /**
    * Execute an already-selected SafePlan without another candidate search.
    * Used by transplant selectors (Bao) so generate→select is counted once.
@@ -600,7 +657,7 @@ public final class QueryEngine {
    */
   public RunResult executeSelected(BoundIr ir, Path runsRoot, RunResult planned)
       throws IOException {
-    RunResult rr = new RunResult();
+    RunResult rr = newRunResult();
     rr.ir = ir;
     rr.plannerMode = plannerMode;
     rr.planOnly = false;
@@ -689,13 +746,14 @@ public final class QueryEngine {
     if (plannerMode == PlannerMode.LLM_DIRECT) {
       if (llm == null) {
         StatusLog.info("ENGINE", "llm_direct without LlmClient → RulePolicy fallback");
-        return new BeamSearch(layout, fastCost, opts).search(ir, new RulePolicy(), budget);
+        return new BeamSearch(layout, fastCost, opts, advancedIndexesEnabled)
+            .search(ir, new RulePolicy(), budget);
       }
       LlmDirectPlanPlanner direct = new LlmDirectPlanPlanner(layout, fastCost, llm, opts);
       direct.setUsageAccumulator(usage);
       return direct.plan(ir, budget);
     }
-    BeamSearch search = new BeamSearch(layout, fastCost, opts);
+    BeamSearch search = new BeamSearch(layout, fastCost, opts, advancedIndexesEnabled);
     ProposalPolicy policy = buildProposalPolicy(fastCost);
     return search.search(ir, policy, budget);
   }
@@ -703,6 +761,10 @@ public final class QueryEngine {
   private ProposalPolicy buildProposalPolicy(FastCost fastCost) {
     switch (plannerMode) {
       case BEST_FIRST:
+        // ADV: BestFirst×FastCost per legal still dominates; Rule expands, Final ranks.
+        if (advancedIndexesEnabled) {
+          return new RulePolicy();
+        }
         return new BestFirstPolicy(fastCost);
       case LLM:
         if (llm != null) {
@@ -740,7 +802,9 @@ public final class QueryEngine {
     if (selected == null || selected.card == null) {
       return;
     }
-    BeamSearch beam = new BeamSearch(layout, new FastCost(layout, stats, planner.cost, regionMapping));
+    BeamSearch beam = new BeamSearch(layout,
+        new FastCost(layout, stats, planner.cost, regionMapping),
+        SearchOptions.from(planner), advancedIndexesEnabled);
     SearchResult family = new SearchResult();
     for (PlanEnvelope env : kart.plan.PlanBuilder.buildCandidatesWithMergeVariants(ir)) {
       beam.validateInjected(ir, env, family);

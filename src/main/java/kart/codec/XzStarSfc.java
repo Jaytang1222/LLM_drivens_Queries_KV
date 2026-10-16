@@ -237,13 +237,17 @@ public final class XzStarSfc {
         }
       }
     }
-    // XZ* SRQ can leave holes inside the returned span; fill them so overlapping
-    // indexed MBRs are not missed (over-fetch preferred to false negatives).
-    return fillInternalGaps(mergeRanges(ranges));
+    // Leave gaps here; adapters apply fillInternalGaps for overlap recall, then
+    // CodeRangeBudget.mergeToBudgetGapAware for physical scan coarsening.
+    return mergeRanges(ranges);
   }
 
-  /** Collapse holes between the first and last SRQ range (soundness > selectivity). */
-  static List<CodeRange> fillInternalGaps(List<CodeRange> ranges) {
+  /**
+   * Soundness over-fetch: collapse holes between first and last SRQ range.
+   * Used by XZ / XZT / TShape adapters so overlapping MBRs/intervals whose
+   * SFC codes fall in enumeration holes are still scanned and accepted.
+   */
+  public static List<CodeRange> fillInternalGaps(List<CodeRange> ranges) {
     if (ranges == null || ranges.size() <= 1) {
       return ranges;
     }

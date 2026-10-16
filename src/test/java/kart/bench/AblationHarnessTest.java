@@ -51,7 +51,7 @@ public final class AblationHarnessTest {
     SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
     assertEquals("ablation", s.kind);
     assertEquals("kart", s.base_arm);
-    assertEquals("experiments/workloads/bound_ir_complex_v1.json", s.workload);
+    assertEquals("experiments/workloads/bound_ir_complex_v2.json", s.workload);
     List<String> ids = s.enabledFactorIds();
     assertTrue(ids.contains("cbo_only"));
     assertTrue(ids.contains("no_online_llm"));

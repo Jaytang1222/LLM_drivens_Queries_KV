@@ -28,7 +28,8 @@ public class XztOverlapRecallTest {
     XztCodec xzt = new XztCodec((short) 12, epoch, horizon);
     long qs = 1_202_068_200_000L;
     long qe = 1_202_250_266_000L;
-    List<CodeRange> ranges = xzt.rangesCovering(qs, qe);
+    // Span-fill proves overlap recall; adapter/query path keeps unfilled ranges.
+    List<CodeRange> ranges = XzStarSfc.fillInternalGaps(xzt.rangesCovering(qs, qe));
     int miss = 0;
     int total = 0;
     // Sample overlapping intervals within/near the query.
@@ -60,7 +61,8 @@ public class XztOverlapRecallTest {
   @Test
   void xzStarSpatialOverlappingMbrsCovered() {
     XzStarSfc sfc = XzStarSfc.create((short) 10, 0, 100, 0, 100);
-    List<CodeRange> ranges = sfc.ranges(20, 20, 40, 40);
+    // Span-fill for overlap recall; adapter query path does not fill (XZ selectivity).
+    List<CodeRange> ranges = XzStarSfc.fillInternalGaps(sfc.ranges(20, 20, 40, 40));
     Random rnd = new Random(7);
     int miss = 0;
     int total = 0;

@@ -11,6 +11,7 @@ import kart.plan.PlanNode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,12 +50,15 @@ public final class QueryCompiler {
       }
       switch (n.op) {
         case TIME_RANGE_SCAN: {
-          if (ir.temporal == null) {
+          if (!BoundIr.hasTemporal(ir)) {
             throw new IllegalArgumentException("plan has TIME_RANGE_SCAN but IR has no temporal");
           }
-          long startMs = ir.temporal.start_ms;
-          long endMs = ir.temporal.end_ms;
-          if (n.params != null) {
+          if (n.params != null
+              && (n.params.get("start_ms") instanceof Number
+                  || n.params.get("end_ms") instanceof Number)) {
+            List<BoundIr.Temporal> temps = BoundIr.temporalsOf(ir);
+            long startMs = temps.get(0).start_ms;
+            long endMs = temps.get(0).end_ms;
             Object s = n.params.get("start_ms");
             Object e = n.params.get("end_ms");
             if (s instanceof Number) {
@@ -63,75 +67,74 @@ public final class QueryCompiler {
             if (e instanceof Number) {
               endMs = ((Number) e).longValue();
             }
+            phys.scanTasks.addAll(time.scanTasks(startMs, endMs, n.id));
+          } else {
+            for (BoundIr.Temporal w : BoundIr.temporalsOf(ir)) {
+              phys.scanTasks.addAll(time.scanTasks(w.start_ms, w.end_ms, n.id));
+            }
           }
-          phys.scanTasks.addAll(time.scanTasks(startMs, endMs, n.id));
           break;
         }
         case ZORDER_RANGE_SCAN: {
-          if (ir.spatial == null) {
+          if (!BoundIr.hasSpatial(ir)) {
             throw new IllegalArgumentException("plan has ZORDER_RANGE_SCAN but IR has no spatial");
           }
-          double minX = ir.spatial.min_x;
-          double minY = ir.spatial.min_y;
-          double maxX = ir.spatial.max_x;
-          double maxY = ir.spatial.max_y;
-          if (n.params != null) {
-            if (n.params.get("min_x") instanceof Number) {
-              minX = ((Number) n.params.get("min_x")).doubleValue();
-            }
-            if (n.params.get("min_y") instanceof Number) {
-              minY = ((Number) n.params.get("min_y")).doubleValue();
-            }
-            if (n.params.get("max_x") instanceof Number) {
-              maxX = ((Number) n.params.get("max_x")).doubleValue();
-            }
-            if (n.params.get("max_y") instanceof Number) {
-              maxY = ((Number) n.params.get("max_y")).doubleValue();
-            }
-          }
-          Rect rect = new Rect(minX, minY, maxX, maxY);
+          List<Rect> zRects = spatialRects(ir, n);
           int maxRanges = n.params != null && n.params.get("max_ranges") instanceof Number
               ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxZorderRanges;
-          phys.scanTasks.addAll(zorder.scanTasks(rect, n.id, maxRanges));
+          int per = Math.max(1, maxRanges / Math.max(1, zRects.size()));
+          for (Rect rect : zRects) {
+            phys.scanTasks.addAll(zorder.scanTasks(rect, n.id, per));
+          }
           break;
         }
         case XZ_RANGE_SCAN: {
-          if (ir.spatial == null) {
+          if (!BoundIr.hasSpatial(ir)) {
             throw new IllegalArgumentException("plan has XZ_RANGE_SCAN but IR has no spatial");
           }
-          Rect xzRect = spatialRect(ir, n);
+          List<Rect> xzRects = spatialRects(ir, n);
           int xzMax = n.params != null && n.params.get("max_ranges") instanceof Number
               ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
-          phys.scanTasks.addAll(xz.scanTasks(xzRect, n.id, xzMax));
+          phys.scanTasks.addAll(xz.scanTasks(xzRects, n.id, xzMax));
           break;
         }
         case TSHAPE_RANGE_SCAN: {
-          if (ir.spatial == null) {
+          if (!BoundIr.hasSpatial(ir)) {
             throw new IllegalArgumentException("plan has TSHAPE_RANGE_SCAN but IR has no spatial");
           }
-          Rect tsRect = spatialRect(ir, n);
+          List<Rect> tsRects = spatialRects(ir, n);
           int tsMax = n.params != null && n.params.get("max_ranges") instanceof Number
               ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
-          phys.scanTasks.addAll(tshape.scanTasks(tsRect, n.id, tsMax));
+          tsMax = TShapeIndexAdapter.configuredMaxRanges(tsMax);
+          phys.scanTasks.addAll(tshape.scanTasks(tsRects, n.id, tsMax));
           break;
         }
         case XZT_RANGE_SCAN: {
-          if (ir.temporal == null) {
+          if (!BoundIr.hasTemporal(ir)) {
             throw new IllegalArgumentException("plan has XZT_RANGE_SCAN but IR has no temporal");
           }
-          long xztStart = ir.temporal.start_ms;
-          long xztEnd = ir.temporal.end_ms;
-          if (n.params != null) {
+          int xztMax = n.params != null && n.params.get("max_ranges") instanceof Number
+              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
+          if (n.params != null
+              && (n.params.get("start_ms") instanceof Number
+                  || n.params.get("end_ms") instanceof Number)) {
+            List<BoundIr.Temporal> temps = BoundIr.temporalsOf(ir);
+            long xztStart = temps.get(0).start_ms;
+            long xztEnd = temps.get(0).end_ms;
             if (n.params.get("start_ms") instanceof Number) {
               xztStart = ((Number) n.params.get("start_ms")).longValue();
             }
             if (n.params.get("end_ms") instanceof Number) {
               xztEnd = ((Number) n.params.get("end_ms")).longValue();
             }
+            phys.scanTasks.addAll(xzt.scanTasks(xztStart, xztEnd, n.id, xztMax));
+          } else {
+            List<BoundIr.Temporal> temps = BoundIr.temporalsOf(ir);
+            int per = Math.max(1, xztMax / Math.max(1, temps.size()));
+            for (BoundIr.Temporal w : temps) {
+              phys.scanTasks.addAll(xzt.scanTasks(w.start_ms, w.end_ms, n.id, per));
+            }
           }
-          int xztMax = n.params != null && n.params.get("max_ranges") instanceof Number
-              ? ((Number) n.params.get("max_ranges")).intValue() : layout.maxXzRanges;
-          phys.scanTasks.addAll(xzt.scanTasks(xztStart, xztEnd, n.id, xztMax));
           break;
         }
         case EQUALITY_LOOKUP: {
@@ -153,12 +156,15 @@ public final class QueryCompiler {
     return phys;
   }
 
-  private static Rect spatialRect(BoundIr ir, PlanNode n) {
-    double minX = ir.spatial.min_x;
-    double minY = ir.spatial.min_y;
-    double maxX = ir.spatial.max_x;
-    double maxY = ir.spatial.max_y;
-    if (n.params != null) {
+  private static List<Rect> spatialRects(BoundIr ir, PlanNode n) {
+    if (n.params != null
+        && (n.params.get("min_x") instanceof Number || n.params.get("min_y") instanceof Number
+            || n.params.get("max_x") instanceof Number || n.params.get("max_y") instanceof Number)) {
+      BoundIr.Spatial u = BoundIr.spatialUnion(ir);
+      double minX = u.min_x;
+      double minY = u.min_y;
+      double maxX = u.max_x;
+      double maxY = u.max_y;
       if (n.params.get("min_x") instanceof Number) {
         minX = ((Number) n.params.get("min_x")).doubleValue();
       }
@@ -171,8 +177,16 @@ public final class QueryCompiler {
       if (n.params.get("max_y") instanceof Number) {
         maxY = ((Number) n.params.get("max_y")).doubleValue();
       }
+      List<Rect> one = new ArrayList<Rect>(1);
+      one.add(new Rect(minX, minY, maxX, maxY));
+      return one;
     }
-    return new Rect(minX, minY, maxX, maxY);
+    List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    List<Rect> out = new ArrayList<Rect>(parts.size());
+    for (BoundIr.Spatial s : parts) {
+      out.add(new Rect(s.min_x, s.min_y, s.max_x, s.max_y));
+    }
+    return out;
   }
 
   private void addFullScanTasks(PhysicalPlan phys, String nodeId) {

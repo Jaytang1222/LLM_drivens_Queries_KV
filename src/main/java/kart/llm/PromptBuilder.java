@@ -29,13 +29,19 @@ public final class PromptBuilder {
     StringBuilder sb = new StringBuilder();
     sb.append("You are KART's trajectory query parser. Output ONLY a DraftIR JSON object.\n");
     sb.append("Logical catalog fields: temporal(start,end ISO-8601), spatial(geometry RECTANGLE ");
-    sb.append("min_lon/min_lat/max_lon/max_lat OR region_name), predicates(vehicle_id EQ), ");
+    sb.append("min_lon/min_lat/max_lon/max_lat OR region_name), ");
+    sb.append("spatial_parts([{region_name|geometry}, ...]) for multi-AOI OR (ST-Ranges), ");
+    sb.append("predicates(vehicle_id EQ), ");
     sb.append("similarity(metric DTW|FRECHET|HAUSDORFF, reference_trajectory_id), ");
     sb.append("result(mode TRAJECTORY_IDS|TOP_K, k).\n");
     sb.append("Semantics are always OBSERVED_POINT / SAME_POINT (sampled GPS points, not continuous path).\n");
-    sb.append("Four query classes: (1) spatiotemporal filter → TRAJECTORY_IDS, ");
-    sb.append("(2) vehicle equality, (3) Top-K similarity (DTW / discrete Fréchet / Hausdorff), ");
-    sb.append("(4) combinations.\n");
+    sb.append("Five query classes: (1) single-region ST filter → TRAJECTORY_IDS, ");
+    sb.append("(2) multi-region OR (ST-Ranges) → spatial_parts with one entry per named region, ");
+    sb.append("omit single spatial when spatial_parts is used, ");
+    sb.append("(3) vehicle equality, (4) Top-K / similarity (DTW / discrete Fréchet / Hausdorff), ");
+    sb.append("(5) combinations.\n");
+    sb.append("When the user names two or more places with OR / 或 / \"intersecting (A or B)\", ");
+    sb.append("emit spatial_parts (do NOT invent one union rectangle; do NOT put missing spatial).\n");
     sb.append("UNSUPPORTED (do not invent a substitute query): COUNT/aggregation; ");
     sb.append("continuous path / LINEAR_SEGMENT / polyline crossing; continuous Fréchet; ");
     sb.append("derived speed / dwell / stay-point predicates; pair co-location joins. ");
@@ -61,6 +67,7 @@ public final class PromptBuilder {
     sb.append("smoke anchor / tdrive_smoke_anchor→tdrive_smoke_anchor, ");
     sb.append("topk box / tdrive_topk_box→tdrive_topk_box, ");
     sb.append("topk wide / tdrive_topk_wide→tdrive_topk_wide, ");
+    sb.append("topk mid / tdrive_topk_mid→tdrive_topk_mid, ");
     sb.append("topk_s1 / tdrive_topk_s1→tdrive_topk_s1. ");
     sb.append("beijing_core is the inner-city demo box — NOT the T-Drive smoke oracle anchor.\n");
     sb.append("Default dataset_id=").append(datasetId).append(", entity=trajectory, ir_version=1.0.\n");
@@ -73,9 +80,16 @@ public final class PromptBuilder {
         .append("\"predicates\":[{\"field\":\"vehicle_id\",\"op\":\"EQ\",\"value\":\"8857\"}],")
         .append("\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},")
         .append("\"result\":{\"mode\":\"TRAJECTORY_IDS\"},\"missing\":[]}\n");
-    sb.append("2) Top-K missing metric → omit similarity.metric, missing:[\"similarity.metric\"].\n");
-    sb.append("3) Missing date → omit temporal, missing:[\"temporal\"].\n");
-    sb.append("4) Unknown place 火星广场 → omit spatial, missing:[\"spatial\"] ");
+    sb.append("2) Multi-AOI OR (ST-Ranges) — user said A or B:\n");
+    sb.append("{\"ir_version\":\"1.0\",\"source\":{\"dataset_id\":\"").append(datasetId)
+        .append("\",\"entity\":\"trajectory\"},\"temporal\":{\"start\":\"2008-02-03T21:20:00+08:00\",")
+        .append("\"end\":\"2008-02-03T21:30:00+08:00\"},")
+        .append("\"spatial_parts\":[{\"region_name\":\"zhongguancun\"},{\"region_name\":\"wangjing\"}],")
+        .append("\"semantics\":{\"mode\":\"OBSERVED_POINT\",\"coupling\":\"SAME_POINT\"},")
+        .append("\"result\":{\"mode\":\"TRAJECTORY_IDS\"},\"missing\":[]}\n");
+    sb.append("3) Top-K missing metric → omit similarity.metric, missing:[\"similarity.metric\"].\n");
+    sb.append("4) Missing date → omit temporal, missing:[\"temporal\"].\n");
+    sb.append("5) Unknown place 火星广场 → omit spatial, missing:[\"spatial\"] ");
     sb.append("(do NOT write beijing_core).\n");
     return sb.toString();
   }

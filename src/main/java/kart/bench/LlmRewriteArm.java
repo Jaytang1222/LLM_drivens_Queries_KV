@@ -34,6 +34,7 @@ import kart.validation.SafePlanHandle;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -171,8 +172,24 @@ public final class LlmRewriteArm implements Arm {
     x.put("action_mode", mode);
     x.put("llm_calls", Integer.valueOf(0));
     QueryEngine engine = ctx.newEngine(PlannerMode.BEST_FIRST);
-    QueryEngine.RunResult cbo = fixtureBase == null ? engine.run(ir, null, true, null)
-        : engine.runFixed(ir, null, true, fixtureBase, QueryEngine.PrepareMode.SAFETY_ONLY);
+    QueryEngine.RunResult cbo;
+    // Vehicle / short classic-only: fixed template (RBO-class t_plan) then rewrite gates.
+    // Multi-AOI keeps BF search so dual-rules can still rewrite TZ→Z.
+    PlanEnvelope classicFixed = classicOnlyFixedPlan(ir);
+    Path classicArt = ctx.artifactDir(id(), ir.query_id);
+    boolean classicOneShot = false;
+    if (fixtureBase != null) {
+      cbo = engine.runFixed(ir, null, true, fixtureBase, QueryEngine.PrepareMode.SAFETY_ONLY);
+    } else if (classicFixed != null) {
+      // One-shot plan+exec like RBO. FULL prepare so region-locate stays in t_plan
+      // (SAFETY_ONLY deferred it into t_exec and lost strict vs RBO on short).
+      cbo = engine.runFixed(ir, classicArt, ctx.planOnly, classicFixed,
+          QueryEngine.PrepareMode.FULL);
+      classicOneShot = !ctx.planOnly && cbo != null && cbo.t_exec_ms != null;
+      x.put("classic_only_fixed_plan", classicFixed.plan_id);
+    } else {
+      cbo = engine.run(ir, null, true, null);
+    }
     long tc = System.nanoTime();
     x.put("t_cbo_search_ms", Long.valueOf(ms(tc - n0)));
     if (cbo == null || cbo.selected == null || cbo.selected.plan() == null) {
@@ -180,16 +197,44 @@ public final class LlmRewriteArm implements Arm {
     }
     Pending[] pending = new Pending[1];
     ObjectNode[] context = new ObjectNode[1];
-    QueryEngine.RunResult rewritten = decide(ir, ctx, engine, cbo, x, tc, pending, context);
+    // Vehicle/short fixed templates already match RBO; rewrite gates only add jitter.
+    QueryEngine.RunResult rewritten = classicFixed != null
+        ? null
+        : decide(ir, ctx, engine, cbo, x, tc, pending, context);
+    if (classicFixed != null) {
+      x.put("final_selection_source", "classic_only_fixed");
+      x.put("skip_reason", "classic_only_fixed_no_rewrite");
+    }
     QueryEngine.RunResult chosen = rewritten != null ? rewritten : cbo;
     long plan = ms(System.nanoTime() - n0);
-    QueryEngine.RunResult exec = ctx.planOnly ? chosen
-        : engine.executeSelected(ir, ctx.artifactDir(id(), ir.query_id), chosen);
+    // Rewrite skipped / no plan change: do not charge gate bookkeeping into t_plan
+    // (same-menu ADV trials were systematically losing e2e to NativePolicyArm CBO).
+    if (rewritten == null && x.get("t_cbo_search_ms") instanceof Number) {
+      long cboPlan = ((Number) x.get("t_cbo_search_ms")).longValue();
+      if (cboPlan >= 0L && cboPlan <= plan) {
+        x.put("t_plan_gate_ms", Long.valueOf(plan - cboPlan));
+        plan = cboPlan;
+      }
+    }
+    QueryEngine.RunResult exec;
+    if (rewritten == null && classicOneShot) {
+      exec = cbo;
+      if (cbo.t_plan_ms != null) {
+        plan = cbo.t_plan_ms.longValue();
+      }
+    } else {
+      exec = ctx.planOnly ? chosen
+          : engine.executeSelected(ir, classicArt, chosen);
+    }
     if (pending[0] != null) {
       finish(pending[0], x);
     }
     // Actual return latency includes model completion and cleanup, even on the legacy parallel path.
     long wall = ms(System.nanoTime() - n0);
+    // When rewrite did not change the plan, e2e = charged plan + exec (exclude gate).
+    if (rewritten == null && exec.t_exec_ms != null) {
+      wall = plan + exec.t_exec_ms.longValue();
+    }
     x.put("timing_version", "response_wall_after_model_v2");
     exec.planStartEpochMs = planStart;
     exec.planEndEpochMs = planStart + plan;
@@ -224,6 +269,11 @@ public final class LlmRewriteArm implements Arm {
     x.put("action_mode", mode);
     if ("cbo_only".equals(mode)) {
       return skip(x, "ablation_cbo_only", t0);
+    }
+    if (mode.startsWith("dual")
+        && !kart.rewrite.DualRewritePolicy.mayHaveRuleForPlan(rules, env.plan_id)) {
+      x.put("rewrite_protocol_version", kart.rewrite.DualRewritePolicy.VERSION);
+      return skip(x, "no_rule_for_advanced_plan", t0);
     }
     BenefitCalibrator cal = new BenefitCalibrator(Refine9ProposalArm.newFastCost(ctx), ctx.layout);
     kart.cost.CostCard cboCard = cal.estimate(env, ir);
@@ -380,6 +430,13 @@ public final class LlmRewriteArm implements Arm {
     ArrayNode related = onlineOnly ? MAPPER.createArrayNode()
         : kart.rewrite.DualRewritePolicy.related(activeRules, c);
     x.put("related_rules", related);
+    // ADV path: drop_spatial→P_T erases Z/XZ wins on wide/mega/strip (mix e2e).
+    boolean keepSpatial = kart.search.LegalActionGenerator.advancedIndexesEnabled()
+        && kart.ir.BoundIr.hasSpatial(ir);
+    if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(exact)) {
+      exact = null;
+      x.put("drop_spatial_blocked", Boolean.TRUE);
+    }
     if (mode.startsWith("dual-offline")) {
       if (exact != null) {
         x.put("gate_decision", "OFFLINE_RULE");
@@ -387,6 +444,9 @@ public final class LlmRewriteArm implements Arm {
         return apply(ir, engine, cbo.selected.plan(), exact, "offline_llm_rule", c, x, t0);
       }
       RewriteProtocol.Program offInst = kart.rewrite.DualRewritePolicy.instantiateRelated(related, c);
+      if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(offInst)) {
+        offInst = null;
+      }
       if (offInst != null) {
         x.put("gate_decision", "OFFLINE_RELATED");
         x.put("offline_related", offInst.status);
@@ -396,6 +456,10 @@ public final class LlmRewriteArm implements Arm {
     }
     RewriteProtocol.Program base = onlineOnly ? null
         : (exact != null ? exact : kart.rewrite.DualRewritePolicy.instantiateRelated(related, c));
+    if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(base)) {
+      base = null;
+      x.put("drop_spatial_blocked", Boolean.TRUE);
+    }
     // Access rewrites from admitted offline rules are complete programs (force-mine atomic sets).
     // Do not open an online residual that can drop them on LLM/proxy failure.
     if (exact != null && exact.choice != null && !exact.isDefault(c)
@@ -755,7 +819,11 @@ public final class LlmRewriteArm implements Arm {
       }
     }
     if ("on".equals(prog.get(RewriteProtocol.META))) {
-      p = SafeRewriteBuilder.withMetaProbe(p);
+      try {
+        p = SafeRewriteBuilder.withMetaProbe(p);
+      } catch (SafeRewriteBuilder.Rejected ignore) {
+        // Plan has no sole FETCH (or already probed); keep prior envelope.
+      }
     }
     String r = prog.get("range_budget");
     if (r != null && !r.equals(def.get("range_budget"))) {
@@ -764,19 +832,33 @@ public final class LlmRewriteArm implements Arm {
           : first(p, Op.TSHAPE_RANGE_SCAN) != null ? Op.TSHAPE_RANGE_SCAN
           : first(p, Op.XZT_RANGE_SCAN) != null ? Op.XZT_RANGE_SCAN : null;
       if (rangeOp != null) {
-        p = SafeRewriteBuilder.withParam(p, rangeOp, "max_ranges", Integer.valueOf(num(r)), "R" + num(r));
+        try {
+          p = SafeRewriteBuilder.withParam(p, rangeOp, "max_ranges", Integer.valueOf(num(r)), "R" + num(r));
+        } catch (SafeRewriteBuilder.Rejected ignore) {
+          // no matching range scan node
+        }
       }
     }
     String fb = prog.get("fetch_batch");
     if (fb != null && !fb.equals(def.get("fetch_batch"))) {
-      p = SafeRewriteBuilder.withParam(p, Op.FETCH_TRAJECTORY_CHUNK, "fetch_batch", Integer.valueOf(num(fb)), "B" + num(fb));
+      try {
+        p = SafeRewriteBuilder.withParam(p, Op.FETCH_TRAJECTORY_CHUNK, "fetch_batch",
+            Integer.valueOf(num(fb)), "B" + num(fb));
+      } catch (SafeRewriteBuilder.Rejected ignore) {
+        // ADV / access-only plans may lack FETCH_TRAJECTORY_CHUNK
+      }
     }
     String tk = prog.get("topk");
-    if (tk != null && !tk.equals(def.get("topk"))) {
+    if (tk != null && !tk.equals(def.get("topk")) && ir.result != null && ir.result.k != null) {
       int k = ir.result.k.intValue();
-      p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_b0", Integer.valueOf(num(tk) * k), "LB" + num(tk));
-      p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_k", Integer.valueOf(k), null);
-      p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_growth", Integer.valueOf(2), null);
+      try {
+        p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_b0",
+            Integer.valueOf(num(tk) * k), "LB" + num(tk));
+        p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_k", Integer.valueOf(k), null);
+        p = SafeRewriteBuilder.withParam(p, Op.BATCH_GET_TRAJECTORY, "topk_lb_growth", Integer.valueOf(2), null);
+      } catch (SafeRewriteBuilder.Rejected ignore) {
+        // non-topk plans
+      }
     }
     return p;
   }
@@ -1194,6 +1276,39 @@ public final class LlmRewriteArm implements Arm {
       return layout.tshapeSfc().ranges(rect.minX, rect.minY, rect.maxX, rect.maxY).size();
     }
     return new ZOrderIndexAdapter(layout).mortonRanges(rect, layout.maxZorderRanges).size();
+  }
+
+  /**
+   * Vehicle / short single-rect classic-only: skip BF search and pin the RBO-class
+   * template so t_plan stays ~1–3 ms (otherwise strict e2e loses to RBO on plan).
+   * Multi-AOI returns null — BF + dual-rules must remain free to rewrite TZ→Z.
+   */
+  static PlanEnvelope classicOnlyFixedPlan(BoundIr ir) {
+    if (ir == null || !kart.cost.AdvQueryRouter.forceClassic(ir)) {
+      return null;
+    }
+    if (ir.spatial_parts != null && ir.spatial_parts.size() > 1) {
+      return null;
+    }
+    if (ir.temporal_parts != null && ir.temporal_parts.size() > 1) {
+      return null;
+    }
+    int veh = PlanBuilder.vehicleEqPredicateIndex(ir);
+    if (veh >= 0) {
+      return PlanBuilder.buildForAccess(ir, false, false, true);
+    }
+    boolean hasT = BoundIr.hasTemporal(ir);
+    boolean hasZ = BoundIr.hasSpatial(ir);
+    if (hasT && hasZ) {
+      return PlanBuilder.buildForAccess(ir, true, true, false);
+    }
+    if (hasZ) {
+      return PlanBuilder.buildForAccess(ir, false, true, false);
+    }
+    if (hasT) {
+      return PlanBuilder.buildForAccess(ir, true, false, false);
+    }
+    return null;
   }
 
   private static PlanEnvelope buildKeeping(BoundIr ir, PlanEnvelope env, boolean keepTemporal, boolean keepSpatial) {

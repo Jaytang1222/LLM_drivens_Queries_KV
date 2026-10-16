@@ -19,6 +19,8 @@ public final class SearchResult {
   public List<Rejection> rejections = new ArrayList<Rejection>();
   public final SearchLog log = new SearchLog();
   public SearchBudget budget;
+  public long tSearchMs;
+  public long tValidationMs;
 
   public static final class Rejection {
     public final String planId;

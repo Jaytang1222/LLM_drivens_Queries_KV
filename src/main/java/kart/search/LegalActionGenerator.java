@@ -14,18 +14,29 @@ import java.util.List;
 public final class LegalActionGenerator {
 
   private final boolean allowIntersect;
+  private final boolean includeAdvancedIndexes;
 
   public LegalActionGenerator() {
-    this(true);
+    this(true, advancedIndexesEnabled());
   }
 
   public LegalActionGenerator(boolean allowIntersect) {
+    this(allowIntersect, advancedIndexesEnabled());
+  }
+
+  /**
+   * @param includeAdvancedIndexes whether XZT/XZ/TSHAPE are expanded by the beam.
+   *     The bounded ADV path leaves this false and injects routed advanced plans
+   *     after the classic search, avoiding duplicate per-action exploration.
+   */
+  public LegalActionGenerator(boolean allowIntersect, boolean includeAdvancedIndexes) {
     this.allowIntersect = allowIntersect;
+    this.includeAdvancedIndexes = includeAdvancedIndexes;
   }
 
   public List<LegalAction> generate(SearchState state) {
     BoundIr ir = state.ir();
-    List<String> available = availableIndexes(ir);
+    List<String> available = availableIndexes(ir, includeAdvancedIndexes);
     List<LegalAction> out = new ArrayList<LegalAction>();
 
     boolean empty = state.usedIndexes().isEmpty();
@@ -54,11 +65,11 @@ public final class LegalActionGenerator {
     }
 
     // System-proved partitions only (LLM cannot invent geometry).
-    if (ir.temporal != null && state.partitionKind() == null
+    if (BoundIr.hasTemporal(ir) && state.partitionKind() == null
         && (empty || state.uses(IndexId.TIME) || state.uses(IndexId.XZT))) {
       out.add(partitionUnion(SearchState.PARTITION_TIME_BIPART));
     }
-    if (ir.spatial != null && state.partitionKind() == null
+    if (BoundIr.hasSpatial(ir) && state.partitionKind() == null
         && (empty || state.uses(IndexId.ZORDER) || state.uses(IndexId.XZ)
             || state.uses(IndexId.TSHAPE))) {
       out.add(partitionUnion(SearchState.PARTITION_Z_QUAD));
@@ -82,13 +93,13 @@ public final class LegalActionGenerator {
 
   public static List<String> availableIndexes(BoundIr ir, boolean advanced) {
     List<String> out = new ArrayList<String>();
-    if (ir.temporal != null) {
+    if (BoundIr.hasTemporal(ir)) {
       out.add(IndexId.TIME);
       if (advanced) {
         out.add(IndexId.XZT);
       }
     }
-    if (ir.spatial != null) {
+    if (BoundIr.hasSpatial(ir)) {
       out.add(IndexId.ZORDER);
       if (advanced) {
         out.add(IndexId.XZ);

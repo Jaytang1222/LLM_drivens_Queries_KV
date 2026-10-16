@@ -50,6 +50,8 @@ public final class BestFirstPolicy implements ProposalPolicy {
       return ActionSelection.of(LegalActionGenerator.finish(), "empty_legal");
     }
     BoundIr ir = state.ir();
+    int evalCap = evalCap();
+    int estimated = 0;
     LegalAction best = null;
     double bestMs = Double.POSITIVE_INFINITY;
     String bestId = null;
@@ -61,6 +63,9 @@ public final class BestFirstPolicy implements ProposalPolicy {
       if (a.isFinish()) {
         ms = card != null ? card.estimated_ms : Double.POSITIVE_INFINITY;
       } else {
+        if (evalCap > 0 && estimated >= evalCap) {
+          continue;
+        }
         SearchState next;
         try {
           next = state.apply(a);
@@ -72,6 +77,7 @@ public final class BestFirstPolicy implements ProposalPolicy {
           continue;
         }
         CostCard nc = fastCost.estimate(next.completePlan(), ir);
+        estimated++;
         ms = nc != null ? nc.estimated_ms : Double.POSITIVE_INFINITY;
       }
       String aid = a.actionId != null ? a.actionId : "";
@@ -88,5 +94,27 @@ public final class BestFirstPolicy implements ProposalPolicy {
       return ActionSelection.of(legal.get(0), "best_first_fallback");
     }
     return ActionSelection.of(best, "best_first_min_fast_cost");
+  }
+
+  /**
+   * Cap non-FINISH FastCost evaluations per frontier state. ADV expands legal
+   * actions (~2×); without a cap BestFirst can burn seconds on unique plans.
+   * Env {@code KART_BEST_FIRST_EVAL_CAP}: unset → 3 when ADV else unlimited (0);
+   * {@code 0}/off/false → unlimited; positive int → hard cap.
+   */
+  static int evalCap() {
+    String v = System.getenv("KART_BEST_FIRST_EVAL_CAP");
+    if (v != null && !v.trim().isEmpty()) {
+      v = v.trim().toLowerCase();
+      if (v.equals("0") || v.equals("off") || v.equals("false") || v.equals("no")) {
+        return 0;
+      }
+      try {
+        return Math.max(0, Integer.parseInt(v));
+      } catch (NumberFormatException e) {
+        return LegalActionGenerator.advancedIndexesEnabled() ? 3 : 0;
+      }
+    }
+    return LegalActionGenerator.advancedIndexesEnabled() ? 3 : 0;
   }
 }

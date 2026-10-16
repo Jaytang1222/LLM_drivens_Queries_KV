@@ -100,6 +100,37 @@ public class BeamSearchAcceptanceTest {
   }
 
   @Test
+  void explicitAdvancedPolicyKeepsCboClassicAndAllowsKartAlternatives() {
+    // Fat single-rect ST so AdvQueryRouter admits XZ inject (short/multi-AOI → classic).
+    BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+    if (ir.temporal != null) {
+      ir.temporal.end_ms = ir.temporal.start_ms + 20L * 3600L * 1000L;
+    }
+    SearchOptions opts = SearchOptions.defaults();
+    SearchResult classic = new BeamSearch(layout, fastCost, opts, false)
+        .search(ir, new RulePolicy(), SearchBudget.defaults());
+    Set<String> classicIds = new HashSet<String>();
+    for (PlanEnvelope env : classic.candidates) {
+      classicIds.add(env.plan_id);
+    }
+    assertFalse(classicIds.stream().anyMatch(BeamSearchAcceptanceTest::isAdvancedPlan),
+        "CBO baseline must not receive KART's advanced plan injection: " + classicIds);
+
+    SearchResult advanced = new BeamSearch(layout, fastCost, opts, true)
+        .search(ir, new RulePolicy(), SearchBudget.defaults());
+    Set<String> advancedIds = new HashSet<String>();
+    for (PlanEnvelope env : advanced.candidates) {
+      advancedIds.add(env.plan_id);
+    }
+    assertTrue(advancedIds.stream().anyMatch(BeamSearchAcceptanceTest::isAdvancedPlan),
+        "KART's explicit advanced policy should inject XZ/TS/XZT alternatives: " + advancedIds);
+  }
+
+  private static boolean isAdvancedPlan(String id) {
+    return id != null && (id.startsWith("P_XZ") || id.startsWith("P_TS"));
+  }
+
+  @Test
   void t43_illegalActionIdLoggedAndCompletes() {
     BoundIr ir = QueryIrFixtureTest.fixtureQuery();
     ScriptedLlmClient llm = new ScriptedLlmClient(

@@ -5,12 +5,12 @@
 # Selectors see the same n_safe / CostCards; candidate_search=false.
 # Report pool_regret_ms (shared pool) — not arm-local beam regret.
 #
-# Default = frozen complex-level set (bound_ir_complex_v1). BoundIR-65 regression:
+# Default = frozen complex_v2 (canonical with E2/E3). BoundIR-65 regression:
 #   --workload experiments/workloads/bound_ir_v1.json
 kind: compare
 id: plan-shared-pool
-workload: experiments/workloads/bound_ir_complex_v1.json
-oracle: experiments/workloads/bound_ir_complex_v1.oracle.json
+workload: experiments/workloads/bound_ir_complex_v2.json
+oracle: experiments/workloads/bound_ir_complex_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: false
 trials: 3

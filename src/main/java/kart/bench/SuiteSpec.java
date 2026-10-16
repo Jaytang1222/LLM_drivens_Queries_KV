@@ -32,6 +32,10 @@ public final class SuiteSpec {
   public List<String> arms = new ArrayList<String>();
   public String base_arm = "kart";
   public List<Factor> factors = new ArrayList<Factor>();
+  /** Param experiment defaults pinned on every OAT cell (beam / candidates / llm). */
+  public Map<String, Object> defaults = new LinkedHashMap<String, Object>();
+  /** {@code oat} = one-at-a-time (formal param); {@code cartesian} = full factorial (smoke). */
+  public String grid_mode;
   public Map<String, List<Object>> grid = new LinkedHashMap<String, List<Object>>();
   public boolean unsafe = false;
 
@@ -60,7 +64,30 @@ public final class SuiteSpec {
     if (s.kind == null || s.kind.trim().isEmpty()) {
       s.kind = s.id;
     }
+    if (s.defaults == null) {
+      s.defaults = new LinkedHashMap<String, Object>();
+    }
+    if (s.grid_mode == null || s.grid_mode.trim().isEmpty()) {
+      if (s.kind != null && "param".equalsIgnoreCase(s.kind.trim())) {
+        s.grid_mode = "oat";
+      } else {
+        s.grid_mode = "cartesian";
+      }
+    } else {
+      s.grid_mode = s.grid_mode.trim().toLowerCase();
+    }
     return s;
+  }
+
+  /** Resolved grid expansion mode for param suites. */
+  public String resolvedGridMode() {
+    if (grid_mode != null && !grid_mode.trim().isEmpty()) {
+      return grid_mode.trim().toLowerCase();
+    }
+    if (kind != null && "param".equalsIgnoreCase(kind.trim())) {
+      return "oat";
+    }
+    return "cartesian";
   }
 
   public List<String> enabledFactorIds() {

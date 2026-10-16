@@ -72,6 +72,27 @@ class ExactSTFilterTest {
   }
 
   @Test
+  void spatialPartsOrTemporalPartsAreOrWithinDimension() {
+    BoundIr ir = new BoundIr();
+    BoundIr.Spatial a = new BoundIr.Spatial();
+    a.min_x = 0; a.min_y = 0; a.max_x = 1; a.max_y = 1;
+    BoundIr.Spatial b = new BoundIr.Spatial();
+    b.min_x = 10; b.min_y = 10; b.max_x = 11; b.max_y = 11;
+    ir.spatial_parts = Arrays.asList(a, b);
+    BoundIr.Temporal t0 = new BoundIr.Temporal();
+    t0.start_ms = 100; t0.end_ms = 110;
+    BoundIr.Temporal t1 = new BoundIr.Temporal();
+    t1.start_ms = 200; t1.end_ms = 210;
+    ir.temporal_parts = Arrays.asList(t0, t1);
+    assertTrue(ExactSTFilter.matches(ir, pts(p(105, 0.5, 0.5)), null));
+    assertTrue(ExactSTFilter.matches(ir, pts(p(205, 10.5, 10.5)), null));
+    // OR within each dimension: any window × any AOI still matches
+    assertTrue(ExactSTFilter.matches(ir, pts(p(105, 10.5, 10.5)), null));
+    assertFalse(ExactSTFilter.matches(ir, pts(p(150, 0.5, 0.5)), null)); // gap time
+    assertFalse(ExactSTFilter.matches(ir, pts(p(105, 5, 5)), null)); // outside all AOIs
+  }
+
+  @Test
   void unsupportedPredicateFails() {
     BoundIr ir = new BoundIr();
     BoundIr.Predicate pred = new BoundIr.Predicate();

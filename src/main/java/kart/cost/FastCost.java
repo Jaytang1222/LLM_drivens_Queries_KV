@@ -6,9 +6,13 @@ import kart.config.AppConfig;
 import kart.ir.BoundIr;
 import kart.plan.PlanEnvelope;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Fast-cost estimator used during plan search (T4.5 / T5.2).
  * Shares {@link CostModel} formula with Final; may approximate before compile.
+ * Memoizes by plan signature within one estimator instance (typically one query run).
  */
 public final class FastCost {
 
@@ -16,6 +20,7 @@ public final class FastCost {
   private final StatsSnapshot stats;
   private final CostModel model;
   private final CostFeaturesExtractor extractor;
+  private final Map<String, CostCard> memo = new HashMap<String, CostCard>();
 
   public FastCost(StatsSnapshot stats) {
     this(null, stats, null, null);
@@ -57,7 +62,20 @@ public final class FastCost {
   }
 
   public CostCard estimate(PlanEnvelope plan, BoundIr ir) {
+    String key = memoKey(plan, ir);
+    CostCard hit = memo.get(key);
+    if (hit != null) {
+      return hit;
+    }
     CostFeatures features = extractor.extractFast(plan, ir);
-    return model.estimateFast(features);
+    CostCard card = model.estimateFast(features);
+    memo.put(key, card);
+    return card;
+  }
+
+  private static String memoKey(PlanEnvelope plan, BoundIr ir) {
+    String sig = plan != null ? plan.signature() : "";
+    String qid = ir != null && ir.query_id != null ? ir.query_id : "";
+    return qid + '\0' + sig;
   }
 }

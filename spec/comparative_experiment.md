@@ -192,9 +192,12 @@ experiments/results/<run_id>/
 
 | 文件 | 用于 | 内容 |
 |---|---|---|
-| `experiments/workloads/nl_ir_v2.json` | E1（默认） | 冻结 NL；金标来自 `bound_ir_cmp_v3` FullScan；含拒绝/澄清；`nl_ir_v1.json` 仅作历史 |
-| `experiments/workloads/bound_ir_simple_v1.json` | E2、E3 **简单层** | `eval_level=simple`；紧凑窗 + 与 `complex_v1` 不相交；目标 kart 不显著落后 CBO（lag≤1.15） |
-| `experiments/workloads/bound_ir_complex_v1.json` | E2、E3 **复杂层** | `eval_level=complex`；冻结的 kart≫cbo 优势集（c3 选择性族）；**禁止**经 `assemble_cmp_v6` 覆盖 |
+| `experiments/workloads/nl_ir_v4.json` | E1（现行冻结） | 40 条：20 basic+20 POI；20 simple+20 complex；SRQ/ST-Ranges/SS/topk 各 10；金标 `bound_ir_e1_v4` FullScan |
+| `experiments/workloads/nl_ir_v3.json` / `nl_ir_v2.json` | E1 历史 | 大混合集（含拒绝/澄清）；仅回归 |
+| `experiments/workloads/bound_ir_simple_v2.json` | E2、E3 **简单层（现行冻结）** | `eval_level=simple`；n=24；SRQ/ST-Ranges/SS/topk 各 6；经典 Z/H/TZ 口袋；与 complex_v2 不相交；**禁止** `assemble_cmp_v6` / 未经评审覆盖 |
+| `experiments/workloads/bound_ir_complex_v2.json` | E2、E3 **复杂层（现行冻结）** | `eval_level=complex`；n=24；同上四类各 6；ADV（XZ/TS/XZT族）+ 经典 multi-AOI/fat-Z；`KART_ADVANCED_INDEXES=1`；**禁止**同上覆盖 |
+| `experiments/workloads/bound_ir_e2e_v2.catalog.json` / `bound_ir_e2e_v2.provenance.json` | 角色表 + 冻结 provenance | type / target_index / scene；canonical 指向 simple_v2/complex_v2 |
+| `experiments/workloads/bound_ir_simple_v1.json` / `bound_ir_complex_v1.json` | 历史 | 旧分层集；仅回归 / 对照 |
 | `experiments/workloads/bound_ir_cmp_v3.json` | 历史 / 回归 | 旧 20 条混合切片；主表改走 simple/complex 分层 |
 | `experiments/workloads/*.oracle.json` | 正确性 | FullScan Oracle 缓存的轨迹 ID / Top-K 有序列表 |
 
@@ -206,8 +209,8 @@ experiments/results/<run_id>/
 
 | 层 | 工作负载 | n（约） | 入选准则 | 期望叙事 |
 |---|---|---|---|---|
-| `simple` | `bound_ir_simple_v1` | 28 | 排除 `c3_*` / `tz_hard` / `locked` / 过大 ST 窗；与 complex 不相交；cold 正式 `kart/cbo ≤ 1.25`，并剔除 offline/online 伤延迟与方差超标条目 | kart ≈ cbo（可略胜），差距可控 |
-| `complex` | `bound_ir_complex_v1` | 31 | cold：kart≫cbo（≥1.3×）且相对 fullscan/rbo 仍优；`ADVANCED_INDEXES=0` | kart 相对 cbo 大幅领先 |
+| `simple` | `bound_ir_simple_v2` | 24 | 紧凑 / 短窗 / vehicle / multi-AOI；四类均分；目标索引族 Z/H/TZ；与 complex 不相交 | 现行冻结主表；相对 cbo/fullscan 的 p50 更优，对 rbo 互有胜负 |
+| `complex` | `bound_ir_complex_v2` | 24 | 宽窗/hybrid/XZT + multi-AOI；四类均分；覆盖 XZ/TS/XZT族 与经典 Z；`KART_ADVANCED_INDEXES=1` | 现行冻结主表；经典口袋稳；ADV 计划需保召回（span-fill） |
 
 辅助切片（层内披露，不作第二主轴）：
 

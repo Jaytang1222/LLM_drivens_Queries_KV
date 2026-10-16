@@ -1,6 +1,7 @@
 package kart.compile;
 
 import kart.catalog.Manifest;
+import kart.catalog.StatsSnapshot;
 import kart.codec.TShapeSfc;
 import kart.codec.XzStarSfc;
 import kart.codec.XztCodec;
@@ -32,6 +33,10 @@ public final class LayoutContext {
   public final int maxZorderRanges;
   public final int maxXzRanges;
 
+  private LazyGapCost xzPostingGapCost;
+  private LazyGapCost tshapePostingGapCost;
+  private LazyGapCost xztPostingGapCost;
+
   private XzStarSfc xzSfc;
   private TShapeSfc tshapeSfc;
   private XztCodec xztCodec;
@@ -61,6 +66,60 @@ public final class LayoutContext {
     this.tableXzt = tableXzt;
     this.maxZorderRanges = maxZorderRanges;
     this.maxXzRanges = maxZorderRanges;
+  }
+
+  private LayoutContext(LayoutContext source, StatsSnapshot stats) {
+    this(source.shardCount, source.bucketMs, source.epochMs, source.zorderLevel,
+        source.xzLevel, source.tshapeMaxDepth, source.xztLevel, source.xztHorizonMs,
+        source.domain, source.tableRaw, source.tableMeta, source.tableTime,
+        source.tableZorder, source.tableHash, source.tableXz, source.tableTshape,
+        source.tableXzt, source.maxZorderRanges);
+    this.xzSfc = source.xzSfc;
+    this.tshapeSfc = source.tshapeSfc;
+    this.xztCodec = source.xztCodec;
+    this.xzPostingGapCost = new LazyGapCost(stats.xz_code_posting_counts);
+    this.tshapePostingGapCost = new LazyGapCost(stats.tshape_code_posting_counts);
+    this.xztPostingGapCost = new LazyGapCost(stats.xzt_code_posting_counts);
+  }
+
+  /** Return an equivalent layout whose ADV range coarsening uses snapshot posting density. */
+  public LayoutContext withPostingCounts(StatsSnapshot stats) {
+    return stats == null ? this : new LayoutContext(this, stats);
+  }
+
+  public CodeRangeBudget.GapCost xzPostingGapCost() {
+    return xzPostingGapCost == null ? null : xzPostingGapCost.get();
+  }
+
+  public CodeRangeBudget.GapCost tshapePostingGapCost() {
+    return tshapePostingGapCost == null ? null : tshapePostingGapCost.get();
+  }
+
+  public CodeRangeBudget.GapCost xztPostingGapCost() {
+    return xztPostingGapCost == null ? null : xztPostingGapCost.get();
+  }
+
+  /** Lazily index posting counts so preparation work stays inside the measured query plan. */
+  private static final class LazyGapCost {
+    private final java.util.Map<String, Long> counts;
+    private volatile boolean resolved;
+    private volatile CodeRangeBudget.GapCost value;
+
+    LazyGapCost(java.util.Map<String, Long> counts) {
+      this.counts = counts;
+    }
+
+    CodeRangeBudget.GapCost get() {
+      if (!resolved) {
+        synchronized (this) {
+          if (!resolved) {
+            value = CodeRangeBudget.postingGapCost(counts);
+            resolved = true;
+          }
+        }
+      }
+      return value;
+    }
   }
 
   public static LayoutContext from(Manifest manifest) {

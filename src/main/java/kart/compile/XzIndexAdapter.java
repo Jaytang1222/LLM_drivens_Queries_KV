@@ -4,11 +4,11 @@ import kart.codec.Bytes;
 import kart.codec.CodeRange;
 import kart.codec.PrefixSuccessor;
 import kart.codec.RowKeyCodec;
+import kart.codec.XzStarSfc;
 import kart.geo.Rect;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,13 +26,30 @@ public final class XzIndexAdapter {
   }
 
   public List<ScanTask> scanTasks(Rect query, String sourceNodeId, int maxRanges) {
-    List<CodeRange> ranges = layout.xzSfc().ranges(query.minX, query.minY, query.maxX, query.maxY);
-    if (ranges.size() > maxRanges) {
-      ranges = mergeToBudget(ranges, maxRanges);
+    return scanTasks(Collections.singletonList(query), sourceNodeId, maxRanges);
+  }
+
+  public List<ScanTask> scanTasks(List<Rect> queries, String sourceNodeId, int maxRanges) {
+    if (queries == null || queries.isEmpty()) {
+      return Collections.emptyList();
     }
+    List<CodeRange> raw = new ArrayList<CodeRange>();
+    for (Rect query : queries) {
+      if (query == null) {
+        continue;
+      }
+      raw.addAll(layout.xzSfc().ranges(query.minX, query.minY, query.maxX, query.maxY));
+    }
+    // Span-fill holes: XZ* range enumeration can omit SFC codes of geometrically
+    // overlapping MBRs; without fill, e2e oracle misses (P_XZ / P_XZTXZ).
+    List<CodeRange> precise = XzStarSfc.fillInternalGaps(
+        CodeRangeBudget.mergeOverlapping(raw));
+    List<CodeRange> physical = CodeRangeBudget.mergeToBudgetGapAware(
+        precise, maxRanges, layout.xzPostingGapCost());
+    List<CodeRange> filter = Collections.unmodifiableList(precise);
     List<ScanTask> out = new ArrayList<ScanTask>();
     for (int shard = 0; shard < layout.shardCount; shard++) {
-      for (CodeRange r : ranges) {
+      for (CodeRange r : physical) {
         byte[] start = RowKeyCodec.encodeXz(shard, r.lo, 0, 0);
         byte[] stop;
         if (r.hi + 1 != 0) {
@@ -44,35 +61,12 @@ public final class XzIndexAdapter {
           }
           stop = succ.get();
         }
-        out.add(new ScanTask(layout.tableXz, start, stop, sourceNodeId, shard,
-            "xz:[" + r.lo + "," + r.hi + "]"));
+        ScanTask t = new ScanTask(layout.tableXz, start, stop, sourceNodeId, shard,
+            "xz:[" + r.lo + "," + r.hi + "]");
+        t.preciseFilter = filter;
+        out.add(t);
       }
     }
     return out;
-  }
-
-  private static List<CodeRange> mergeToBudget(List<CodeRange> ranges, int maxRanges) {
-    List<CodeRange> cur = new ArrayList<CodeRange>(ranges);
-    Collections.sort(cur, new Comparator<CodeRange>() {
-      @Override
-      public int compare(CodeRange a, CodeRange b) {
-        return Long.compare(a.lo, b.lo);
-      }
-    });
-    while (cur.size() > maxRanges) {
-      List<CodeRange> next = new ArrayList<CodeRange>();
-      for (int i = 0; i < cur.size(); i += 2) {
-        if (i + 1 >= cur.size()) {
-          next.add(cur.get(i));
-        } else {
-          CodeRange a = cur.get(i);
-          CodeRange b = cur.get(i + 1);
-          next.add(new CodeRange(Math.min(a.lo, b.lo), Math.max(a.hi, b.hi),
-              a.contained && b.contained));
-        }
-      }
-      cur = next;
-    }
-    return cur;
   }
 }

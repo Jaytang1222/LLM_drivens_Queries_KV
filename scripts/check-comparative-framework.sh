@@ -19,6 +19,9 @@ need_file experiments/suites/ablation.yaml
 
 need_file experiments/workloads/nl_ir_v2.json
 need_file experiments/workloads/nl_ir_v3.json
+need_file experiments/workloads/nl_ir_v4.json
+need_file experiments/workloads/bound_ir_e1_v4.json
+need_file experiments/workloads/bound_ir_e1_v4.oracle.json
 need_file experiments/workloads/bound_ir_poi_e1.json
 need_file experiments/workloads/bound_ir_poi_e1.oracle.json
 need_file experiments/workloads/bound_ir_cmp_v3.json
@@ -55,42 +58,65 @@ else
   bad "parse.yaml must default sag-mql-nofeedback without enabling sag-mql"
 fi
 
-# Formal E2/E3 default = frozen complex-level set (ADV=0). cmp_v3 remains a regression alias only.
-for suite in experiments/suites/plan.yaml experiments/suites/plan-shared-pool.yaml experiments/suites/e2e.yaml; do
-  if grep -q 'workload: experiments/workloads/bound_ir_complex_v1.json' "$suite" \
-    && grep -q 'oracle: experiments/workloads/bound_ir_complex_v1.oracle.json' "$suite"; then
-    ok "$suite defaults to bound_ir_complex_v1"
+# Formal E2/E3/ablation/param canonical = simple_v2 / complex_v2. v1 / cmp_v3 = regression only.
+for suite in experiments/suites/plan.yaml experiments/suites/e2e.yaml experiments/suites/plan-shared-pool.yaml experiments/suites/ablation.yaml; do
+  if grep -q 'workload: experiments/workloads/bound_ir_complex_v2.json' "$suite" \
+    && grep -q 'oracle: experiments/workloads/bound_ir_complex_v2.oracle.json' "$suite"; then
+    ok "$suite defaults to bound_ir_complex_v2"
   else
-    bad "$suite must default to bound_ir_complex_v1 workload/oracle"
+    bad "$suite must default to bound_ir_complex_v2 workload/oracle"
   fi
 done
-if grep -q 'workload: experiments/workloads/nl_ir_v3.json' experiments/suites/parse.yaml; then
-  ok "parse.yaml uses nl_ir_v3"
-else
-  bad "parse.yaml must use nl_ir_v3"
-fi
-# Ablation follows complexity stratification (spec/ablation_experiment.md): complex + simple.
-if grep -q 'workload: experiments/workloads/bound_ir_complex_v1.json' experiments/suites/ablation.yaml \
-  && grep -q 'oracle: experiments/workloads/bound_ir_complex_v1.oracle.json' experiments/suites/ablation.yaml; then
-  ok "ablation.yaml uses bound_ir_complex_v1"
-else
-  bad "ablation.yaml must use bound_ir_complex_v1"
-fi
-if [[ -f experiments/suites/ablation-simple.yaml ]]; then
-  if grep -q 'workload: experiments/workloads/bound_ir_simple_v1.json' experiments/suites/ablation-simple.yaml \
-    && grep -q 'oracle: experiments/workloads/bound_ir_simple_v1.oracle.json' experiments/suites/ablation-simple.yaml; then
-    ok "ablation-simple.yaml uses bound_ir_simple_v1"
+for suite in experiments/suites/plan-simple.yaml experiments/suites/e2e-simple.yaml experiments/suites/ablation-simple.yaml; do
+  if [[ -f "$suite" ]] && grep -q 'workload: experiments/workloads/bound_ir_simple_v2.json' "$suite" \
+    && grep -q 'oracle: experiments/workloads/bound_ir_simple_v2.oracle.json' "$suite"; then
+    ok "$suite defaults to bound_ir_simple_v2"
   else
-    bad "ablation-simple.yaml must use bound_ir_simple_v1"
+    bad "$suite must default to bound_ir_simple_v2 workload/oracle"
   fi
+done
+
+# Param OAT formal suites (simple / complex v2)
+if [[ -f experiments/suites/param.yaml ]] \
+  && grep -q 'workload: experiments/workloads/bound_ir_complex_v2.json' experiments/suites/param.yaml \
+  && grep -q 'oracle: experiments/workloads/bound_ir_complex_v2.oracle.json' experiments/suites/param.yaml \
+  && grep -q 'grid_mode: oat' experiments/suites/param.yaml \
+  && grep -q 'beam_width:' experiments/suites/param.yaml \
+  && grep -q 'max_candidates:' experiments/suites/param.yaml \
+  && grep -q 'max_llm_calls:' experiments/suites/param.yaml \
+  && grep -q 'base_arm: kart' experiments/suites/param.yaml; then
+  ok "param.yaml OAT complex_v2 + three-axis grid"
+else
+  bad "param.yaml must be OAT complex_v2 with kart + beam/candidates/llm grid"
+fi
+if [[ -f experiments/suites/param-simple.yaml ]] \
+  && grep -q 'workload: experiments/workloads/bound_ir_simple_v2.json' experiments/suites/param-simple.yaml \
+  && grep -q 'oracle: experiments/workloads/bound_ir_simple_v2.oracle.json' experiments/suites/param-simple.yaml \
+  && grep -q 'grid_mode: oat' experiments/suites/param-simple.yaml \
+  && grep -q 'base_arm: kart' experiments/suites/param-simple.yaml; then
+  ok "param-simple.yaml OAT simple_v2"
+else
+  bad "param-simple.yaml must be OAT simple_v2 with kart"
 fi
 
-python3 - <<'PY' || bad "cmp_v3 / nl_v3 sizes"
+if grep -q 'workload: experiments/workloads/nl_ir_v4.json' experiments/suites/parse.yaml; then
+  ok "parse.yaml uses nl_ir_v4"
+else
+  bad "parse.yaml must use nl_ir_v4"
+fi
+if [[ -f experiments/workloads/bound_ir_e2e_v2.provenance.json ]]; then
+  ok "bound_ir_e2e_v2.provenance.json present"
+else
+  bad "missing bound_ir_e2e_v2.provenance.json"
+fi
+
+python3 - <<'PY' || bad "cmp_v3 / nl_v4 sizes"
 import json
 from pathlib import Path
 wl = json.loads(Path("experiments/workloads/bound_ir_cmp_v3.json").read_text(encoding="utf-8"))
 ora = json.loads(Path("experiments/workloads/bound_ir_cmp_v3.oracle.json").read_text(encoding="utf-8"))
-nl = json.loads(Path("experiments/workloads/nl_ir_v3.json").read_text(encoding="utf-8"))
+nl = json.loads(Path("experiments/workloads/nl_ir_v4.json").read_text(encoding="utf-8"))
+nl3 = json.loads(Path("experiments/workloads/nl_ir_v3.json").read_text(encoding="utf-8"))
 poi = json.loads(Path("experiments/workloads/bound_ir_poi_e1.json").read_text(encoding="utf-8"))
 poi_ora = json.loads(Path("experiments/workloads/bound_ir_poi_e1.oracle.json").read_text(encoding="utf-8"))
 ids = [q["query_id"] for q in wl["queries"]]
@@ -98,9 +124,8 @@ ans = {r["query_id"] for r in ora["answers"]}
 assert len(ids) == len(set(ids)) >= 20, len(ids)
 assert set(ids) == ans
 assert wl.get("evaluation_role") in ("kart_operating_region", "kart_rewrite_ge10_vs_cbo")
-assert nl.get("parent_nl_ir") == "nl_ir_v2"
-assert nl.get("poi_bound_ir") == "bound_ir_poi_e1"
-assert len(nl["queries"]) >= 140
+assert len(nl["queries"]) == 40
+assert len(nl3["queries"]) >= 140
 poi_ids = {q["query_id"] for q in poi["queries"]}
 poi_ans = {r["query_id"] for r in poi_ora["answers"]}
 assert poi_ids == poi_ans and len(poi_ids) >= 32

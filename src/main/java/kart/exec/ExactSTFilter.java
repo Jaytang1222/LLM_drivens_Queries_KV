@@ -8,6 +8,7 @@ import java.util.List;
 /**
  * Exact spatio-temporal SAME_POINT filter over decoded chunk points.
  * Time is half-open [start_ms, end_ms); space is closed (boundary included).
+ * Multiple {@code temporal_parts}/{@code spatial_parts} are OR'd within each dimension.
  */
 public final class ExactSTFilter {
 
@@ -21,7 +22,6 @@ public final class ExactSTFilter {
    * @param vehicleId trajectory vehicle id, or null if unknown/not needed
    */
   public static boolean matches(BoundIr ir, List<Chunk.DecodedPoint> points, String vehicleId) {
-    // attribute predicates (trajectory-level)
     if (ir.predicates != null) {
       for (BoundIr.Predicate p : ir.predicates) {
         if (p == null) {
@@ -37,18 +37,37 @@ public final class ExactSTFilter {
         }
       }
     }
-    boolean needT = ir.temporal != null;
-    boolean needS = ir.spatial != null;
+    List<BoundIr.Temporal> temps = BoundIr.temporalsOf(ir);
+    List<BoundIr.Spatial> spaces = BoundIr.spatialsOf(ir);
+    boolean needT = !temps.isEmpty();
+    boolean needS = !spaces.isEmpty();
     if (!needT && !needS) {
       return true;
     }
     for (Chunk.DecodedPoint pt : points) {
-      boolean okT = !needT
-          || (pt.t >= ir.temporal.start_ms && pt.t < ir.temporal.end_ms);
-      boolean okS = !needS
-          || (pt.x >= ir.spatial.min_x && pt.x <= ir.spatial.max_x
-          && pt.y >= ir.spatial.min_y && pt.y <= ir.spatial.max_y);
+      boolean okT = !needT || inAnyTemporal(temps, pt.t);
+      boolean okS = !needS || inAnySpatial(spaces, pt.x, pt.y);
       if (okT && okS) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean inAnyTemporal(List<BoundIr.Temporal> temps, long t) {
+    for (BoundIr.Temporal w : temps) {
+      if (w != null && t >= w.start_ms && t < w.end_ms) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean inAnySpatial(List<BoundIr.Spatial> spaces, double x, double y) {
+    for (BoundIr.Spatial s : spaces) {
+      if (s != null
+          && x >= s.min_x && x <= s.max_x
+          && y >= s.min_y && y <= s.max_y) {
         return true;
       }
     }

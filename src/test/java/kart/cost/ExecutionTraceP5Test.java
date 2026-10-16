@@ -49,6 +49,15 @@ public class ExecutionTraceP5Test {
       assertEquals(null, t.rpc_count);
       assertNotNull(t.client_ops_count);
       assertTrue(t.client_ops_count.longValue() > 0);
+      long emittedRanges = 0L;
+      for (ExecutionTrace.NodeTrace node : t.nodes.values()) {
+        if (node.emitted_ranges != null) {
+          emittedRanges += node.emitted_ranges.longValue();
+        }
+      }
+      assertEquals(rr.selected.physicalPlan().scanTasks.size(), emittedRanges,
+          "emitted_ranges must count compiled scan tasks, including parallel scans");
+      assertEquals(Long.valueOf(emittedRanges), t.totalEmittedRanges());
       assertNotNull(t.dtw_cells);
       assertTrue(t.dtw_cells.longValue() > 0);
 

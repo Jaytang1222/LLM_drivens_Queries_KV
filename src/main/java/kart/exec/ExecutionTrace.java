@@ -56,6 +56,10 @@ public final class ExecutionTrace {
   public Long matched_trajectories;
   public Long deduplicated_chunks;
   public Long fetched_chunks;
+  /** Index postings seen before precise-code filter (ADV merge gaps). */
+  public Long postings_raw;
+  /** Index postings kept after precise-code membership filter. */
+  public Long postings_after_code_filter;
   public Long filter_passed;
   public Long dtw_cells;
   public Long llm_calls;
@@ -113,6 +117,24 @@ public final class ExecutionTrace {
     // estimated_* must come from planner CostFeatures when available; do not mirror actuals.
     totalRows += rows;
     totalBytes += bytes;
+  }
+
+  /**
+   * Sum observed ScanTask opens across operators. Null means the trace did not
+   * report this metric; zero is reserved for an observed zero-task execution.
+   */
+  public Long totalEmittedRanges() {
+    long total = 0L;
+    boolean observed = false;
+    for (NodeTrace node : nodes.values()) {
+      if (node == null || node.emitted_ranges == null) {
+        continue;
+      }
+      observed = true;
+      long value = Math.max(0L, node.emitted_ranges.longValue());
+      total = Long.MAX_VALUE - total < value ? Long.MAX_VALUE : total + value;
+    }
+    return observed ? Long.valueOf(total) : null;
   }
 
   /** Rebuild operator_metrics list from nodes map before serialization. */

@@ -1,0 +1,340 @@
+{
+  "version": "nl_ir_v4",
+  "n": 40,
+  "by_source": {
+    "basic": 20,
+    "poi": 20
+  },
+  "by_level": {
+    "simple": 20,
+    "complex": 20
+  },
+  "by_type": {
+    "SRQ": 10,
+    "ST-Ranges": 10,
+    "SS": 10,
+    "topk": 10
+  },
+  "roles": [
+    {
+      "query_id": "e1v4_b_simple_srq_1",
+      "bound_id": "b_simple_srq_1",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SRQ",
+      "layer": "basic_srq"
+    },
+    {
+      "query_id": "e1v4_b_simple_srq_2",
+      "bound_id": "b_simple_srq_2",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SRQ",
+      "layer": "basic_srq"
+    },
+    {
+      "query_id": "e1v4_b_simple_srq_3",
+      "bound_id": "b_simple_srq_3",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SRQ",
+      "layer": "basic_srq"
+    },
+    {
+      "query_id": "e1v4_b_complex_srq_4",
+      "bound_id": "b_complex_srq_4",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "SRQ",
+      "layer": "basic_srq"
+    },
+    {
+      "query_id": "e1v4_b_complex_srq_5",
+      "bound_id": "b_complex_srq_5",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "SRQ",
+      "layer": "basic_srq"
+    },
+    {
+      "query_id": "e1v4_p_simple_srq_1",
+      "bound_id": "p_simple_srq_1",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "SRQ",
+      "layer": "poi_srq"
+    },
+    {
+      "query_id": "e1v4_p_simple_srq_2",
+      "bound_id": "p_simple_srq_2",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "SRQ",
+      "layer": "poi_srq"
+    },
+    {
+      "query_id": "e1v4_p_complex_srq_3",
+      "bound_id": "p_complex_srq_3",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SRQ",
+      "layer": "poi_srq"
+    },
+    {
+      "query_id": "e1v4_p_complex_srq_4",
+      "bound_id": "p_complex_srq_4",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SRQ",
+      "layer": "poi_srq"
+    },
+    {
+      "query_id": "e1v4_p_complex_srq_5",
+      "bound_id": "p_complex_srq_5",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SRQ",
+      "layer": "poi_srq"
+    },
+    {
+      "query_id": "e1v4_b_simple_str_1",
+      "bound_id": "b_simple_str_1",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "ST-Ranges",
+      "layer": "basic_stranges"
+    },
+    {
+      "query_id": "e1v4_b_simple_str_2",
+      "bound_id": "b_simple_str_2",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "ST-Ranges",
+      "layer": "basic_stranges"
+    },
+    {
+      "query_id": "e1v4_b_simple_str_3",
+      "bound_id": "b_simple_str_3",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "ST-Ranges",
+      "layer": "basic_stranges"
+    },
+    {
+      "query_id": "e1v4_b_complex_str_4",
+      "bound_id": "b_complex_str_4",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "ST-Ranges",
+      "layer": "basic_stranges"
+    },
+    {
+      "query_id": "e1v4_b_complex_str_5",
+      "bound_id": "b_complex_str_5",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "ST-Ranges",
+      "layer": "basic_stranges"
+    },
+    {
+      "query_id": "e1v4_p_simple_str_1",
+      "bound_id": "p_simple_str_1",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "ST-Ranges",
+      "layer": "poi_stranges"
+    },
+    {
+      "query_id": "e1v4_p_simple_str_2",
+      "bound_id": "p_simple_str_2",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "ST-Ranges",
+      "layer": "poi_stranges"
+    },
+    {
+      "query_id": "e1v4_p_complex_str_3",
+      "bound_id": "p_complex_str_3",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "ST-Ranges",
+      "layer": "poi_stranges"
+    },
+    {
+      "query_id": "e1v4_p_complex_str_4",
+      "bound_id": "p_complex_str_4",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "ST-Ranges",
+      "layer": "poi_stranges"
+    },
+    {
+      "query_id": "e1v4_p_complex_str_5",
+      "bound_id": "p_complex_str_5",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "ST-Ranges",
+      "layer": "poi_stranges"
+    },
+    {
+      "query_id": "e1v4_b_simple_ss_1",
+      "bound_id": "b_simple_ss_1",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SS",
+      "layer": "basic_ss"
+    },
+    {
+      "query_id": "e1v4_b_simple_ss_2",
+      "bound_id": "b_simple_ss_2",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SS",
+      "layer": "basic_ss"
+    },
+    {
+      "query_id": "e1v4_b_simple_ss_3",
+      "bound_id": "b_simple_ss_3",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "SS",
+      "layer": "basic_ss"
+    },
+    {
+      "query_id": "e1v4_b_complex_ss_4",
+      "bound_id": "b_complex_ss_4",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "SS",
+      "layer": "basic_ss"
+    },
+    {
+      "query_id": "e1v4_b_complex_ss_5",
+      "bound_id": "b_complex_ss_5",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "SS",
+      "layer": "basic_ss"
+    },
+    {
+      "query_id": "e1v4_p_simple_ss_1",
+      "bound_id": "p_simple_ss_1",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "SS",
+      "layer": "poi_ss"
+    },
+    {
+      "query_id": "e1v4_p_simple_ss_2",
+      "bound_id": "p_simple_ss_2",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "SS",
+      "layer": "poi_ss"
+    },
+    {
+      "query_id": "e1v4_p_complex_ss_3",
+      "bound_id": "p_complex_ss_3",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SS",
+      "layer": "poi_ss"
+    },
+    {
+      "query_id": "e1v4_p_complex_ss_4",
+      "bound_id": "p_complex_ss_4",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SS",
+      "layer": "poi_ss"
+    },
+    {
+      "query_id": "e1v4_p_complex_ss_5",
+      "bound_id": "p_complex_ss_5",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "SS",
+      "layer": "poi_ss"
+    },
+    {
+      "query_id": "e1v4_b_simple_topk_1",
+      "bound_id": "b_simple_topk_1",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "topk",
+      "layer": "basic_topk"
+    },
+    {
+      "query_id": "e1v4_b_simple_topk_2",
+      "bound_id": "b_simple_topk_2",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "topk",
+      "layer": "basic_topk"
+    },
+    {
+      "query_id": "e1v4_b_simple_topk_3",
+      "bound_id": "b_simple_topk_3",
+      "source_kind": "basic",
+      "eval_level": "simple",
+      "query_type": "topk",
+      "layer": "basic_topk"
+    },
+    {
+      "query_id": "e1v4_b_complex_topk_4",
+      "bound_id": "b_complex_topk_4",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "topk",
+      "layer": "basic_topk"
+    },
+    {
+      "query_id": "e1v4_b_complex_topk_5",
+      "bound_id": "b_complex_topk_5",
+      "source_kind": "basic",
+      "eval_level": "complex",
+      "query_type": "topk",
+      "layer": "basic_topk"
+    },
+    {
+      "query_id": "e1v4_p_simple_topk_1",
+      "bound_id": "p_simple_topk_1",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "topk",
+      "layer": "poi_topk"
+    },
+    {
+      "query_id": "e1v4_p_simple_topk_2",
+      "bound_id": "p_simple_topk_2",
+      "source_kind": "poi",
+      "eval_level": "simple",
+      "query_type": "topk",
+      "layer": "poi_topk"
+    },
+    {
+      "query_id": "e1v4_p_complex_topk_3",
+      "bound_id": "p_complex_topk_3",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "topk",
+      "layer": "poi_topk"
+    },
+    {
+      "query_id": "e1v4_p_complex_topk_4",
+      "bound_id": "p_complex_topk_4",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "topk",
+      "layer": "poi_topk"
+    },
+    {
+      "query_id": "e1v4_p_complex_topk_5",
+      "bound_id": "p_complex_topk_5",
+      "source_kind": "poi",
+      "eval_level": "complex",
+      "query_type": "topk",
+      "layer": "poi_topk"
+    }
+  ]
+}

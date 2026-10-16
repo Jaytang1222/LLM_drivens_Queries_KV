@@ -16,8 +16,13 @@ import kart.plan.PlanEnvelope;
 import kart.plan.PlanNode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +37,28 @@ public final class CostFeaturesExtractor {
   private final StatsSnapshot stats;
   private final RegionMapping regionMapping;
   private final long softMemoryBytes;
+  /** Sorted code→count views for ADV posting maps (identity-keyed; stats maps are stable). */
+  private final Map<Map<String, Long>, SortedCodeCounts> sortedCodeCache =
+      new IdentityHashMap<Map<String, Long>, SortedCodeCounts>();
+  /** Budgeted range lists are reused across candidate plans for the same query. */
+  private final Map<BudgetedRangesKey, List<CodeRange>> budgetedCodeRangeCache =
+      new HashMap<BudgetedRangesKey, List<CodeRange>>();
+  /** Memo for sample/posting candidate estimates within one extractor (one query FastCost). */
+  private final Map<String, Long> candidateEstCache = new HashMap<String, Long>();
+  /** Exact posting sums are query/range-specific and reused across candidate plan scoring. */
+  private final Map<List<CodeRange>, Map<SampleCodeFamily, SumResult>> codePostingEstimateCache =
+      new IdentityHashMap<List<CodeRange>, Map<SampleCodeFamily, SumResult>>();
+  /**
+   * Process-wide SFC/XZT range memo (generation dominates ADV FastCost). Bounded;
+   * shared across FastCost instances in a warm suite JVM.
+   */
+  private static final Map<String, List<CodeRange>> GLOBAL_CODE_RANGE_CACHE =
+      Collections.synchronizedMap(new LinkedHashMap<String, List<CodeRange>>(256, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, List<CodeRange>> eldest) {
+          return size() > 256;
+        }
+      });
 
   public CostFeaturesExtractor(LayoutContext layout, StatsSnapshot stats) {
     this(layout, stats, null, 0L);
@@ -203,36 +230,36 @@ public final class CostFeaturesExtractor {
     long hashRows = 0L;
     long fullRows = 0L;
 
-    if (shape.usedXzt && ir != null && ir.temporal != null) {
-      SumResult sr = sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms);
+    if (shape.usedXzt && ir != null && BoundIr.hasTemporal(ir)) {
+      SumResult sr = sumXztPostingsIr(ir);
       xztRows = sr.sum;
       timeRows = xztRows;
       if (sr.missing) {
         f.missingStats = true;
       }
-    } else if (shape.hasTime && ir != null && ir.temporal != null) {
-      SumResult sr = sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms);
+    } else if (shape.hasTime && ir != null && BoundIr.hasTemporal(ir)) {
+      SumResult sr = sumTimePostingsIr(ir);
       timeRows = sr.sum;
       if (sr.missing) {
         f.missingStats = true;
       }
     }
-    if (shape.usedXz && ir != null && ir.spatial != null) {
-      SumResult sr = sumXzPostings(ir.spatial);
+    if (shape.usedXz && ir != null && BoundIr.hasSpatial(ir)) {
+      SumResult sr = sumXzPostingsIr(ir);
       xzRows = sr.sum;
       zRows = xzRows;
       if (sr.missing) {
         f.missingStats = true;
       }
-    } else if (shape.usedTshape && ir != null && ir.spatial != null) {
-      SumResult sr = sumTshapePostings(ir.spatial);
+    } else if (shape.usedTshape && ir != null && BoundIr.hasSpatial(ir)) {
+      SumResult sr = sumTshapePostingsIr(ir);
       tsRows = sr.sum;
       zRows = tsRows;
       if (sr.missing) {
         f.missingStats = true;
       }
-    } else if (shape.hasZ && ir != null && ir.spatial != null) {
-      SumResult sr = sumZPostings(ir.spatial);
+    } else if (shape.hasZ && ir != null && BoundIr.hasSpatial(ir)) {
+      SumResult sr = sumZPostingsIr(ir);
       zRows = sr.sum;
       if (sr.missing) {
         f.missingStats = true;
@@ -253,6 +280,10 @@ public final class CostFeaturesExtractor {
     }
 
     f.estIndexRows = timeRows + zRows + hashRows + fullRows;
+    long preciseIndexRows = f.estIndexRows;
+    f.estIndexRowsAfterCodeFilter = preciseIndexRows;
+    f.estIndexRows = putAdvancedRangeBudgetExtras(
+        f, shape, ir, preciseIndexRows, xzRows, tsRows, xztRows);
 
     long cand;
     if (shape.hasFull && !shape.hasTime && !shape.hasZ && !shape.hasHash) {
@@ -310,7 +341,7 @@ public final class CostFeaturesExtractor {
 
     // Soft spill + geometry work units for §13.4 reserved terms.
     f.estSpillBytes = Math.max(0L, f.estRawBytes - softMemoryBytes);
-    if (ir != null && ir.spatial != null) {
+    if (ir != null && BoundIr.hasSpatial(ir)) {
       f.estGeometryOps = Math.max(1L,
           (long) Math.ceil(f.estCandidateChunks * f.avgPointsPerChunk));
     } else {
@@ -349,6 +380,149 @@ public final class CostFeaturesExtractor {
     f.extras.put("tshape_index_rows", Long.valueOf(tsRows));
     f.extras.put("hash_index_rows", Long.valueOf(hashRows));
     f.extras.put("access", shape.branches.toString());
+  }
+
+  /**
+   * Separate physical scan postings (budget-merged ranges) from rows retained
+   * by the precise-code filter. Both estimates follow the adapters' range budget.
+   */
+  private long putAdvancedRangeBudgetExtras(CostFeatures f, AccessShape shape, BoundIr ir,
+                                            long preciseIndexRows, long xzPrecise,
+                                            long tsPrecise, long xztPrecise) {
+    if (!usesAdvancedShape(shape) || layout == null) {
+      return preciseIndexRows;
+    }
+    int budget = Math.max(1, layout.maxXzRanges);
+    long advancedPreciseRows = 0L;
+    long advancedScannedRows = 0L;
+    long preciseRangeCount = 0L;
+    long scanRangeCount = 0L;
+    if (shape.usedXz && ir != null && BoundIr.hasSpatial(ir)) {
+      List<CodeRange> ranges = cachedXzRangesIr(ir);
+      SumResult scan = recordAdvancedBranchEstimate(f, "xz", ranges,
+          stats != null ? stats.xz_code_posting_counts : null, SampleCodeFamily.XZ,
+          xzPrecise, budget);
+      advancedPreciseRows += xzPrecise;
+      advancedScannedRows += Math.max(xzPrecise, scan.sum);
+      preciseRangeCount += ranges.size();
+      scanRangeCount += scan.physicalRangeCount;
+    }
+    if (shape.usedTshape && ir != null && BoundIr.hasSpatial(ir)) {
+      List<CodeRange> ranges = cachedTshapeRangesIr(ir);
+      SumResult scan = recordAdvancedBranchEstimate(f, "tshape", ranges,
+          stats != null ? stats.tshape_code_posting_counts : null, SampleCodeFamily.TSHAPE,
+          tsPrecise, budget);
+      advancedPreciseRows += tsPrecise;
+      advancedScannedRows += Math.max(tsPrecise, scan.sum);
+      preciseRangeCount += ranges.size();
+      scanRangeCount += scan.physicalRangeCount;
+    }
+    if (shape.usedXzt && ir != null && BoundIr.hasTemporal(ir)) {
+      List<CodeRange> ranges = cachedXztRangesIr(ir);
+      SumResult scan = recordAdvancedBranchEstimate(f, "xzt", ranges,
+          stats != null ? stats.xzt_code_posting_counts : null, SampleCodeFamily.XZT,
+          xztPrecise, budget);
+      advancedPreciseRows += xztPrecise;
+      advancedScannedRows += Math.max(xztPrecise, scan.sum);
+      preciseRangeCount += ranges.size();
+      scanRangeCount += scan.physicalRangeCount;
+    }
+    if (advancedPreciseRows == 0L && advancedScannedRows == 0L) {
+      return preciseIndexRows;
+    }
+    f.extras.put("precise_code_ranges", Long.valueOf(preciseRangeCount));
+    f.extras.put("merged_scan_ranges", Long.valueOf(scanRangeCount));
+    f.extras.put("est_postings_precise", Long.valueOf(advancedPreciseRows));
+    f.extras.put("est_postings_merged", Long.valueOf(advancedScannedRows));
+    long nonAdvancedRows = Math.max(0L, preciseIndexRows - advancedPreciseRows);
+    return nonAdvancedRows + advancedScannedRows;
+  }
+
+  private SumResult recordAdvancedBranchEstimate(CostFeatures f, String name,
+                                                  List<CodeRange> preciseRanges,
+                                                  Map<String, Long> counts,
+                                                  SampleCodeFamily family,
+                                                  long preciseRows, int budget) {
+    List<CodeRange> physicalRanges = cachedBudgetedRanges(preciseRanges, budget, family);
+    SumResult scanned = sumCodeRangePostings(counts, physicalRanges, family);
+    f.extras.put(name + "_precise_range_count", Integer.valueOf(preciseRanges.size()));
+    f.extras.put(name + "_scan_range_count", Integer.valueOf(physicalRanges.size()));
+    f.extras.put(name + "_estimated_postings_after_code_filter", Long.valueOf(preciseRows));
+    f.extras.put(name + "_estimated_postings_scanned", Long.valueOf(Math.max(preciseRows, scanned.sum)));
+    f.extras.put(name + "_posting_count_source",
+        scanned.sampleBased ? "SAMPLE_EXTRAPOLATION"
+            : (counts != null && !counts.isEmpty() ? "POSTING_HISTOGRAM" : "RANGE_UPPER_BOUND"));
+    f.extras.put(name + "_gap_merge_source", gapCost(family) != null
+        ? "POSTING_HISTOGRAM" : "CODE_GAP_LENGTH_FALLBACK");
+    scanned.physicalRangeCount = physicalRanges.size();
+    if (scanned.sampleBased) {
+      f.missingStats = true;
+      f.extras.put(name + "_sample_matches_scanned", Integer.valueOf(scanned.sampleMatches));
+      f.extras.put(name + "_sample_size", Integer.valueOf(scanned.sampleSize));
+      f.extras.put(name + "_sample_rate", Double.valueOf(scanned.sampleRate));
+    }
+    return scanned;
+  }
+
+  private static int physicalRangeCount(List<CodeRange> preciseRanges, int budget) {
+    return Math.min(Math.max(0, budget), preciseRanges == null ? 0 : preciseRanges.size());
+  }
+
+  private List<CodeRange> cachedBudgetedRanges(List<CodeRange> preciseRanges, int budget,
+                                               SampleCodeFamily family) {
+    BudgetedRangesKey key = new BudgetedRangesKey(preciseRanges, budget, family);
+    List<CodeRange> cached = budgetedCodeRangeCache.get(key);
+    if (cached != null) {
+      return cached;
+    }
+    List<CodeRange> merged = kart.compile.CodeRangeBudget
+        .mergeToBudgetGapAware(preciseRanges, budget, gapCost(family));
+    budgetedCodeRangeCache.put(key, merged);
+    return merged;
+  }
+
+  private kart.compile.CodeRangeBudget.GapCost gapCost(SampleCodeFamily family) {
+    if (layout == null || family == null) {
+      return null;
+    }
+    switch (family) {
+      case XZ:
+        return layout.xzPostingGapCost();
+      case TSHAPE:
+        return layout.tshapePostingGapCost();
+      case XZT:
+        return layout.xztPostingGapCost();
+      default:
+        return null;
+    }
+  }
+
+  private static final class BudgetedRangesKey {
+    final List<CodeRange> ranges;
+    final int budget;
+    final SampleCodeFamily family;
+
+    BudgetedRangesKey(List<CodeRange> ranges, int budget, SampleCodeFamily family) {
+      this.ranges = ranges;
+      this.budget = budget;
+      this.family = family;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof BudgetedRangesKey)) {
+        return false;
+      }
+      BudgetedRangesKey that = (BudgetedRangesKey) other;
+      return ranges == that.ranges && budget == that.budget && family == that.family;
+    }
+
+    @Override
+    public int hashCode() {
+      int h = System.identityHashCode(ranges);
+      h = 31 * h + budget;
+      return 31 * h + (family == null ? 0 : family.hashCode());
+    }
   }
 
   /** HBase Scan caching (rows per RPC page); matches ScanTask / Coordinator default. */
@@ -415,24 +589,38 @@ public final class CostFeaturesExtractor {
 
   private long estimateIntersectCandidates(BoundIr ir, AccessShape shape,
                                            boolean time, boolean z, boolean hash) {
-    if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
+    String ck = candidateCacheKey("I", ir, shape, time, z, hash);
+    Long hitCached = candidateEstCache.get(ck);
+    if (hitCached != null) {
+      return hitCached.longValue();
+    }
+    long value = estimateIntersectCandidatesUncached(ir, shape, time, z, hash);
+    candidateEstCache.put(ck, Long.valueOf(value));
+    return value;
+  }
+
+  private long estimateIntersectCandidatesUncached(BoundIr ir, AccessShape shape,
+                                                   boolean time, boolean z, boolean hash) {
+    // ADV shapes: sample×SFC-range scans dominate FastCost; use posting mins instead.
+    if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()
+        || (advancedFastPostingOnly() && usesAdvancedShape(shape))) {
       // No consistent sample: do NOT use independence / geometric mean (§13.3).
       // Conservative upper bound = min(branch postings); caller marks missingStats.
       long min = Long.MAX_VALUE;
-      if (time && ir != null && ir.temporal != null) {
+      if (time && ir != null && BoundIr.hasTemporal(ir)) {
         long rows = shape != null && shape.usedXzt
-            ? sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms).sum
-            : sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms).sum;
+            ? sumXztPostingsIr(ir).sum
+            : sumTimePostingsIr(ir).sum;
         min = Math.min(min, Math.max(1L, rows));
       }
-      if (z && ir != null && ir.spatial != null) {
+      if (z && ir != null && BoundIr.hasSpatial(ir)) {
         long rows;
         if (shape != null && shape.usedXz) {
-          rows = sumXzPostings(ir.spatial).sum;
+          rows = sumXzPostingsIr(ir).sum;
         } else if (shape != null && shape.usedTshape) {
-          rows = sumTshapePostings(ir.spatial).sum;
+          rows = sumTshapePostingsIr(ir).sum;
         } else {
-          rows = sumZPostings(ir.spatial).sum;
+          rows = sumZPostingsIr(ir).sum;
         }
         min = Math.min(min, Math.max(1L, rows));
       }
@@ -446,15 +634,13 @@ public final class CostFeaturesExtractor {
         ? zCellSet(ir) : null;
     List<CodeRange> xztRanges = time && shape != null && shape.usedXzt && ir != null
         && ir.temporal != null && layout != null
-        ? layout.xztCodec().rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms) : null;
+        ? cachedXztRangesIr(ir) : null;
     List<CodeRange> xzRanges = z && shape != null && shape.usedXz && ir != null
-        && ir.spatial != null && layout != null
-        ? layout.xzSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
-            ir.spatial.max_x, ir.spatial.max_y) : null;
+        && BoundIr.hasSpatial(ir) && layout != null
+        ? cachedXzRangesIr(ir) : null;
     List<CodeRange> tsRanges = z && shape != null && shape.usedTshape && ir != null
-        && ir.spatial != null && layout != null
-        ? layout.tshapeSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
-            ir.spatial.max_x, ir.spatial.max_y) : null;
+        && BoundIr.hasSpatial(ir) && layout != null
+        ? cachedTshapeRangesIr(ir) : null;
     String veh = hash ? vehicleEq(ir) : null;
     int hit = 0;
     for (StatsSnapshot.SampleChunk sc : stats.sample_chunks) {
@@ -478,21 +664,61 @@ public final class CostFeaturesExtractor {
 
   private long estimateSingleIndexCandidates(BoundIr ir, AccessShape shape,
                                              boolean time, boolean z) {
-    if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
-      if (time && ir != null && ir.temporal != null) {
-        if (shape != null && shape.usedXzt) {
-          return Math.max(1L, sumXztPostings(ir.temporal.start_ms, ir.temporal.end_ms).sum);
-        }
-        return Math.max(1L, sumTimePostings(ir.temporal.start_ms, ir.temporal.end_ms).sum);
+    String ck = candidateCacheKey("S", ir, shape, time, z, false);
+    Long hitCached = candidateEstCache.get(ck);
+    if (hitCached != null) {
+      return hitCached.longValue();
+    }
+    long value = estimateSingleIndexCandidatesUncached(ir, shape, time, z);
+    candidateEstCache.put(ck, Long.valueOf(value));
+    return value;
+  }
+
+  private static String candidateCacheKey(String kind, BoundIr ir, AccessShape shape,
+                                          boolean time, boolean z, boolean hash) {
+    StringBuilder sb = new StringBuilder(64);
+    sb.append(kind).append('|');
+    sb.append(time ? 'T' : '-').append(z ? 'Z' : '-').append(hash ? 'H' : '-').append('|');
+    if (shape != null) {
+      sb.append(shape.usedXzt ? '1' : '0');
+      sb.append(shape.usedXz ? '1' : '0');
+      sb.append(shape.usedTshape ? '1' : '0');
+      sb.append(shape.intersect ? 'I' : 'S');
+    }
+    sb.append('|');
+    if (ir != null && BoundIr.hasTemporal(ir)) {
+      java.util.List<BoundIr.Temporal> _tp = BoundIr.temporalsOf(ir);
+      if (!_tp.isEmpty()) {
+        sb.append(_tp.get(0).start_ms).append(':').append(_tp.get(_tp.size()-1).end_ms);
       }
-      if (z && ir != null && ir.spatial != null) {
+    }
+    sb.append('|');
+    if (ir != null && BoundIr.hasSpatial(ir)) {
+      BoundIr.Spatial _su = BoundIr.spatialUnion(ir);
+      sb.append(_su.min_x).append(':').append(_su.min_y).append(':')
+          .append(_su.max_x).append(':').append(_su.max_y);
+    }
+    return sb.toString();
+  }
+
+  private long estimateSingleIndexCandidatesUncached(BoundIr ir, AccessShape shape,
+                                                     boolean time, boolean z) {
+    if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()
+        || (advancedFastPostingOnly() && usesAdvancedShape(shape))) {
+      if (time && ir != null && BoundIr.hasTemporal(ir)) {
+        if (shape != null && shape.usedXzt) {
+          return Math.max(1L, sumXztPostingsIr(ir).sum);
+        }
+        return Math.max(1L, sumTimePostingsIr(ir).sum);
+      }
+      if (z && ir != null && BoundIr.hasSpatial(ir)) {
         if (shape != null && shape.usedXz) {
-          return Math.max(1L, sumXzPostings(ir.spatial).sum);
+          return Math.max(1L, sumXzPostingsIr(ir).sum);
         }
         if (shape != null && shape.usedTshape) {
-          return Math.max(1L, sumTshapePostings(ir.spatial).sum);
+          return Math.max(1L, sumTshapePostingsIr(ir).sum);
         }
-        return Math.max(1L, sumZPostings(ir.spatial).sum);
+        return Math.max(1L, sumZPostingsIr(ir).sum);
       }
       return conservativeTotalPostings();
     }
@@ -501,15 +727,13 @@ public final class CostFeaturesExtractor {
         ? zCellSet(ir) : null;
     List<CodeRange> xztRanges = time && shape != null && shape.usedXzt && ir != null
         && ir.temporal != null && layout != null
-        ? layout.xztCodec().rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms) : null;
+        ? cachedXztRangesIr(ir) : null;
     List<CodeRange> xzRanges = z && shape != null && shape.usedXz && ir != null
-        && ir.spatial != null && layout != null
-        ? layout.xzSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
-            ir.spatial.max_x, ir.spatial.max_y) : null;
+        && BoundIr.hasSpatial(ir) && layout != null
+        ? cachedXzRangesIr(ir) : null;
     List<CodeRange> tsRanges = z && shape != null && shape.usedTshape && ir != null
-        && ir.spatial != null && layout != null
-        ? layout.tshapeSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
-            ir.spatial.max_x, ir.spatial.max_y) : null;
+        && BoundIr.hasSpatial(ir) && layout != null
+        ? cachedTshapeRangesIr(ir) : null;
     int hit = 0;
     for (StatsSnapshot.SampleChunk sc : stats.sample_chunks) {
       boolean ok = true;
@@ -556,7 +780,12 @@ public final class CostFeaturesExtractor {
       return buckets == null || buckets.isEmpty();
     }
     // Envelope overlap with half-open query window.
-    return sc.t_max_ms >= ir.temporal.start_ms && sc.t_min_ms < ir.temporal.end_ms;
+    for (BoundIr.Temporal w : BoundIr.temporalsOf(ir)) {
+      if (w != null && sc.t_max_ms >= w.start_ms && sc.t_min_ms < w.end_ms) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean hitsZ(StatsSnapshot.SampleChunk sc, Set<Long> cells) {
@@ -581,8 +810,13 @@ public final class CostFeaturesExtractor {
     if (ir == null || ir.spatial == null) {
       return cells == null || cells.isEmpty();
     }
-    return sc.max_x >= ir.spatial.min_x && sc.min_x <= ir.spatial.max_x
-        && sc.max_y >= ir.spatial.min_y && sc.min_y <= ir.spatial.max_y;
+    for (BoundIr.Spatial s : BoundIr.spatialsOf(ir)) {
+      if (s != null && sc.max_x >= s.min_x && sc.min_x <= s.max_x
+          && sc.max_y >= s.min_y && sc.min_y <= s.max_y) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean hitsTemporalBranch(StatsSnapshot.SampleChunk sc, Set<Long> buckets,
@@ -615,11 +849,35 @@ public final class CostFeaturesExtractor {
     return hitsZ(sc, cells, ir);
   }
 
+  /**
+   * Membership test. When {@code ranges} is merge-sorted non-overlapping (see
+   * {@link #mergeCodeRanges}), uses binary search; otherwise falls back to linear scan.
+   */
   private static boolean codeInRanges(long code, List<CodeRange> ranges) {
-    if (ranges == null) {
+    if (ranges == null || ranges.isEmpty()) {
       return false;
     }
-    for (CodeRange r : ranges) {
+    if (ranges.size() >= 4) {
+      int lo = 0;
+      int hi = ranges.size() - 1;
+      while (lo <= hi) {
+        int mid = (lo + hi) >>> 1;
+        CodeRange r = ranges.get(mid);
+        if (r == null) {
+          return false;
+        }
+        if (code < r.lo) {
+          hi = mid - 1;
+        } else if (code > r.hi) {
+          lo = mid + 1;
+        } else {
+          return true;
+        }
+      }
+      return false;
+    }
+    for (int i = 0; i < ranges.size(); i++) {
+      CodeRange r = ranges.get(i);
       if (r != null && code >= r.lo && code <= r.hi) {
         return true;
       }
@@ -669,7 +927,7 @@ public final class CostFeaturesExtractor {
       return set;
     }
     long[] buckets = TimeBucket.bucketsCovering(
-        ir.temporal.start_ms, ir.temporal.end_ms, layout.epochMs, layout.bucketMs);
+        BoundIr.temporalsOf(ir).get(0).start_ms, BoundIr.temporalsOf(ir).get(BoundIr.temporalsOf(ir).size()-1).end_ms, layout.epochMs, layout.bucketMs);
     for (long b : buckets) {
       set.add(b);
     }
@@ -683,7 +941,7 @@ public final class CostFeaturesExtractor {
     }
     Rect d = layout.domain;
     ZOrder.CellRect cells = ZOrder.metersToCells(
-        ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y,
+        BoundIr.spatialUnion(ir).min_x, BoundIr.spatialUnion(ir).min_y, BoundIr.spatialUnion(ir).max_x, BoundIr.spatialUnion(ir).max_y,
         d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
     for (int cx = cells.cxMin; cx <= cells.cxMax; cx++) {
       for (int cy = cells.cyMin; cy <= cells.cyMax; cy++) {
@@ -790,7 +1048,142 @@ public final class CostFeaturesExtractor {
       return SumResult.missing(conservativeTotalPostings());
     }
     return sumCodeRangePostings(stats != null ? stats.xzt_code_posting_counts : null,
-        layout.xztCodec().rangesCovering(startMs, endMs));
+        cachedXztRanges(startMs, endMs), SampleCodeFamily.XZT);
+  }
+
+
+
+  private SumResult sumXztPostingsIr(BoundIr ir) {
+    java.util.List<BoundIr.Temporal> parts = BoundIr.temporalsOf(ir);
+    if (parts.isEmpty()) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    if (parts.size() == 1) {
+      return sumXztPostings(parts.get(0).start_ms, parts.get(0).end_ms);
+    }
+    SumResult total = new SumResult();
+    for (BoundIr.Temporal w : parts) {
+      SumResult r = sumXztPostings(w.start_ms, w.end_ms);
+      total.sum += r.sum;
+      total.missing |= r.missing;
+    }
+    return total;
+  }
+
+  private List<CodeRange> cachedXztRangesIr(BoundIr ir) {
+    java.util.List<BoundIr.Temporal> parts = BoundIr.temporalsOf(ir);
+    if (parts.isEmpty()) {
+      return java.util.Collections.emptyList();
+    }
+    if (parts.size() == 1) {
+      return cachedXztRanges(parts.get(0).start_ms, parts.get(0).end_ms);
+    }
+    java.util.List<CodeRange> all = new java.util.ArrayList<CodeRange>();
+    for (BoundIr.Temporal w : parts) {
+      all.addAll(cachedXztRanges(w.start_ms, w.end_ms));
+    }
+    return mergeCodeRanges(all);
+  }
+
+  private SumResult sumXzPostingsIr(BoundIr ir) {
+    java.util.List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    if (parts.isEmpty()) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    if (parts.size() == 1) {
+      return sumXzPostings(parts.get(0));
+    }
+    SumResult total = new SumResult();
+    for (BoundIr.Spatial s : parts) {
+      SumResult r = sumXzPostings(s);
+      total.sum += r.sum;
+      total.missing |= r.missing;
+    }
+    return total;
+  }
+
+  private SumResult sumTshapePostingsIr(BoundIr ir) {
+    java.util.List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    if (parts.isEmpty()) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    if (parts.size() == 1) {
+      return sumTshapePostings(parts.get(0));
+    }
+    SumResult total = new SumResult();
+    for (BoundIr.Spatial s : parts) {
+      SumResult r = sumTshapePostings(s);
+      total.sum += r.sum;
+      total.missing |= r.missing;
+    }
+    return total;
+  }
+
+  private SumResult sumZPostingsIr(BoundIr ir) {
+    java.util.List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    if (parts.isEmpty()) {
+      SumResult r = new SumResult();
+      r.missing = true;
+      r.sum = conservativeTotalPostings();
+      return r;
+    }
+    if (parts.size() == 1) {
+      return sumZPostings(parts.get(0));
+    }
+    SumResult total = new SumResult();
+    for (BoundIr.Spatial s : parts) {
+      SumResult r = sumZPostings(s);
+      total.sum += r.sum;
+      total.missing |= r.missing;
+    }
+    return total;
+  }
+
+  private SumResult sumTimePostingsIr(BoundIr ir) {
+    java.util.List<BoundIr.Temporal> parts = BoundIr.temporalsOf(ir);
+    if (parts.isEmpty()) {
+      return SumResult.missing(conservativeTotalPostings());
+    }
+    if (parts.size() == 1) {
+      return sumTimePostings(parts.get(0).start_ms, parts.get(0).end_ms);
+    }
+    SumResult total = new SumResult();
+    for (BoundIr.Temporal w : parts) {
+      SumResult r = sumTimePostings(w.start_ms, w.end_ms);
+      total.sum += r.sum;
+      total.missing |= r.missing;
+    }
+    return total;
+  }
+
+  private List<CodeRange> cachedXzRangesIr(BoundIr ir) {
+    java.util.List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    if (parts.isEmpty()) {
+      return java.util.Collections.emptyList();
+    }
+    if (parts.size() == 1) {
+      return cachedXzRanges(parts.get(0));
+    }
+    java.util.List<CodeRange> all = new java.util.ArrayList<CodeRange>();
+    for (BoundIr.Spatial s : parts) {
+      all.addAll(cachedXzRanges(s));
+    }
+    return mergeCodeRanges(all);
+  }
+
+  private List<CodeRange> cachedTshapeRangesIr(BoundIr ir) {
+    java.util.List<BoundIr.Spatial> parts = BoundIr.spatialsOf(ir);
+    if (parts.isEmpty()) {
+      return java.util.Collections.emptyList();
+    }
+    if (parts.size() == 1) {
+      return cachedTshapeRanges(parts.get(0));
+    }
+    java.util.List<CodeRange> all = new java.util.ArrayList<CodeRange>();
+    for (BoundIr.Spatial s : parts) {
+      all.addAll(cachedTshapeRanges(s));
+    }
+    return mergeCodeRanges(all);
   }
 
   private SumResult sumXzPostings(BoundIr.Spatial spatial) {
@@ -798,7 +1191,7 @@ public final class CostFeaturesExtractor {
       return SumResult.missing(conservativeTotalPostings());
     }
     return sumCodeRangePostings(stats != null ? stats.xz_code_posting_counts : null,
-        layout.xzSfc().ranges(spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+        cachedXzRanges(spatial), SampleCodeFamily.XZ);
   }
 
   private SumResult sumTshapePostings(BoundIr.Spatial spatial) {
@@ -806,43 +1199,349 @@ public final class CostFeaturesExtractor {
       return SumResult.missing(conservativeTotalPostings());
     }
     return sumCodeRangePostings(stats != null ? stats.tshape_code_posting_counts : null,
-        layout.tshapeSfc().ranges(spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+        cachedTshapeRanges(spatial), SampleCodeFamily.TSHAPE);
   }
 
-  private SumResult sumCodeRangePostings(Map<String, Long> counts, List<CodeRange> ranges) {
-    SumResult r = new SumResult();
+  private List<CodeRange> cachedXztRanges(long startMs, long endMs) {
+    String key = rangeLayoutKey() + "|xzt|" + startMs + "|" + endMs;
+    List<CodeRange> hit = GLOBAL_CODE_RANGE_CACHE.get(key);
+    if (hit != null) {
+      return hit;
+    }
+    List<CodeRange> ranges = mergeCodeRanges(layout.xztCodec().rangesCovering(startMs, endMs));
+    GLOBAL_CODE_RANGE_CACHE.put(key, ranges);
+    return ranges;
+  }
+
+  private List<CodeRange> cachedXzRanges(BoundIr.Spatial spatial) {
+    String key = rangeLayoutKey() + "|xz|" + spatial.min_x + "|" + spatial.min_y + "|"
+        + spatial.max_x + "|" + spatial.max_y;
+    List<CodeRange> hit = GLOBAL_CODE_RANGE_CACHE.get(key);
+    if (hit != null) {
+      return hit;
+    }
+    List<CodeRange> ranges = mergeCodeRanges(layout.xzSfc().ranges(
+        spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+    GLOBAL_CODE_RANGE_CACHE.put(key, ranges);
+    return ranges;
+  }
+
+  private List<CodeRange> cachedTshapeRanges(BoundIr.Spatial spatial) {
+    String key = rangeLayoutKey() + "|ts|" + spatial.min_x + "|" + spatial.min_y + "|"
+        + spatial.max_x + "|" + spatial.max_y;
+    List<CodeRange> hit = GLOBAL_CODE_RANGE_CACHE.get(key);
+    if (hit != null) {
+      return hit;
+    }
+    List<CodeRange> ranges = mergeCodeRanges(layout.tshapeSfc().ranges(
+        spatial.min_x, spatial.min_y, spatial.max_x, spatial.max_y));
+    GLOBAL_CODE_RANGE_CACHE.put(key, ranges);
+    return ranges;
+  }
+
+  /** Static range memo must distinguish datasets/index layouts sharing query coordinates. */
+  private String rangeLayoutKey() {
+    if (layout == null || layout.domain == null) {
+      return "layout:none";
+    }
+    return "layout:" + layout.xzLevel + ':' + layout.tshapeMaxDepth + ':' + layout.xztLevel
+        + ':' + layout.epochMs + ':' + layout.bucketMs + ':' + layout.xztHorizonMs
+        + ':' + Double.doubleToLongBits(layout.domain.minX)
+        + ':' + Double.doubleToLongBits(layout.domain.minY)
+        + ':' + Double.doubleToLongBits(layout.domain.maxX)
+        + ':' + Double.doubleToLongBits(layout.domain.maxY);
+  }
+
+  private SumResult sumCodeRangePostings(Map<String, Long> counts, List<CodeRange> ranges,
+                                         SampleCodeFamily family) {
     if (ranges == null || ranges.isEmpty()) {
+      SumResult r = new SumResult();
       r.missing = true;
       r.sum = Math.max(1L, conservativeTotalPostings());
       return r;
     }
+    Map<SampleCodeFamily, SumResult> byFamily = codePostingEstimateCache.get(ranges);
+    if (byFamily != null) {
+      SumResult cached = byFamily.get(family);
+      if (cached != null) {
+        return cached;
+      }
+    }
+    SumResult r;
     if (counts == null || counts.isEmpty()) {
-      r.missing = true;
+      r = estimateSampleCodePostings(ranges, family);
+    } else {
+      SortedCodeCounts sc = sortedCodeCounts(counts);
+      // All callers pass normalized ranges from cachedX*Ranges or cachedBudgetedRanges.
+      r = new SumResult();
+      r.sum = sumSortedDisjointCodeRanges(sc, ranges);
+    }
+    if (byFamily == null) {
+      byFamily = new HashMap<SampleCodeFamily, SumResult>();
+      codePostingEstimateCache.put(ranges, byFamily);
+    }
+    byFamily.put(family, r);
+    return r;
+  }
+
+  /**
+   * Estimates code-range postings from the uniform-hash chunk sample when the
+   * exact posting histogram is absent. Zero hits use a half-sample pseudocount,
+   * and the caller marks the resulting estimate as uncertain.
+   */
+  private SumResult estimateSampleCodePostings(List<CodeRange> ranges, SampleCodeFamily family) {
+    SumResult r = new SumResult();
+    r.missing = true;
+    r.sampleBased = true;
+    r.sampleSize = 0;
+    r.sampleRate = stats != null && stats.sample_rate > 0.0 ? stats.sample_rate : 0.01;
+    if (stats == null || stats.sample_chunks == null || stats.sample_chunks.isEmpty()) {
       r.sum = Math.max(1L, (long) ranges.size() * 10_000L);
+      r.sampleBased = false;
       return r;
     }
-    long maxKnown = maxMapValue(counts);
-    boolean any = false;
-    for (Map.Entry<String, Long> e : counts.entrySet()) {
-      if (e.getKey() == null || e.getValue() == null) {
-        continue;
-      }
-      long code;
-      try {
-        code = Long.parseLong(e.getKey());
-      } catch (NumberFormatException ex) {
-        continue;
-      }
-      if (codeInRanges(code, ranges)) {
-        r.sum += e.getValue().longValue();
-        any = true;
+    int hits = 0;
+    for (StatsSnapshot.SampleChunk sample : stats.sample_chunks) {
+      Long code = sampleCode(sample, family);
+      if (code != null) {
+        r.sampleSize++;
+        if (codeInRanges(code.longValue(), ranges)) {
+          hits++;
+        }
       }
     }
-    if (!any) {
-      r.missing = true;
-      r.sum = Math.max(1L, maxKnown);
+    if (r.sampleSize != stats.sample_chunks.size()) {
+      // A legacy/partial snapshot cannot support a valid extrapolation.
+      r.sampleBased = false;
+      r.sum = Math.max(1L, (long) ranges.size() * 10_000L);
+      r.sampleMatches = hits;
+      return r;
     }
+    r.sampleMatches = hits;
+    double estimated = hits > 0 ? hits / r.sampleRate : 0.5 / r.sampleRate;
+    r.sum = Math.max(1L, (long) Math.ceil(estimated));
     return r;
+  }
+
+  private static Long sampleCode(StatsSnapshot.SampleChunk sample, SampleCodeFamily family) {
+    if (sample == null || family == null) {
+      return null;
+    }
+    switch (family) {
+      case XZ:
+        return sample.xz_code;
+      case TSHAPE:
+        return sample.tshape_code;
+      case XZT:
+        return sample.xzt_code;
+      default:
+        return null;
+    }
+  }
+
+  private static boolean usesAdvancedShape(AccessShape shape) {
+    return shape != null && (shape.usedXzt || shape.usedXz || shape.usedTshape);
+  }
+
+  /**
+   * When advanced indexes are enabled, FastCost skips sample_chunks for ADV shapes
+   * (SFC range × samples) and uses posting-count mins. Override with
+   * {@code KART_FAST_COST_POSTING_ONLY=0/1}.
+   */
+  static boolean advancedFastPostingOnly() {
+    String o = System.getenv("KART_FAST_COST_POSTING_ONLY");
+    if (o != null && !o.trim().isEmpty()) {
+      o = o.trim().toLowerCase();
+      if (o.equals("0") || o.equals("false") || o.equals("off") || o.equals("no")) {
+        return false;
+      }
+      if (o.equals("1") || o.equals("true") || o.equals("on") || o.equals("yes")) {
+        return true;
+      }
+    }
+    String v = System.getenv("KART_ADVANCED_INDEXES");
+    if (v == null || v.isEmpty()) {
+      return false;
+    }
+    v = v.trim().toLowerCase();
+    return v.equals("1") || v.equals("true") || v.equals("on") || v.equals("yes");
+  }
+
+  private SortedCodeCounts sortedCodeCounts(Map<String, Long> counts) {
+    SortedCodeCounts cached = sortedCodeCache.get(counts);
+    if (cached != null) {
+      return cached;
+    }
+    SortedCodeCounts built = SortedCodeCounts.from(counts);
+    sortedCodeCache.put(counts, built);
+    return built;
+  }
+
+  /**
+   * Sum posting counts for codes covered by {@code ranges} using sorted keys + binary search.
+   * Overlapping ranges are merged so each code is counted at most once (same as full-map scan).
+   */
+  static long sumSortedCodeRanges(SortedCodeCounts sc, List<CodeRange> ranges) {
+    if (sc == null || sc.codes.length == 0 || ranges == null || ranges.isEmpty()) {
+      return 0L;
+    }
+    return sumSortedDisjointCodeRanges(sc, mergeCodeRanges(ranges));
+  }
+
+  /** Sum a sorted, disjoint range list using prefix counts; inclusive endpoints. */
+  private static long sumSortedDisjointCodeRanges(SortedCodeCounts sc,
+                                                  List<CodeRange> sortedDisjoint) {
+    if (sc == null || sc.codes.length == 0 || sortedDisjoint == null || sortedDisjoint.isEmpty()) {
+      return 0L;
+    }
+    long sum = 0L;
+    for (int ri = 0; ri < sortedDisjoint.size(); ri++) {
+      CodeRange cr = sortedDisjoint.get(ri);
+      int from = lowerBound(sc.codes, cr.lo);
+      int to = upperBound(sc.codes, cr.hi);
+      if (to > from) {
+        sum += sc.prefixCounts[to] - sc.prefixCounts[from];
+      }
+    }
+    return sum;
+  }
+
+  static List<CodeRange> mergeCodeRanges(List<CodeRange> ranges) {
+    List<CodeRange> sorted = new ArrayList<CodeRange>(ranges.size());
+    for (int i = 0; i < ranges.size(); i++) {
+      CodeRange r = ranges.get(i);
+      if (r != null && r.lo <= r.hi) {
+        sorted.add(r);
+      }
+    }
+    if (sorted.isEmpty()) {
+      return sorted;
+    }
+    Collections.sort(sorted, new Comparator<CodeRange>() {
+      @Override
+      public int compare(CodeRange a, CodeRange b) {
+        if (a.lo < b.lo) {
+          return -1;
+        }
+        if (a.lo > b.lo) {
+          return 1;
+        }
+        return a.hi < b.hi ? -1 : (a.hi > b.hi ? 1 : 0);
+      }
+    });
+    List<CodeRange> out = new ArrayList<CodeRange>(sorted.size());
+    CodeRange cur = sorted.get(0);
+    for (int i = 1; i < sorted.size(); i++) {
+      CodeRange n = sorted.get(i);
+      if (n.lo <= cur.hi || (cur.hi != Long.MAX_VALUE && n.lo == cur.hi + 1L)) {
+        if (n.hi > cur.hi) {
+          cur = new CodeRange(cur.lo, n.hi, cur.contained && n.contained);
+        }
+      } else {
+        out.add(cur);
+        cur = n;
+      }
+    }
+    out.add(cur);
+    return out;
+  }
+
+  static int lowerBound(long[] codes, long key) {
+    int lo = 0;
+    int hi = codes.length;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (codes[mid] < key) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
+  static int upperBound(long[] codes, long key) {
+    int lo = 0;
+    int hi = codes.length;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (codes[mid] <= key) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
+  /** Immutable sorted parallel arrays for string-keyed posting maps. */
+  static final class SortedCodeCounts {
+    final long[] codes;
+    final long[] counts;
+    final long[] prefixCounts;
+    final long maxValue;
+
+    SortedCodeCounts(long[] codes, long[] counts, long[] prefixCounts, long maxValue) {
+      this.codes = codes;
+      this.counts = counts;
+      this.prefixCounts = prefixCounts;
+      this.maxValue = maxValue;
+    }
+
+    static SortedCodeCounts from(Map<String, Long> counts) {
+      int n = counts.size();
+      long[][] pairs = new long[n][2];
+      int w = 0;
+      long max = 0L;
+      for (Map.Entry<String, Long> e : counts.entrySet()) {
+        if (e.getKey() == null || e.getValue() == null) {
+          continue;
+        }
+        long code;
+        try {
+          code = Long.parseLong(e.getKey());
+        } catch (NumberFormatException ex) {
+          continue;
+        }
+        long v = e.getValue().longValue();
+        pairs[w][0] = code;
+        pairs[w][1] = v;
+        if (v > max) {
+          max = v;
+        }
+        w++;
+      }
+      Arrays.sort(pairs, 0, w, new Comparator<long[]>() {
+        @Override
+        public int compare(long[] a, long[] b) {
+          return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0);
+        }
+      });
+      // Collapse duplicate codes (sum counts) after sort.
+      long[] codesOut = new long[w];
+      long[] countsOut = new long[w];
+      int m = 0;
+      for (int i = 0; i < w; i++) {
+        long c = pairs[i][0];
+        long v = pairs[i][1];
+        if (m > 0 && codesOut[m - 1] == c) {
+          countsOut[m - 1] += v;
+        } else {
+          codesOut[m] = c;
+          countsOut[m] = v;
+          m++;
+        }
+      }
+      if (m != w) {
+        codesOut = Arrays.copyOf(codesOut, m);
+        countsOut = Arrays.copyOf(countsOut, m);
+      }
+      long[] prefix = new long[m + 1];
+      for (int i = 0; i < m; i++) {
+        prefix[i + 1] = prefix[i] + countsOut[i];
+      }
+      return new SortedCodeCounts(codesOut, countsOut, prefix, max);
+    }
   }
 
   private long conservativeTotalPostings() {
@@ -868,28 +1567,27 @@ public final class CostFeaturesExtractor {
     boolean usedXzt = shape.branches.contains("XZT");
     boolean usedXz = shape.branches.contains("XZ");
     boolean usedTs = shape.branches.contains("TSHAPE");
-    if (shape.hasTime && ir != null && ir.temporal != null && layout != null) {
+    if (shape.hasTime && ir != null && BoundIr.hasTemporal(ir) && layout != null) {
       if (usedXzt) {
-        ranges += (long) layout.xztCodec()
-            .rangesCovering(ir.temporal.start_ms, ir.temporal.end_ms).size() * shards;
+        ranges += (long) physicalRangeCount(
+            cachedXztRangesIr(ir),
+            Math.max(1, layout.maxXzRanges)) * shards;
       } else {
         long[] buckets = TimeBucket.bucketsCovering(
-            ir.temporal.start_ms, ir.temporal.end_ms, layout.epochMs, layout.bucketMs);
+            BoundIr.temporalsOf(ir).get(0).start_ms, BoundIr.temporalsOf(ir).get(BoundIr.temporalsOf(ir).size()-1).end_ms, layout.epochMs, layout.bucketMs);
         ranges += (long) buckets.length * shards;
       }
     }
-    if (shape.hasZ && ir != null && ir.spatial != null && layout != null) {
+    if (shape.hasZ && ir != null && BoundIr.hasSpatial(ir) && layout != null) {
       if (usedXz) {
-        ranges += (long) layout.xzSfc()
-            .ranges(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y)
-            .size() * shards;
+        ranges += (long) physicalRangeCount(cachedXzRangesIr(ir),
+            Math.max(1, layout.maxXzRanges)) * shards;
       } else if (usedTs) {
-        ranges += (long) layout.tshapeSfc()
-            .ranges(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y)
-            .size() * shards;
+        ranges += (long) physicalRangeCount(cachedTshapeRangesIr(ir),
+            Math.max(1, layout.maxXzRanges)) * shards;
       } else {
         List<ZOrder.MortonRange> mr = new ZOrderIndexAdapter(layout).mortonRanges(
-            new Rect(ir.spatial.min_x, ir.spatial.min_y, ir.spatial.max_x, ir.spatial.max_y));
+            new Rect(BoundIr.spatialUnion(ir).min_x, BoundIr.spatialUnion(ir).min_y, BoundIr.spatialUnion(ir).max_x, BoundIr.spatialUnion(ir).max_y));
         ranges += (long) mr.size() * shards;
       }
     }
@@ -1036,9 +1734,20 @@ public final class CostFeaturesExtractor {
     final List<String> branches = new ArrayList<String>();
   }
 
+  private enum SampleCodeFamily {
+    XZ,
+    TSHAPE,
+    XZT
+  }
+
   private static final class SumResult {
     long sum;
     boolean missing;
+    boolean sampleBased;
+    int physicalRangeCount;
+    int sampleMatches;
+    int sampleSize;
+    double sampleRate;
 
     static SumResult zero() {
       return new SumResult();

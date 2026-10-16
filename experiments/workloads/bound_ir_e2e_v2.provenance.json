@@ -1,0 +1,16 @@
+{
+  "workload_family": "bound_ir_e2e_v2",
+  "frozen": true,
+  "frozen_date": "2026-10-15",
+  "simple": "experiments/workloads/bound_ir_simple_v2.json",
+  "simple_oracle": "experiments/workloads/bound_ir_simple_v2.oracle.json",
+  "complex": "experiments/workloads/bound_ir_complex_v2.json",
+  "complex_oracle": "experiments/workloads/bound_ir_complex_v2.oracle.json",
+  "catalog": "experiments/workloads/bound_ir_e2e_v2.catalog.json",
+  "generator": "experiments/adapters/gen_e2e_stratified_workload.py",
+  "supersedes": [
+    "bound_ir_simple_v1",
+    "bound_ir_complex_v1"
+  ],
+  "note": "Canonical stratified simple/complex for E2/E3; v1 retained for regression only."
+}

@@ -157,8 +157,8 @@ public final class RboFixedArm implements Arm {
    * advanced XZT/XZ/TShape families, then FULL last.
    */
   static List<PlanEnvelope> templatePlans(BoundIr ir) {
-    boolean hasT = ir != null && ir.temporal != null;
-    boolean hasZ = ir != null && ir.spatial != null;
+    boolean hasT = BoundIr.hasTemporal(ir);
+    boolean hasZ = BoundIr.hasSpatial(ir);
     boolean hasH = PlanBuilder.vehicleEqPredicateIndex(ir) >= 0;
     List<boolean[]> classic = templatePriority(hasT, hasZ, hasH);
     List<PlanEnvelope> out = new ArrayList<PlanEnvelope>();

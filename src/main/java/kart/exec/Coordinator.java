@@ -1,6 +1,8 @@
 package kart.exec;
 
+import kart.codec.CodeRange;
 import kart.codec.RowKeyCodec;
+import kart.compile.CodeRangeBudget;
 import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
 import kart.compile.ScanTask;
@@ -56,6 +58,8 @@ public final class Coordinator {
   private long prunedCells;
   private final AtomicLong rpcCounter = new AtomicLong(0L);
   private final AtomicLong retainedBytes = new AtomicLong(0L);
+  private final AtomicLong postingsRaw = new AtomicLong(0L);
+  private final AtomicLong postingsAfterCodeFilter = new AtomicLong(0L);
   private final ThreadLocal<ExecutionTrace.NodeTrace> activeNode =
       new ThreadLocal<ExecutionTrace.NodeTrace>();
   private long execDeadlineMs;
@@ -101,6 +105,8 @@ public final class Coordinator {
     trace.llm_tokens = null;
     rpcCounter.set(0L);
     retainedBytes.set(0L);
+    postingsRaw.set(0L);
+    postingsAfterCodeFilter.set(0L);
     execDeadlineMs = limits.maxExecMs > 0
         ? (t0 + limits.maxExecMs)
         : Long.MAX_VALUE;
@@ -148,6 +154,10 @@ public final class Coordinator {
     }
     trace.rpc_count = null; // no HBase RPC metrics available
     trace.client_ops_count = Long.valueOf(rpcCounter.get());
+    if (postingsRaw.get() > 0L || postingsAfterCodeFilter.get() > 0L) {
+      trace.postings_raw = Long.valueOf(postingsRaw.get());
+      trace.postings_after_code_filter = Long.valueOf(postingsAfterCodeFilter.get());
+    }
     trace.elapsedMs = System.currentTimeMillis() - t0;
     trace.finalizeMetrics();
     return result;
@@ -228,17 +238,6 @@ public final class Coordinator {
     }
   }
 
-  private void noteEmittedRanges(int n) {
-    if (n <= 0) {
-      return;
-    }
-    ExecutionTrace.NodeTrace nt = activeNode.get();
-    if (nt != null) {
-      long prev = nt.emitted_ranges == null ? 0L : nt.emitted_ranges.longValue();
-      nt.emitted_ranges = Long.valueOf(prev + n);
-    }
-  }
-
   private void rememberPayload(ChunkRef ref, int payloadLen) {
     if (ref != null && payloadLen > 0) {
       payloadBytesByRef.put(ref, Long.valueOf(payloadLen));
@@ -306,7 +305,7 @@ public final class Coordinator {
     accountBytes(estimateBytes(out));
     long elapsed = System.currentTimeMillis() - nt0;
     trace.addNode(n.id, estimateRows(out), estimateBytes(out), elapsed);
-    recordOpMetrics(trace, n, out, values);
+    recordOpMetrics(trace, n, out, values, phys);
   }
 
   /**
@@ -386,7 +385,7 @@ public final class Coordinator {
         accountBytes(estimateBytes(out));
         long elapsed = elapsedById.get(n.id).longValue();
         trace.addNode(n.id, estimateRows(out), estimateBytes(out), elapsed);
-        recordOpMetrics(trace, n, out, values);
+        recordOpMetrics(trace, n, out, values, phys);
       }
     } finally {
       pool.shutdownNow();
@@ -395,11 +394,15 @@ public final class Coordinator {
 
   @SuppressWarnings("unchecked")
   private void recordOpMetrics(ExecutionTrace trace, PlanNode n, Object out,
-                               Map<String, Object> values) {
+                               Map<String, Object> values, PhysicalPlan phys) {
     long nodeMs = 0L;
     ExecutionTrace.NodeTrace nt = trace.nodes.get(n.id);
     if (nt != null) {
       nodeMs = nt.elapsedMs;
+    }
+    if (isIndexBranch(n.op) || n.op == Op.FULL_SCAN_CHUNKS) {
+      List<ScanTask> tasks = phys == null ? null : phys.tasksForNode(n.id);
+      trace.node(n.id).emitted_ranges = Long.valueOf(tasks == null ? 0 : tasks.size());
     }
     addPhase(trace, n.op, nodeMs);
     if (out instanceof Set && !((Set<?>) out).isEmpty()
@@ -587,7 +590,6 @@ public final class Coordinator {
   private void scanOneTask(ScanTask task, final String veh, final Set<ChunkRef> out)
       throws IOException {
     checkBudgets();
-    noteEmittedRanges(1);
     int caching = task.caching > 0 ? task.caching : 1000;
     final AtomicLong rowsSeen = new AtomicLong(0L);
     kv.scanConsume(task.table, task.startBytes(), task.stopBytes(), null, caching,
@@ -599,6 +601,11 @@ public final class Coordinator {
           checkBudgets();
         }
         accountBytes(rowWireBytes(row));
+        postingsRaw.incrementAndGet();
+        if (!passesPreciseCodeFilter(task, row.key)) {
+          return;
+        }
+        postingsAfterCodeFilter.incrementAndGet();
         ChunkRef ref = decodePosting(row.key);
         if (ref == null) {
           return;
@@ -620,6 +627,19 @@ public final class Coordinator {
     long rows = rowsSeen.get();
     int pages = (int) Math.max(1L, (rows + caching - 1L) / (long) caching);
     noteRpc(pages);
+  }
+
+  /** Drop postings whose SFC code lies outside precise ranges after physical merge. */
+  private static boolean passesPreciseCodeFilter(ScanTask task, byte[] key) {
+    List<CodeRange> filter = task == null ? null : task.preciseFilter;
+    if (filter == null || filter.isEmpty()) {
+      return true;
+    }
+    if (key == null || key.length != 21) {
+      return true;
+    }
+    long code = RowKeyCodec.decodeXz(key).code;
+    return CodeRangeBudget.containsCode(filter, code);
   }
 
   private void parallelScanTasks(List<ScanTask> tasks, final String veh, final Set<ChunkRef> out)
@@ -685,7 +705,6 @@ public final class Coordinator {
         new LinkedHashMap<ChunkRef, List<Chunk.DecodedPoint>>();
     for (ScanTask task : phys.tasksForNode(n.id)) {
       checkBudgets();
-      noteEmittedRanges(1);
       int caching = task.caching > 0 ? task.caching : 1000;
       final AtomicLong rowsSeen = new AtomicLong(0L);
       kv.scanConsume(task.table, task.startBytes(), task.stopBytes(), null, caching,
@@ -1318,11 +1337,28 @@ public final class Coordinator {
     double minY = bb.getDouble();
     double maxX = bb.getDouble();
     double maxY = bb.getDouble();
-    if (ir.temporal != null && (t1 < ir.temporal.start_ms || t0 >= ir.temporal.end_ms)) {
-      return false;
+    if (BoundIr.hasTemporal(ir)) {
+      boolean anyT = false;
+      for (BoundIr.Temporal w : BoundIr.temporalsOf(ir)) {
+        if (w != null && !(t1 < w.start_ms || t0 >= w.end_ms)) {
+          anyT = true;
+          break;
+        }
+      }
+      if (!anyT) {
+        return false;
+      }
     }
-    return ir.spatial == null || !(maxX < ir.spatial.min_x || minX > ir.spatial.max_x
-        || maxY < ir.spatial.min_y || minY > ir.spatial.max_y);
+    if (!BoundIr.hasSpatial(ir)) {
+      return true;
+    }
+    for (BoundIr.Spatial s : BoundIr.spatialsOf(ir)) {
+      if (s != null && !(maxX < s.min_x || minX > s.max_x
+          || maxY < s.min_y || minY > s.max_y)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static int intParam(PlanNode n, String key, int def) {

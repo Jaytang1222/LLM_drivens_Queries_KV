@@ -10,6 +10,9 @@ import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
 import kart.compile.QueryCompiler;
 import kart.compile.ScanTask;
+import kart.compile.CodeRangeBudget;
+import kart.codec.CodeRange;
+import kart.codec.XzStarSfc;
 import kart.geo.Rect;
 import kart.ir.BoundIr;
 import kart.ir.IrSchemaValidator;
@@ -46,6 +49,9 @@ public final class PlanValidator {
   private final LayoutContext layout;
   private final IrSchemaValidator schemas;
   private final boolean skipCoverageCheck;
+  /** Exact SFC ranges reused while validating several plans for the same query. */
+  private final Map<String, List<CodeRange>> codeRangeCache =
+      new HashMap<String, List<CodeRange>>();
 
   public PlanValidator(LayoutContext layout) {
     this(layout, loadSchemasQuietly(), false);
@@ -262,10 +268,10 @@ public final class PlanValidator {
     }
     // EXACT_ST_FILTER must reference all IR predicates
     Set<String> required = new HashSet<String>();
-    if (ir.temporal != null) {
+    if (BoundIr.hasTemporal(ir)) {
       required.add("/temporal");
     }
-    if (ir.spatial != null) {
+    if (BoundIr.hasSpatial(ir)) {
       required.add("/spatial");
     }
     if (ir.predicates != null) {
@@ -356,7 +362,7 @@ public final class PlanValidator {
     }
     for (PlanNode n : env.nodes) {
       if (n.op == Op.CHUNK_META_FILTER) {
-        if (ir.temporal == null && ir.spatial == null) {
+        if (!BoundIr.hasTemporal(ir) && !BoundIr.hasSpatial(ir)) {
           report.fail(C, "CHUNK_META_FILTER " + n.id + " without ST predicates");
           return false;
         }
@@ -448,10 +454,15 @@ public final class PlanValidator {
       }
 
       if (tasks.isEmpty() && n.op != Op.FULL_SCAN_CHUNKS) {
-        if (n.op == Op.TIME_RANGE_SCAN && ir.temporal != null
-            && ir.temporal.end_ms <= ir.temporal.start_ms) {
-          report.addCertificate(cert);
-          continue;
+        if (n.op == Op.TIME_RANGE_SCAN && BoundIr.hasTemporal(ir)) {
+          boolean allEmpty = true;
+          for (BoundIr.Temporal _w : BoundIr.temporalsOf(ir)) {
+            if (_w != null && _w.end_ms > _w.start_ms) { allEmpty = false; break; }
+          }
+          if (allEmpty) {
+            report.addCertificate(cert);
+            continue;
+          }
         }
         cert.unresolved_obligations.add("no_scan_tasks");
         report.addCertificate(cert);
@@ -475,54 +486,72 @@ public final class PlanValidator {
 
       switch (n.op) {
         case TIME_RANGE_SCAN: {
-          if (ir.temporal == null) {
+          if (!BoundIr.hasTemporal(ir)) {
             cert.unresolved_obligations.add("missing_temporal");
             report.addCertificate(cert);
             report.fail(C, "TIME_RANGE_SCAN without IR temporal");
             return false;
           }
-          long winStart = ir.temporal.start_ms;
-          long winEnd = ir.temporal.end_ms;
-          if (n.params != null) {
+          java.util.List<BoundIr.Temporal> timeWins = new java.util.ArrayList<BoundIr.Temporal>();
+          if (n.params != null
+              && (n.params.get("start_ms") instanceof Number
+                  || n.params.get("end_ms") instanceof Number)) {
+            BoundIr.Temporal u = BoundIr.temporalsOf(ir).get(0);
+            long winStart = u.start_ms;
+            long winEnd = u.end_ms;
             if (n.params.get("start_ms") instanceof Number) {
               winStart = ((Number) n.params.get("start_ms")).longValue();
             }
             if (n.params.get("end_ms") instanceof Number) {
               winEnd = ((Number) n.params.get("end_ms")).longValue();
             }
-          }
-          if (winStart < ir.temporal.start_ms || winEnd > ir.temporal.end_ms) {
-            cert.unresolved_obligations.add("partition_outside_temporal");
-            report.addCertificate(cert);
-            report.fail(C, "TIME partition window outside IR temporal for node " + n.id);
-            return false;
+            long coverLo = Long.MAX_VALUE;
+            long coverHi = Long.MIN_VALUE;
+            for (BoundIr.Temporal w : BoundIr.temporalsOf(ir)) {
+              if (w.start_ms < coverLo) coverLo = w.start_ms;
+              if (w.end_ms > coverHi) coverHi = w.end_ms;
+            }
+            if (winStart < coverLo || winEnd > coverHi) {
+              cert.unresolved_obligations.add("partition_outside_temporal");
+              report.addCertificate(cert);
+              report.fail(C, "TIME partition window outside IR temporal for node " + n.id);
+              return false;
+            }
+            BoundIr.Temporal one = new BoundIr.Temporal();
+            one.start_ms = winStart;
+            one.end_ms = winEnd;
+            timeWins.add(one);
+          } else {
+            timeWins.addAll(BoundIr.temporalsOf(ir));
           }
           if (indexed) {
             index = RangeCoverageIndex.buildForTable(decoded, layout.tableTime, timing);
           }
-          long[] buckets = TimeBucket.bucketsCovering(
-              winStart, winEnd, layout.epochMs, layout.bucketMs);
           long tProbe0 = System.nanoTime();
-          for (int shard = 0; shard < layout.shardCount; shard++) {
-            cert.required_shards.add(Integer.valueOf(shard));
-            for (long b : buckets) {
-              cert.required_bucket_or_cell_cover.add("time:shard=" + shard + ":bucket=" + b);
-              byte[] probe = RowKeyCodec.encodeTime(shard, b, 0, 0);
-              if (timing != null) {
-                timing.coverage_probe_count++;
-              }
-              boolean hit = indexed
-                  ? index.covers(probe)
-                  : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableTime, timing);
-              if (!hit) {
+          for (BoundIr.Temporal tw : timeWins) {
+            long[] buckets = TimeBucket.bucketsCovering(
+                tw.start_ms, tw.end_ms, layout.epochMs, layout.bucketMs);
+            for (int shard = 0; shard < layout.shardCount; shard++) {
+              cert.required_shards.add(Integer.valueOf(shard));
+              for (long b : buckets) {
+                cert.required_bucket_or_cell_cover.add("time:shard=" + shard + ":bucket=" + b);
+                byte[] probe = RowKeyCodec.encodeTime(shard, b, 0, 0);
                 if (timing != null) {
-                  timing.t_coverage_probe_ms +=
-                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                  timing.coverage_probe_count++;
                 }
-                cert.unresolved_obligations.add("time:shard=" + shard + ":bucket=" + b);
-                report.addCertificate(cert);
-                report.fail(C, "time bucket " + b + " shard " + shard + " not covered by node " + n.id);
-                return false;
+                boolean hit = indexed
+                    ? index.covers(probe)
+                    : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableTime, timing);
+                if (!hit) {
+                  if (timing != null) {
+                    timing.t_coverage_probe_ms +=
+                        Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                  }
+                  cert.unresolved_obligations.add("time:shard=" + shard + ":bucket=" + b);
+                  report.addCertificate(cert);
+                  report.fail(C, "time bucket " + b + " shard " + shard + " not covered by node " + n.id);
+                  return false;
+                }
               }
             }
           }
@@ -532,17 +561,21 @@ public final class PlanValidator {
           break;
         }
         case ZORDER_RANGE_SCAN: {
-          if (ir.spatial == null) {
+          if (!BoundIr.hasSpatial(ir)) {
             cert.unresolved_obligations.add("missing_spatial");
             report.addCertificate(cert);
             report.fail(C, "ZORDER_RANGE_SCAN without IR spatial");
             return false;
           }
-          double minX = ir.spatial.min_x;
-          double minY = ir.spatial.min_y;
-          double maxX = ir.spatial.max_x;
-          double maxY = ir.spatial.max_y;
-          if (n.params != null) {
+          java.util.List<BoundIr.Spatial> zParts = new java.util.ArrayList<BoundIr.Spatial>();
+          BoundIr.Spatial zUnion = BoundIr.spatialUnion(ir);
+          if (n.params != null
+              && (n.params.get("min_x") instanceof Number || n.params.get("min_y") instanceof Number
+                  || n.params.get("max_x") instanceof Number || n.params.get("max_y") instanceof Number)) {
+            double minX = zUnion.min_x;
+            double minY = zUnion.min_y;
+            double maxX = zUnion.max_x;
+            double maxY = zUnion.max_y;
             if (n.params.get("min_x") instanceof Number) {
               minX = ((Number) n.params.get("min_x")).doubleValue();
             }
@@ -555,46 +588,53 @@ public final class PlanValidator {
             if (n.params.get("max_y") instanceof Number) {
               maxY = ((Number) n.params.get("max_y")).doubleValue();
             }
-          }
-          if (minX < ir.spatial.min_x || minY < ir.spatial.min_y
-              || maxX > ir.spatial.max_x || maxY > ir.spatial.max_y) {
-            cert.unresolved_obligations.add("partition_outside_spatial");
-            report.addCertificate(cert);
-            report.fail(C, "Z partition rect outside IR spatial for node " + n.id);
-            return false;
+            if (minX < zUnion.min_x || minY < zUnion.min_y
+                || maxX > zUnion.max_x || maxY > zUnion.max_y) {
+              cert.unresolved_obligations.add("partition_outside_spatial");
+              report.addCertificate(cert);
+              report.fail(C, "Z partition rect outside IR spatial for node " + n.id);
+              return false;
+            }
+            BoundIr.Spatial one = new BoundIr.Spatial();
+            one.min_x = minX; one.min_y = minY; one.max_x = maxX; one.max_y = maxY;
+            zParts.add(one);
+          } else {
+            zParts.addAll(BoundIr.spatialsOf(ir));
           }
           if (indexed) {
             index = RangeCoverageIndex.buildForTable(decoded, layout.tableZorder, timing);
           }
           Rect d = layout.domain;
-          ZOrder.CellRect cells = ZOrder.metersToCells(
-              minX, minY, maxX, maxY,
-              d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
           long tProbe0 = System.nanoTime();
-          for (int cx = cells.cxMin; cx <= cells.cxMax; cx++) {
-            for (int cy = cells.cyMin; cy <= cells.cyMax; cy++) {
-              long z = ZOrder.interleave(cx, cy, layout.zorderLevel);
-              for (int shard = 0; shard < layout.shardCount; shard++) {
-                if (!cert.required_shards.contains(Integer.valueOf(shard))) {
-                  cert.required_shards.add(Integer.valueOf(shard));
-                }
-                cert.required_bucket_or_cell_cover.add("z:shard=" + shard + ":cell=" + z);
-                byte[] probe = RowKeyCodec.encodeZorder(shard, z, 0, 0);
-                if (timing != null) {
-                  timing.coverage_probe_count++;
-                }
-                boolean hit = indexed
-                    ? index.covers(probe)
-                    : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableZorder, timing);
-                if (!hit) {
-                  if (timing != null) {
-                    timing.t_coverage_probe_ms +=
-                        Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+          for (BoundIr.Spatial zs : zParts) {
+            ZOrder.CellRect cells = ZOrder.metersToCells(
+                zs.min_x, zs.min_y, zs.max_x, zs.max_y,
+                d.minX, d.minY, d.maxX, d.maxY, layout.zorderLevel);
+            for (int cx = cells.cxMin; cx <= cells.cxMax; cx++) {
+              for (int cy = cells.cyMin; cy <= cells.cyMax; cy++) {
+                long z = ZOrder.interleave(cx, cy, layout.zorderLevel);
+                for (int shard = 0; shard < layout.shardCount; shard++) {
+                  if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                    cert.required_shards.add(Integer.valueOf(shard));
                   }
-                  cert.unresolved_obligations.add("z:shard=" + shard + ":cell=" + z);
-                  report.addCertificate(cert);
-                  report.fail(C, "z-cell " + z + " shard " + shard + " not covered by node " + n.id);
-                  return false;
+                  cert.required_bucket_or_cell_cover.add("z:shard=" + shard + ":cell=" + z);
+                  byte[] probe = RowKeyCodec.encodeZorder(shard, z, 0, 0);
+                  if (timing != null) {
+                    timing.coverage_probe_count++;
+                  }
+                  boolean hit = indexed
+                      ? index.covers(probe)
+                      : RangeCoverageIndex.coveredByLegacy(probe, tasks, layout.tableZorder, timing);
+                  if (!hit) {
+                    if (timing != null) {
+                      timing.t_coverage_probe_ms +=
+                          Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                    }
+                    cert.unresolved_obligations.add("z:shard=" + shard + ":cell=" + z);
+                    report.addCertificate(cert);
+                    report.fail(C, "z-cell " + z + " shard " + shard + " not covered by node " + n.id);
+                    return false;
+                  }
                 }
               }
             }
@@ -606,70 +646,78 @@ public final class PlanValidator {
         }
         case XZ_RANGE_SCAN:
         case TSHAPE_RANGE_SCAN: {
-          if (ir.spatial == null) {
+          if (!BoundIr.hasSpatial(ir)) {
             cert.unresolved_obligations.add("missing_spatial");
             report.addCertificate(cert);
             report.fail(C, n.op + " without IR spatial");
             return false;
           }
-          double minX = ir.spatial.min_x;
-          double minY = ir.spatial.min_y;
-          double maxX = ir.spatial.max_x;
-          double maxY = ir.spatial.max_y;
-          if (n.params != null) {
+          java.util.List<BoundIr.Spatial> xzParts = new java.util.ArrayList<BoundIr.Spatial>();
+          BoundIr.Spatial xzUnion = BoundIr.spatialUnion(ir);
+          if (n.params != null
+              && (n.params.get("min_x") instanceof Number || n.params.get("min_y") instanceof Number
+                  || n.params.get("max_x") instanceof Number || n.params.get("max_y") instanceof Number)) {
+            BoundIr.Spatial one = new BoundIr.Spatial();
+            one.min_x = xzUnion.min_x; one.min_y = xzUnion.min_y;
+            one.max_x = xzUnion.max_x; one.max_y = xzUnion.max_y;
             if (n.params.get("min_x") instanceof Number) {
-              minX = ((Number) n.params.get("min_x")).doubleValue();
+              one.min_x = ((Number) n.params.get("min_x")).doubleValue();
             }
             if (n.params.get("min_y") instanceof Number) {
-              minY = ((Number) n.params.get("min_y")).doubleValue();
+              one.min_y = ((Number) n.params.get("min_y")).doubleValue();
             }
             if (n.params.get("max_x") instanceof Number) {
-              maxX = ((Number) n.params.get("max_x")).doubleValue();
+              one.max_x = ((Number) n.params.get("max_x")).doubleValue();
             }
             if (n.params.get("max_y") instanceof Number) {
-              maxY = ((Number) n.params.get("max_y")).doubleValue();
+              one.max_y = ((Number) n.params.get("max_y")).doubleValue();
             }
+            xzParts.add(one);
+          } else {
+            xzParts.addAll(BoundIr.spatialsOf(ir));
           }
           String table = n.op == Op.XZ_RANGE_SCAN ? layout.tableXz : layout.tableTshape;
           if (indexed) {
             index = RangeCoverageIndex.buildForTable(decoded, table, timing);
           }
-          java.util.List<kart.codec.CodeRange> codeRanges = n.op == Op.XZ_RANGE_SCAN
-              ? layout.xzSfc().ranges(minX, minY, maxX, maxY)
-              : layout.tshapeSfc().ranges(minX, minY, maxX, maxY);
-          if (!spatialOverlapSound(n.op, minX, minY, maxX, maxY, codeRanges, cert, report)) {
-            return false;
-          }
           long tProbe0 = System.nanoTime();
-          for (kart.codec.CodeRange cr : codeRanges) {
-            for (int shard = 0; shard < layout.shardCount; shard++) {
-              if (!cert.required_shards.contains(Integer.valueOf(shard))) {
-                cert.required_shards.add(Integer.valueOf(shard));
-              }
-              cert.required_bucket_or_cell_cover.add(n.op + ":shard=" + shard + ":lo=" + cr.lo);
-              byte[] probeLo = n.op == Op.XZ_RANGE_SCAN
-                  ? RowKeyCodec.encodeXz(shard, cr.lo, 0, 0)
-                  : RowKeyCodec.encodeTShape(shard, cr.lo, 0, 0);
-              byte[] probeHi = n.op == Op.XZ_RANGE_SCAN
-                  ? RowKeyCodec.encodeXz(shard, cr.hi, 0, 0)
-                  : RowKeyCodec.encodeTShape(shard, cr.hi, 0, 0);
-              if (timing != null) {
-                timing.coverage_probe_count += 2;
-              }
-              boolean hitLo = indexed ? index.covers(probeLo)
-                  : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, table, timing);
-              boolean hitHi = indexed ? index.covers(probeHi)
-                  : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, table, timing);
-              if (!hitLo || !hitHi) {
-                if (timing != null) {
-                  timing.t_coverage_probe_ms +=
-                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+          for (BoundIr.Spatial xs : xzParts) {
+            List<CodeRange> codeRanges = spatialCodeRanges(
+                n.op, xs.min_x, xs.min_y, xs.max_x, xs.max_y);
+            if (!spatialOverlapSound(n.op, xs.min_x, xs.min_y, xs.max_x, xs.max_y,
+                codeRanges, cert, report)) {
+              return false;
+            }
+            for (kart.codec.CodeRange cr : codeRanges) {
+              for (int shard = 0; shard < layout.shardCount; shard++) {
+                if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                  cert.required_shards.add(Integer.valueOf(shard));
                 }
-                cert.unresolved_obligations.add(n.op + ":shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
-                report.addCertificate(cert);
-                report.fail(C, n.op + " range [" + cr.lo + "," + cr.hi + "] shard " + shard
-                    + " not covered by node " + n.id);
-                return false;
+                cert.required_bucket_or_cell_cover.add(n.op + ":shard=" + shard + ":lo=" + cr.lo);
+                byte[] probeLo = n.op == Op.XZ_RANGE_SCAN
+                    ? RowKeyCodec.encodeXz(shard, cr.lo, 0, 0)
+                    : RowKeyCodec.encodeTShape(shard, cr.lo, 0, 0);
+                byte[] probeHi = n.op == Op.XZ_RANGE_SCAN
+                    ? RowKeyCodec.encodeXz(shard, cr.hi, 0, 0)
+                    : RowKeyCodec.encodeTShape(shard, cr.hi, 0, 0);
+                if (timing != null) {
+                  timing.coverage_probe_count += 2;
+                }
+                boolean hitLo = indexed ? index.covers(probeLo)
+                    : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, table, timing);
+                boolean hitHi = indexed ? index.covers(probeHi)
+                    : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, table, timing);
+                if (!hitLo || !hitHi) {
+                  if (timing != null) {
+                    timing.t_coverage_probe_ms +=
+                        Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                  }
+                  cert.unresolved_obligations.add(n.op + ":shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
+                  report.addCertificate(cert);
+                  report.fail(C, n.op + " range [" + cr.lo + "," + cr.hi + "] shard " + shard
+                      + " not covered by node " + n.id);
+                  return false;
+                }
               }
             }
           }
@@ -679,56 +727,65 @@ public final class PlanValidator {
           break;
         }
         case XZT_RANGE_SCAN: {
-          if (ir.temporal == null) {
+          if (!BoundIr.hasTemporal(ir)) {
             cert.unresolved_obligations.add("missing_temporal");
             report.addCertificate(cert);
             report.fail(C, "XZT_RANGE_SCAN without IR temporal");
             return false;
           }
-          long winStart = ir.temporal.start_ms;
-          long winEnd = ir.temporal.end_ms;
-          if (n.params != null) {
+          java.util.List<BoundIr.Temporal> xztWins = new java.util.ArrayList<BoundIr.Temporal>();
+          if (n.params != null
+              && (n.params.get("start_ms") instanceof Number
+                  || n.params.get("end_ms") instanceof Number)) {
+            BoundIr.Temporal u = BoundIr.temporalsOf(ir).get(0);
+            BoundIr.Temporal one = new BoundIr.Temporal();
+            one.start_ms = u.start_ms;
+            one.end_ms = u.end_ms;
             if (n.params.get("start_ms") instanceof Number) {
-              winStart = ((Number) n.params.get("start_ms")).longValue();
+              one.start_ms = ((Number) n.params.get("start_ms")).longValue();
             }
             if (n.params.get("end_ms") instanceof Number) {
-              winEnd = ((Number) n.params.get("end_ms")).longValue();
+              one.end_ms = ((Number) n.params.get("end_ms")).longValue();
             }
+            xztWins.add(one);
+          } else {
+            xztWins.addAll(BoundIr.temporalsOf(ir));
           }
           if (indexed) {
             index = RangeCoverageIndex.buildForTable(decoded, layout.tableXzt, timing);
           }
-          java.util.List<kart.codec.CodeRange> xztRanges =
-              layout.xztCodec().rangesCovering(winStart, winEnd);
-          if (!xztOverlapSound(winStart, winEnd, xztRanges, cert, report)) {
-            return false;
-          }
           long tProbe0 = System.nanoTime();
-          for (kart.codec.CodeRange cr : xztRanges) {
-            for (int shard = 0; shard < layout.shardCount; shard++) {
-              if (!cert.required_shards.contains(Integer.valueOf(shard))) {
-                cert.required_shards.add(Integer.valueOf(shard));
-              }
-              cert.required_bucket_or_cell_cover.add("xzt:shard=" + shard + ":lo=" + cr.lo);
-              byte[] probeLo = RowKeyCodec.encodeXzt(shard, cr.lo, 0, 0);
-              byte[] probeHi = RowKeyCodec.encodeXzt(shard, cr.hi, 0, 0);
-              if (timing != null) {
-                timing.coverage_probe_count += 2;
-              }
-              boolean hitLo = indexed ? index.covers(probeLo)
-                  : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, layout.tableXzt, timing);
-              boolean hitHi = indexed ? index.covers(probeHi)
-                  : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, layout.tableXzt, timing);
-              if (!hitLo || !hitHi) {
-                if (timing != null) {
-                  timing.t_coverage_probe_ms +=
-                      Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+          for (BoundIr.Temporal xw : xztWins) {
+            List<CodeRange> xztRanges = temporalCodeRanges(xw.start_ms, xw.end_ms);
+            if (!xztOverlapSound(xw.start_ms, xw.end_ms, xztRanges, cert, report)) {
+              return false;
+            }
+            for (kart.codec.CodeRange cr : xztRanges) {
+              for (int shard = 0; shard < layout.shardCount; shard++) {
+                if (!cert.required_shards.contains(Integer.valueOf(shard))) {
+                  cert.required_shards.add(Integer.valueOf(shard));
                 }
-                cert.unresolved_obligations.add("xzt:shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
-                report.addCertificate(cert);
-                report.fail(C, "xzt range [" + cr.lo + "," + cr.hi + "] shard " + shard
-                    + " not covered by node " + n.id);
-                return false;
+                cert.required_bucket_or_cell_cover.add("xzt:shard=" + shard + ":lo=" + cr.lo);
+                byte[] probeLo = RowKeyCodec.encodeXzt(shard, cr.lo, 0, 0);
+                byte[] probeHi = RowKeyCodec.encodeXzt(shard, cr.hi, 0, 0);
+                if (timing != null) {
+                  timing.coverage_probe_count += 2;
+                }
+                boolean hitLo = indexed ? index.covers(probeLo)
+                    : RangeCoverageIndex.coveredByLegacy(probeLo, tasks, layout.tableXzt, timing);
+                boolean hitHi = indexed ? index.covers(probeHi)
+                    : RangeCoverageIndex.coveredByLegacy(probeHi, tasks, layout.tableXzt, timing);
+                if (!hitLo || !hitHi) {
+                  if (timing != null) {
+                    timing.t_coverage_probe_ms +=
+                        Math.max(0L, (System.nanoTime() - tProbe0) / 1_000_000L);
+                  }
+                  cert.unresolved_obligations.add("xzt:shard=" + shard + ":[" + cr.lo + "," + cr.hi + "]");
+                  report.addCertificate(cert);
+                  report.fail(C, "xzt range [" + cr.lo + "," + cr.hi + "] shard " + shard
+                      + " not covered by node " + n.id);
+                  return false;
+                }
               }
             }
           }
@@ -842,7 +899,9 @@ public final class PlanValidator {
         continue; // non-overlapping with query
       }
       long code = layout.xztCodec().indexInterval(a, b);
-      if (!codeInRanges(code, ranges)) {
+      // Adapters span-fill for recall; accept unfilled or filled cover.
+      if (!codeInRanges(code, ranges)
+          && !codeInRanges(code, XzStarSfc.fillInternalGaps(ranges))) {
         cert.unresolved_obligations.add("xzt_overlap_miss:code=" + code);
         report.addCertificate(cert);
         report.fail("CoverageCheck", "XZT SRQ misses overlapping interval code=" + code
@@ -883,9 +942,55 @@ public final class PlanValidator {
     return true;
   }
 
-  private static boolean codeInRanges(long code, java.util.List<kart.codec.CodeRange> ranges) {
-    for (kart.codec.CodeRange r : ranges) {
-      if (code >= r.lo && code <= r.hi) {
+  /**
+   * Return the exact inclusive SFC cover for this predicate. Sorting and merging
+   * overlap/adjacency preserves the represented integer-code set and lets the
+   * validator reuse one result across all candidate plans for the same query.
+   */
+  private List<CodeRange> spatialCodeRanges(Op op, double minX, double minY,
+                                            double maxX, double maxY) {
+    String key = op.name() + "|" + Double.doubleToLongBits(minX) + "|"
+        + Double.doubleToLongBits(minY) + "|" + Double.doubleToLongBits(maxX) + "|"
+        + Double.doubleToLongBits(maxY);
+    List<CodeRange> cached = codeRangeCache.get(key);
+    if (cached != null) {
+      return cached;
+    }
+    List<CodeRange> raw = op == Op.XZ_RANGE_SCAN
+        ? layout.xzSfc().ranges(minX, minY, maxX, maxY)
+        : layout.tshapeSfc().ranges(minX, minY, maxX, maxY);
+    List<CodeRange> normalized = CodeRangeBudget.mergeOverlapping(raw);
+    codeRangeCache.put(key, normalized);
+    return normalized;
+  }
+
+  private List<CodeRange> temporalCodeRanges(long startMs, long endMs) {
+    String key = "XZT|" + startMs + "|" + endMs;
+    List<CodeRange> cached = codeRangeCache.get(key);
+    if (cached != null) {
+      return cached;
+    }
+    List<CodeRange> normalized = CodeRangeBudget.mergeOverlapping(
+        layout.xztCodec().rangesCovering(startMs, endMs));
+    codeRangeCache.put(key, normalized);
+    return normalized;
+  }
+
+  /** Binary search over the sorted, disjoint ranges returned by the two helpers above. */
+  static boolean codeInRanges(long code, List<CodeRange> ranges) {
+    if (ranges == null || ranges.isEmpty()) {
+      return false;
+    }
+    int lo = 0;
+    int hi = ranges.size() - 1;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      CodeRange range = ranges.get(mid);
+      if (code < range.lo) {
+        hi = mid - 1;
+      } else if (code > range.hi) {
+        lo = mid + 1;
+      } else {
         return true;
       }
     }

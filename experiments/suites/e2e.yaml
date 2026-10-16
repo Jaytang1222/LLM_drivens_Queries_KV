@@ -1,14 +1,14 @@
 # E3 — end-to-end from gold BoundIR
 # trials: 3 is harness/smoke. Formal first-run: --cache cold --trials 1
 # Formal warm P50/P95: --cache warm --trials 5
-# Default = frozen complex-level advantage set (bound_ir_complex_v1).
-# Run with KART_ADVANCED_INDEXES=0 (kart-env / Java default off).
-# Compat alias: bound_ir_cmp_v6.json. BoundIR-65 regression:
+# Canonical frozen complex = bound_ir_complex_v2 (do not overwrite).
+# KART needs KART_ADVANCED_INDEXES=1; CBO arm keeps classic menu in NativePolicyArm.
+# History: bound_ir_complex_v1.json. BoundIR-65 regression:
 #   --workload experiments/workloads/bound_ir_v1.json
 kind: compare
 id: e2e
-workload: experiments/workloads/bound_ir_complex_v1.json
-oracle: experiments/workloads/bound_ir_complex_v1.oracle.json
+workload: experiments/workloads/bound_ir_complex_v2.json
+oracle: experiments/workloads/bound_ir_complex_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

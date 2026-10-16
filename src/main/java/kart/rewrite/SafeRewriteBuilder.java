@@ -120,6 +120,32 @@ public final class SafeRewriteBuilder {
     return null;
   }
 
+  /** True when the plan has exactly one FETCH_TRAJECTORY_CHUNK and no meta_probe yet. */
+  public static boolean canMetaProbe(PlanEnvelope p) {
+    if (p == null || p.node("meta_probe") != null) {
+      return false;
+    }
+    int fetches = 0;
+    for (PlanNode n : p.nodes) {
+      if (n.op == Op.FETCH_TRAJECTORY_CHUNK) {
+        fetches++;
+      }
+    }
+    return fetches == 1;
+  }
+
+  public static boolean hasOp(PlanEnvelope p, Op op) {
+    if (p == null || op == null) {
+      return false;
+    }
+    for (PlanNode n : p.nodes) {
+      if (n.op == op) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Inserts CHUNK_META_FILTER directly before the sole FETCH_TRAJECTORY_CHUNK. */
   public static PlanEnvelope withMetaProbe(PlanEnvelope p) throws Rejected {
     PlanNode fetch = null;

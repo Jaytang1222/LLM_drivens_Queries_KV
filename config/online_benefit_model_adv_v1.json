@@ -1,0 +1,15 @@
+{
+  "basis": "log",
+  "intercept": -3136.1737665171645,
+  "coefficients": [
+    671.9451547062678,
+    109.39082795030734,
+    -76.21116611569303
+  ],
+  "margin_ms": 1395.6813475558115,
+  "training_queries": 37,
+  "training_rows": 370,
+  "version": "calib_loglin_adv_v1",
+  "note": "Side-track ADV force-plan census fit; do not replace online_benefit_model_v5",
+  "source": "experiments/results/adv-census-p0/census.jsonl"
+}

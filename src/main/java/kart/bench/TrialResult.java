@@ -24,8 +24,18 @@ public final class TrialResult {
     t.run = rr;
     if (rr != null) {
       t.queryResult = rr.result;
+      t.extras.put("advanced_indexes_enabled", Boolean.valueOf(rr.advanced_indexes_enabled));
       t.t_plan_ms = rr.t_plan_ms;
       t.t_exec_ms = rr.t_exec_ms;
+      if (rr.t_search_ms != null) {
+        t.extras.put("t_search_ms", rr.t_search_ms);
+      }
+      if (rr.t_validation_ms != null) {
+        t.extras.put("t_validation_ms", rr.t_validation_ms);
+      }
+      if (rr.t_final_cost_ms != null) {
+        t.extras.put("t_final_cost_ms", rr.t_final_cost_ms);
+      }
       if (rr.plannerMode != null) {
         t.planner_mode = rr.plannerMode.wireName();
       }

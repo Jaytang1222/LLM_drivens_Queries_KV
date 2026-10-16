@@ -20,6 +20,8 @@ public final class DraftIr {
   public Source source;
   public Temporal temporal;
   public Spatial spatial;
+  /** OR of AOIs (ST-Ranges); when non-empty, preferred over {@link #spatial}. */
+  public List<Spatial> spatial_parts;
   public List<Predicate> predicates = new ArrayList<Predicate>();
   public Semantics semantics;
   public Similarity similarity;

@@ -75,10 +75,10 @@ kart_ensure_jar >>"$LOG" 2>&1
 kart_load_llm_env >>"$LOG" 2>&1 || log "WARN: LLM env incomplete (online residual arm may fail)"
 
 for f in \
-  experiments/workloads/bound_ir_complex_v1.json \
-  experiments/workloads/bound_ir_complex_v1.oracle.json \
-  experiments/workloads/bound_ir_simple_v1.json \
-  experiments/workloads/bound_ir_simple_v1.oracle.json \
+  experiments/workloads/bound_ir_complex_v2.json \
+  experiments/workloads/bound_ir_complex_v2.oracle.json \
+  experiments/workloads/bound_ir_simple_v2.json \
+  experiments/workloads/bound_ir_simple_v2.oracle.json \
   experiments/suites/ablation.yaml \
   experiments/suites/ablation-simple.yaml
 do

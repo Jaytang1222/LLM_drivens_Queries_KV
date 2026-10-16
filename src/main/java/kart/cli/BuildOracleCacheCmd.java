@@ -18,9 +18,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -73,9 +78,32 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       description = "Projected CRS when loading data (default: from manifest.layout.crs or EPSG:32650)")
   private String crs;
 
+  @Option(names = "--advanced-complex-diagnostic",
+      description = "Build a fresh 12-query, multi-anchor advanced-index diagnostic workload and FullScanOracle")
+  private boolean advancedComplexDiagnostic;
+
+  @Option(names = "--diagnostic-seed", defaultValue = "20261014",
+      description = "Fixed seed for deterministic multi-anchor selection")
+  private long diagnosticSeed;
+
+  @Option(names = "--diagnostic-workload-out",
+      defaultValue = "experiments/workloads/bound_ir_adv_complex_diag_v1.json")
+  private Path diagnosticWorkloadOut;
+
+  @Option(names = "--diagnostic-oracle-out",
+      defaultValue = "experiments/workloads/bound_ir_adv_complex_diag_v1.oracle.json")
+  private Path diagnosticOracleOut;
+
+  @Option(names = "--diagnostic-overwrite",
+      description = "Allow replacing the diagnostic workload and Oracle outputs when both already exist")
+  private boolean diagnosticOverwrite;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
+    if (advancedComplexDiagnostic) {
+      return buildAdvancedComplexDiagnostic(root);
+    }
     if (appendTopkMetrics) {
       return appendTopkMetrics(root);
     }
@@ -161,6 +189,301 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     System.out.println("ORACLE_CACHE_OK workload=" + wOut + " oracle=" + oOut
         + " queries=" + queries.size() + " non_empty=" + nonEmpty);
     return 0;
+  }
+
+  /**
+   * Build a diagnostic workload from independently sampled real trajectories.
+   * Selection depends only on the fixed seed, trajectory identity, and spatial
+   * grid; it never uses KART/CBO plans, costs, or execution results.
+   */
+  private int buildAdvancedComplexDiagnostic(Path root) throws Exception {
+    Path cat = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
+    CatalogStore store = new CatalogStore(cat);
+    Manifest m = store.loadManifest(manifestId).orElse(null);
+    if (m == null) {
+      System.err.println("manifest not found: " + manifestId);
+      return 1;
+    }
+    if (!"tdrive_v1_ready".equals(manifestId)) {
+      System.err.println("advanced complex diagnostic currently requires manifest tdrive_v1_ready");
+      return 2;
+    }
+    Rect domain = new Rect(m.layout.domain.xmin, m.layout.domain.ymin,
+        m.layout.domain.xmax, m.layout.domain.ymax);
+    long bucketMs = m.layout.bucket_ms;
+    long epochMs = m.layout.epoch_ms;
+    Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
+    System.out.println("ADV_DIAG_PHASE=load_cleaned seed=" + diagnosticSeed + " data=" + data);
+    System.out.flush();
+    long loadStart = System.currentTimeMillis();
+    List<Trajectory> trajs = loadTrajectories(data, domain, m);
+    System.out.println("ADV_DIAG_PROGRESS trajectories=" + trajs.size()
+        + " elapsed_s=" + ((System.currentTimeMillis() - loadStart) / 1000));
+    List<Anchor> anchors = pickDiverseAnchors(trajs, domain, bucketMs, diagnosticSeed, 12);
+    if (anchors.size() != 12) {
+      System.err.println("need 12 distinct trajectory anchors; found " + anchors.size());
+      return 2;
+    }
+    List<BoundIr> queries = buildAdvancedComplexDiagnosticWorkload(
+        anchors, domain, bucketMs, epochMs, m);
+    FullScanOracle oracle = new FullScanOracle(trajs);
+
+    Map<String, Object> workload = new LinkedHashMap<String, Object>();
+    workload.put("workload_id", "bound_ir_adv_complex_diag_v1");
+    workload.put("manifest_id", manifestId);
+    workload.put("semantics_version", m.semantics_version);
+    workload.put("evaluation_role", "mechanism_diagnostic_not_population_estimate");
+    workload.put("selection_seed", Long.valueOf(diagnosticSeed));
+    workload.put("selection_policy",
+        "eligible trajectories shuffled by seed; distinct vehicle and coarse spatial cell where possible; no method outcomes used");
+    workload.put("query_families", new String[] {
+        "temporal_only_control", "spatial_only", "vehicle_equality_control",
+        "short_spatiotemporal", "long_spatiotemporal", "vehicle_spatiotemporal",
+        "topk_dtw", "topk_frechet", "topk_hausdorff"
+    });
+    List<Map<String, Object>> anchorRows = new ArrayList<Map<String, Object>>();
+    for (int i = 0; i < anchors.size(); i++) {
+      Map<String, Object> row = anchors.get(i).toMap();
+      row.put("query_id", queries.get(i).query_id);
+      anchorRows.add(row);
+    }
+    workload.put("anchors", anchorRows);
+    workload.put("queries", queries);
+
+    List<Map<String, Object>> answers = new ArrayList<Map<String, Object>>();
+    int nonEmpty = 0;
+    int topKNonEmpty = 0;
+    boolean topKComplete = true;
+    for (BoundIr ir : queries) {
+      FullScanOracle.Answer ans = oracle.evaluate(ir);
+      Map<String, Object> row = new LinkedHashMap<String, Object>();
+      row.put("query_id", ir.query_id);
+      row.put("trajectory_ids", ans.trajectoryIds);
+      if (ans.topK != null) {
+        List<Map<String, Object>> scored = new ArrayList<Map<String, Object>>();
+        for (FullScanOracle.ScoredId s : ans.topK) {
+          Map<String, Object> sc = new LinkedHashMap<String, Object>();
+          sc.put("tid", Long.valueOf(s.tid));
+          sc.put("trajectory_id", s.trajectoryId);
+          sc.put("distance", Double.valueOf(s.distance));
+          scored.add(sc);
+        }
+        row.put("top_k", scored);
+        row.put("top_k_count", Integer.valueOf(scored.size()));
+        if (!scored.isEmpty()) {
+          topKNonEmpty++;
+        }
+        int requestedK = ir.result != null && ir.result.k != null
+            ? ir.result.k.intValue() : 0;
+        if (scored.size() < requestedK) {
+          topKComplete = false;
+          System.err.println("ADV_DIAG_INCOMPLETE_TOPK id=" + ir.query_id
+              + " requested=" + requestedK + " actual=" + scored.size());
+        }
+      }
+      answers.add(row);
+      if (ans.trajectoryIds != null && !ans.trajectoryIds.isEmpty()) {
+        nonEmpty++;
+      }
+      System.out.println("ADV_DIAG_ORACLE id=" + ir.query_id
+          + " candidates=" + (ans.trajectoryIds == null ? 0 : ans.trajectoryIds.size())
+          + (ans.topK == null ? "" : " topk=" + ans.topK.size()));
+    }
+
+    Map<String, Object> cache = new LinkedHashMap<String, Object>();
+    cache.put("manifest_id", manifestId);
+    cache.put("semantics_version", m.semantics_version);
+    cache.put("trajectory_count", Integer.valueOf(trajs.size()));
+    cache.put("non_empty", Integer.valueOf(nonEmpty));
+    cache.put("topk_non_empty", Integer.valueOf(topKNonEmpty));
+    cache.put("total", Integer.valueOf(queries.size()));
+    cache.put("source", "FullScanOracle");
+    cache.put("answers", answers);
+
+    Path wOut = diagnosticWorkloadOut.isAbsolute()
+        ? diagnosticWorkloadOut : root.resolve(diagnosticWorkloadOut);
+    Path oOut = diagnosticOracleOut.isAbsolute()
+        ? diagnosticOracleOut : root.resolve(diagnosticOracleOut);
+    if (!topKComplete) {
+      System.err.println("refusing to write diagnostic set with underfilled Top-K Oracle answers");
+      return 2;
+    }
+    if ((Files.exists(wOut) || Files.exists(oOut)) && !diagnosticOverwrite) {
+      System.err.println("refusing to overwrite existing diagnostic output: " + wOut + " or " + oOut);
+      return 2;
+    }
+    if (Files.exists(wOut) != Files.exists(oOut)) {
+      System.err.println("refusing partial overwrite; workload and Oracle outputs must both exist or both be absent");
+      return 2;
+    }
+    Files.createDirectories(wOut.getParent());
+    Files.createDirectories(oOut.getParent());
+    Files.write(wOut, MAPPER.writeValueAsString(workload).getBytes(StandardCharsets.UTF_8));
+    Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    System.out.println("ADV_DIAG_OK workload=" + wOut + " oracle=" + oOut
+        + " queries=" + queries.size() + " non_empty=" + nonEmpty
+        + " topk_non_empty=" + topKNonEmpty + " seed=" + diagnosticSeed);
+    return 0;
+  }
+
+  static List<Anchor> pickDiverseAnchors(List<Trajectory> trajectories, Rect domain,
+                                        long bucketMs, long seed, int requested) {
+    if (trajectories == null || trajectories.isEmpty() || requested <= 0) {
+      return Collections.emptyList();
+    }
+    List<Trajectory> pool = new ArrayList<Trajectory>(trajectories);
+    Collections.sort(pool, new Comparator<Trajectory>() {
+      @Override
+      public int compare(Trajectory a, Trajectory b) {
+        return Long.compare(a.tid, b.tid);
+      }
+    });
+    Collections.shuffle(pool, new Random(seed));
+    List<Anchor> out = new ArrayList<Anchor>(requested);
+    Set<String> vehicles = new HashSet<String>();
+    Set<Integer> cells = new HashSet<Integer>();
+    Set<Long> tids = new HashSet<Long>();
+    for (Trajectory t : pool) {
+      Anchor a = anchorAtMidpoint(t, domain, bucketMs);
+      if (a == null || tids.contains(Long.valueOf(a.tid))) {
+        continue;
+      }
+      int cell = coarseSpatialCell(a, domain);
+      if (vehicles.contains(a.vehicleId) || cells.contains(Integer.valueOf(cell))) {
+        continue;
+      }
+      out.add(a);
+      tids.add(Long.valueOf(a.tid));
+      vehicles.add(a.vehicleId);
+      cells.add(Integer.valueOf(cell));
+      if (out.size() >= requested) {
+        return out;
+      }
+    }
+    // If some grid cells are empty in the sampled data, fill deterministically
+    // with new trajectories, preserving unique vehicles whenever possible.
+    for (Trajectory t : pool) {
+      Anchor a = anchorAtMidpoint(t, domain, bucketMs);
+      if (a == null || tids.contains(Long.valueOf(a.tid))) {
+        continue;
+      }
+      if (vehicles.contains(a.vehicleId)) {
+        continue;
+      }
+      out.add(a);
+      tids.add(Long.valueOf(a.tid));
+      vehicles.add(a.vehicleId);
+      if (out.size() >= requested) {
+        break;
+      }
+    }
+    return out;
+  }
+
+  private static Anchor anchorAtMidpoint(Trajectory t, Rect domain, long bucketMs) {
+    if (t == null || t.size() < 8 || t.vehicleId == null || t.vehicleId.trim().isEmpty()) {
+      return null;
+    }
+    CanonicalPoint p = t.points().get(t.size() / 2);
+    if (p == null || !Double.isFinite(p.xM) || !Double.isFinite(p.yM)
+        || p.xM < domain.minX || p.xM > domain.maxX
+        || p.yM < domain.minY || p.yM > domain.maxY) {
+      return null;
+    }
+    Anchor a = new Anchor();
+    a.vehicleId = t.vehicleId;
+    a.trajectoryId = t.trajectoryId;
+    a.tid = t.tid;
+    a.pointCount = t.size();
+    a.tMs = p.timestampMs;
+    a.x = p.xM;
+    a.y = p.yM;
+    a.bucketMs = bucketMs;
+    return a;
+  }
+
+  private static int coarseSpatialCell(Anchor a, Rect domain) {
+    int x = gridCoordinate(a.x, domain.minX, domain.maxX);
+    int y = gridCoordinate(a.y, domain.minY, domain.maxY);
+    return y * 4 + x;
+  }
+
+  private static int gridCoordinate(double value, double min, double max) {
+    if (!(max > min)) {
+      return 0;
+    }
+    int cell = (int) Math.floor((value - min) * 4.0d / (max - min));
+    return Math.max(0, Math.min(3, cell));
+  }
+
+  static List<BoundIr> buildAdvancedComplexDiagnosticWorkload(List<Anchor> anchors,
+                                                              Rect domain,
+                                                              long bucketMs,
+                                                              long epochMs,
+                                                              Manifest m) {
+    if (anchors == null || anchors.size() < 12) {
+      throw new IllegalArgumentException("12 distinct anchors are required");
+    }
+    double dx = domain.maxX - domain.minX;
+    double dy = domain.maxY - domain.minY;
+    List<BoundIr> out = new ArrayList<BoundIr>(12);
+    Anchor a = anchors.get(0);
+    out.add(ids("advdiag_t_only", window(a, 6, bucketMs, epochMs), null, null, m));
+
+    a = anchors.get(1);
+    out.add(ids("advdiag_spatial_only", null,
+        spatial(a.x, a.y, 700.0d, 700.0d, domain), null, m));
+
+    a = anchors.get(2);
+    out.add(ids("advdiag_vehicle_only", null, null, vehicleEq(a.vehicleId), m));
+
+    a = anchors.get(3);
+    out.add(ids("advdiag_st_short_tight", window(a, 3, bucketMs, epochMs),
+        spatial(a.x, a.y, 1_500.0d, 1_500.0d, domain), null, m));
+
+    a = anchors.get(4);
+    out.add(ids("advdiag_st_short_wide", window(a, 6, bucketMs, epochMs),
+        spatial(a.x, a.y, dx * 0.06d, dy * 0.06d, domain), null, m));
+
+    a = anchors.get(5);
+    out.add(ids("advdiag_st_long_tight", window(a, 72, bucketMs, epochMs),
+        spatial(a.x, a.y, 500.0d, 500.0d, domain), null, m));
+
+    a = anchors.get(6);
+    out.add(ids("advdiag_st_long_wide", window(a, 72, bucketMs, epochMs),
+        spatial(a.x, a.y, dx * 0.18d, dy * 0.18d, domain), null, m));
+
+    a = anchors.get(7);
+    out.add(ids("advdiag_vehicle_time", window(a, 24, bucketMs, epochMs),
+        null, vehicleEq(a.vehicleId), m));
+
+    a = anchors.get(8);
+    out.add(ids("advdiag_vehicle_st", window(a, 24, bucketMs, epochMs),
+        spatial(a.x, a.y, dx * 0.10d, dy * 0.10d, domain),
+        vehicleEq(a.vehicleId), m));
+
+    a = anchors.get(9);
+    out.add(topk("advdiag_topk_dtw", window(a, 72, bucketMs, epochMs),
+        spatial(a.x, a.y, dx * 0.15d, dy * 0.15d, domain),
+        a.tid, 3, m, null, "DTW"));
+
+    a = anchors.get(10);
+    out.add(topk("advdiag_topk_frechet", window(a, 24, bucketMs, epochMs),
+        spatial(a.x, a.y, dx * 0.10d, dy * 0.10d, domain),
+        a.tid, 5, m, null, "FRECHET"));
+
+    a = anchors.get(11);
+    out.add(topk("advdiag_topk_hausdorff", null,
+        spatial(a.x, a.y, dx * 0.07d, dy * 0.07d, domain),
+        a.tid, 3, m, null, "HAUSDORFF"));
+    return out;
+  }
+
+  private static BoundIr.Temporal window(Anchor a, int bucketCount,
+                                         long bucketMs, long epochMs) {
+    long center = alignBucket(a.tMs, bucketMs, epochMs);
+    long start = Math.max(epochMs, center - (bucketCount / 2L) * bucketMs);
+    return temporal(start, start + bucketCount * bucketMs);
   }
 
   /** Pick a mid-sized trajectory near domain center for stable smoke anchors. */

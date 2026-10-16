@@ -4,8 +4,10 @@ import kart.codec.Bytes;
 import kart.codec.CodeRange;
 import kart.codec.PrefixSuccessor;
 import kart.codec.RowKeyCodec;
+import kart.codec.XzStarSfc;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,13 +25,15 @@ public final class XztIndexAdapter {
   }
 
   public List<ScanTask> scanTasks(long startMs, long endMs, String sourceNodeId, int maxRanges) {
-    List<CodeRange> ranges = layout.xztCodec().rangesCovering(startMs, endMs);
-    if (ranges.size() > maxRanges) {
-      ranges = coarsen(ranges, maxRanges);
-    }
+    // Span-fill for overlap recall (same hole class as spatial XZ*).
+    List<CodeRange> precise = XzStarSfc.fillInternalGaps(CodeRangeBudget.mergeOverlapping(
+        layout.xztCodec().rangesCovering(startMs, endMs)));
+    List<CodeRange> physical = CodeRangeBudget.mergeToBudgetGapAware(
+        precise, maxRanges, layout.xztPostingGapCost());
+    List<CodeRange> filter = Collections.unmodifiableList(precise);
     List<ScanTask> out = new ArrayList<ScanTask>();
     for (int shard = 0; shard < layout.shardCount; shard++) {
-      for (CodeRange r : ranges) {
+      for (CodeRange r : physical) {
         byte[] start = RowKeyCodec.encodeXzt(shard, r.lo, 0, 0);
         byte[] stop;
         if (r.hi + 1 != 0) {
@@ -41,34 +45,12 @@ public final class XztIndexAdapter {
           }
           stop = succ.get();
         }
-        out.add(new ScanTask(layout.tableXzt, start, stop, sourceNodeId, shard,
-            "xzt:[" + r.lo + "," + r.hi + "]"));
+        ScanTask t = new ScanTask(layout.tableXzt, start, stop, sourceNodeId, shard,
+            "xzt:[" + r.lo + "," + r.hi + "]");
+        t.preciseFilter = filter;
+        out.add(t);
       }
     }
     return out;
-  }
-
-  private static List<CodeRange> coarsen(List<CodeRange> ranges, int maxRanges) {
-    List<CodeRange> cur = new ArrayList<CodeRange>(ranges);
-    java.util.Collections.sort(cur, new java.util.Comparator<CodeRange>() {
-      @Override
-      public int compare(CodeRange a, CodeRange b) {
-        return Long.compare(a.lo, b.lo);
-      }
-    });
-    while (cur.size() > maxRanges) {
-      List<CodeRange> next = new ArrayList<CodeRange>();
-      for (int i = 0; i < cur.size(); i += 2) {
-        if (i + 1 >= cur.size()) {
-          next.add(cur.get(i));
-        } else {
-          CodeRange a = cur.get(i);
-          CodeRange b = cur.get(i + 1);
-          next.add(new CodeRange(Math.min(a.lo, b.lo), Math.max(a.hi, b.hi), false));
-        }
-      }
-      cur = next;
-    }
-    return cur;
   }
 }

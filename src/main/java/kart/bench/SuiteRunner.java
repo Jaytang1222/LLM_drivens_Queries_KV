@@ -37,6 +37,9 @@ public final class SuiteRunner {
   /** Formal BoundIR cardinality for {@code bound_ir_cmp_v3.json} (spec / audit gate). */
   public static final int FORMAL_BOUND_IR_COUNT = 20;
 
+  /** Formal stratified v2 simple/complex BoundIR cardinality (param / E2/E3). */
+  public static final int FORMAL_BOUND_IR_V2_COUNT = 24;
+
   /** E1/E2/E3 arm rotation: {@code shift = (trial-1 + queryIndex) % nArm}. */
   static int armShift(int trial1Based, int queryIndex, int nArm) {
     if (nArm <= 0) {
@@ -209,12 +212,15 @@ public final class SuiteRunner {
     Path planPath = resultDir.resolve("plan.jsonl");
     Path e2ePath = resultDir.resolve("e2e.jsonl");
     Path ablationPath = resultDir.resolve("ablation.jsonl");
+    Path paramPath = resultDir.resolve("param.jsonl");
+    Map<String, String> queryTypeById = loadQueryTypeRoles(opt.root);
 
     try {
       TrialWriter parseWriter = hasParse ? new TrialWriter(parsePath, true) : null;
       TrialWriter planWriter = null;
       TrialWriter e2eWriter = null;
       TrialWriter ablationWriter = null;
+      TrialWriter paramWriter = null;
       try {
         boolean suiteHasParse = false;
         for (String stage : suite.stages) {
@@ -366,6 +372,9 @@ public final class SuiteRunner {
             if (isAblation(suite)) {
               ablationWriter = new TrialWriter(ablationPath, true);
             }
+            if (isParam(suite)) {
+              paramWriter = new TrialWriter(paramPath, true);
+            }
           }
           int nArm = runnable.size();
           cacheProtocol.armOrderPolicy = "rotate_by_query_and_trial";
@@ -411,7 +420,8 @@ public final class SuiteRunner {
                 if (catalog.containsKey(ir.query_id)) {
                   row.putAll(catalog.get(ir.query_id));
                 }
-                putQueryStrata(row, ir);
+                putQueryStrata(row, ir, queryTypeById);
+                putParamRowFields(row, suite, cell);
                 row.put("arm_position", Integer.valueOf(pos));
                 row.put("arm_order_shift", Integer.valueOf(shift));
                 if (!planOnly && "cold".equals(cacheProtocol.mode)) {
@@ -507,6 +517,9 @@ public final class SuiteRunner {
                 if (!planOnly && ablationWriter != null) {
                   ablationWriter.write(row);
                 }
+                if (!planOnly && paramWriter != null) {
+                  paramWriter.write(row);
+                }
                 allTrials.add(row);
                 System.out.println("BENCH " + suite.id + " stage=" + stage
                     + " cell=" + cell.label + " q=" + ir.query_id
@@ -530,6 +543,9 @@ public final class SuiteRunner {
         }
         if (ablationWriter != null) {
           ablationWriter.close();
+        }
+        if (paramWriter != null) {
+          paramWriter.close();
         }
       }
     } finally {
@@ -613,6 +629,7 @@ public final class SuiteRunner {
       return;
     }
     ExecutionTrace t = qr.trace;
+    row.put("emitted_ranges", t.totalEmittedRanges());
     row.put("n_ranges", t.client_ops_count);
     row.put("index_rows", t.totalRows > 0 ? Long.valueOf(t.totalRows) : null);
     row.put("fetch_chunks", t.fetched_chunks);
@@ -730,6 +747,38 @@ public final class SuiteRunner {
       }
       meta.put("factors", factorAudit(opt.root, cfg.planner(), cells));
     }
+    if (isParam(suite)) {
+      meta.put("experiment_kind", "param");
+      meta.put("base_arm", suite.base_arm);
+      meta.put("grid_mode", suite.resolvedGridMode());
+      meta.put("param_defaults", suite.defaults == null
+          ? Collections.emptyMap()
+          : new LinkedHashMap<String, Object>(suite.defaults));
+      meta.put("param_grid", suite.grid == null
+          ? Collections.emptyMap()
+          : new LinkedHashMap<String, List<Object>>(suite.grid));
+      meta.put("eval_level", inferEvalLevel(suite));
+      if (opt.limit != null) {
+        meta.put("query_limit", opt.limit);
+      }
+      meta.put("formal_bound_ir_count", Integer.valueOf(FORMAL_BOUND_IR_V2_COUNT));
+      meta.put("formal_workload_complete",
+          Boolean.valueOf(boundCount >= FORMAL_BOUND_IR_V2_COUNT));
+      Map<String, Object> budget = new LinkedHashMap<String, Object>();
+      if (suite.defaults != null) {
+        budget.putAll(suite.defaults);
+      }
+      if (cfg.planner() != null) {
+        if (!budget.containsKey("max_plan_ms")) {
+          budget.put("max_plan_ms", Long.valueOf(cfg.planner().max_plan_ms));
+        }
+        if (!budget.containsKey("stagnation_steps")) {
+          budget.put("stagnation_steps", Integer.valueOf(cfg.planner().stagnation_steps));
+        }
+      }
+      meta.put("search_budget", budget);
+      meta.put("param_cells", cellSummaries(cells));
+    }
     String model = System.getenv("LLM_MODEL");
     String base = System.getenv("LLM_BASE_URL");
     String temp = System.getenv("KART_LLM_TEMPERATURE");
@@ -740,6 +789,12 @@ public final class SuiteRunner {
       meta.put("LLM_BASE_URL", base);
     }
     meta.put("LLM_TEMPERATURE", temp == null || temp.isEmpty() ? "0" : temp);
+    meta.put("KART_TSHAPE_MAX_RANGES",
+        System.getenv("KART_TSHAPE_MAX_RANGES") == null
+            ? "layout_default" : System.getenv("KART_TSHAPE_MAX_RANGES"));
+    meta.put("KART_ADV_VALIDATION_CAP",
+        System.getenv("KART_ADV_VALIDATION_CAP") == null
+            ? "default" : System.getenv("KART_ADV_VALIDATION_CAP"));
     Map<String, Object> fairness = new LinkedHashMap<String, Object>();
     fairness.put("same_endpoint", Boolean.TRUE);
     fairness.put("temperature", meta.get("LLM_TEMPERATURE"));
@@ -899,26 +954,33 @@ public final class SuiteRunner {
     }
 
     if ("param".equals(kind)) {
-      List<Map<String, Object>> points = cartesian(suite.grid);
-      String armId = suite.base_arm != null ? suite.base_arm : "rule";
+      String armId = suite.base_arm != null ? suite.base_arm : "kart";
       if (!passArmFilter(armId, opt)) {
         return cells;
       }
+      List<ParamPoint> points = expandParamPoints(suite);
       if (points.isEmpty()) {
         RunCell c = new RunCell();
         c.armId = armId;
         c.label = "param:default";
-        c.extras.put("param_point", Collections.emptyMap());
+        Map<String, Object> defs = suite.defaults == null
+            ? Collections.<String, Object>emptyMap()
+            : new LinkedHashMap<String, Object>(suite.defaults);
+        c.overrides.putAll(defs);
+        c.extras.put("param_point", defs);
         cells.add(c);
         return cells;
       }
-      int i = 0;
-      for (Map<String, Object> pt : points) {
+      for (ParamPoint pt : points) {
         RunCell c = new RunCell();
         c.armId = armId;
-        c.label = "param:" + (++i);
-        c.overrides.putAll(pt);
-        c.extras.put("param_point", pt);
+        c.label = pt.label;
+        c.overrides.putAll(pt.overrides);
+        c.extras.put("param_point", new LinkedHashMap<String, Object>(pt.overrides));
+        if (pt.axis != null) {
+          c.extras.put("param_axis", pt.axis);
+          c.extras.put("param_value", pt.value);
+        }
         cells.add(c);
       }
       return cells;
@@ -969,6 +1031,80 @@ public final class SuiteRunner {
   private static boolean isAblation(SuiteSpec suite) {
     return suite != null && suite.kind != null
         && "ablation".equalsIgnoreCase(suite.kind.trim());
+  }
+
+  static boolean isParam(SuiteSpec suite) {
+    return suite != null && suite.kind != null
+        && "param".equalsIgnoreCase(suite.kind.trim());
+  }
+
+  /** One OAT / cartesian param grid cell before RunCell packing. */
+  static final class ParamPoint {
+    String label;
+    String axis;
+    Object value;
+    Map<String, Object> overrides = new LinkedHashMap<String, Object>();
+  }
+
+  /**
+   * Expand param grid. Formal mode {@code oat}: one axis at a time with suite defaults
+   * pinned; {@code cartesian}: full factorial (smoke only).
+   */
+  static List<ParamPoint> expandParamPoints(SuiteSpec suite) {
+    List<ParamPoint> out = new ArrayList<ParamPoint>();
+    if (suite == null) {
+      return out;
+    }
+    Map<String, Object> defaults = suite.defaults == null
+        ? new LinkedHashMap<String, Object>()
+        : new LinkedHashMap<String, Object>(suite.defaults);
+    Map<String, List<Object>> grid = suite.grid;
+    if (grid == null || grid.isEmpty()) {
+      return out;
+    }
+    String mode = suite.resolvedGridMode();
+    if ("cartesian".equals(mode)) {
+      for (Map<String, Object> pt : cartesian(grid)) {
+        ParamPoint pp = new ParamPoint();
+        pp.overrides.putAll(defaults);
+        pp.overrides.putAll(pt);
+        pp.label = "param:" + compactPoint(pt);
+        out.add(pp);
+      }
+      return out;
+    }
+    // oat (default for kind=param)
+    for (Map.Entry<String, List<Object>> e : grid.entrySet()) {
+      String axis = e.getKey();
+      List<Object> vals = e.getValue();
+      if (axis == null || vals == null) {
+        continue;
+      }
+      for (Object v : vals) {
+        ParamPoint pp = new ParamPoint();
+        pp.overrides.putAll(defaults);
+        pp.overrides.put(axis, v);
+        pp.axis = axis;
+        pp.value = v;
+        pp.label = "param:" + axis + "=" + String.valueOf(v);
+        out.add(pp);
+      }
+    }
+    return out;
+  }
+
+  private static String compactPoint(Map<String, Object> pt) {
+    if (pt == null || pt.isEmpty()) {
+      return "default";
+    }
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<String, Object> e : pt.entrySet()) {
+      if (sb.length() > 0) {
+        sb.append(',');
+      }
+      sb.append(e.getKey()).append('=').append(e.getValue());
+    }
+    return sb.toString();
   }
 
   private static boolean passArmFilter(String armId, Options opt) {
@@ -1090,6 +1226,11 @@ public final class SuiteRunner {
   }
 
   static void putQueryStrata(Map<String, Object> row, BoundIr ir) {
+    putQueryStrata(row, ir, null);
+  }
+
+  static void putQueryStrata(Map<String, Object> row, BoundIr ir,
+                             Map<String, String> queryTypeById) {
     if (row == null || ir == null) {
       return;
     }
@@ -1116,6 +1257,134 @@ public final class SuiteRunner {
         row.put("empty_boundary", "interior");
       }
     }
+    if (!row.containsKey("query_type")) {
+      row.put("query_type", classifyQueryType(ir, queryTypeById));
+    }
+  }
+
+  /** Param §4.2 strata: SRQ (incl. ST-Ranges), SS, topk. */
+  static String classifyQueryType(BoundIr ir, Map<String, String> queryTypeById) {
+    if (ir != null && ir.query_id != null && queryTypeById != null) {
+      String fromCat = queryTypeById.get(ir.query_id);
+      if (fromCat != null && !fromCat.isEmpty()) {
+        return normalizeParamQueryType(fromCat);
+      }
+    }
+    return inferQueryType(ir);
+  }
+
+  static String normalizeParamQueryType(String raw) {
+    if (raw == null) {
+      return "SRQ";
+    }
+    String t = raw.trim();
+    if ("ST-Ranges".equalsIgnoreCase(t) || "ST_RANGES".equalsIgnoreCase(t)
+        || "stranges".equalsIgnoreCase(t)) {
+      return "SRQ";
+    }
+    if ("SS".equalsIgnoreCase(t) || "similarity".equalsIgnoreCase(t)) {
+      return "SS";
+    }
+    if ("topk".equalsIgnoreCase(t) || "top-k".equalsIgnoreCase(t)
+        || "TOP_K".equalsIgnoreCase(t)) {
+      return "topk";
+    }
+    if ("SRQ".equalsIgnoreCase(t)) {
+      return "SRQ";
+    }
+    return t;
+  }
+
+  static String inferQueryType(BoundIr ir) {
+    if (ir == null || ir.query_id == null) {
+      return "SRQ";
+    }
+    String id = ir.query_id;
+    if (id.contains("_ss_")) {
+      return "SS";
+    }
+    if (id.contains("_topk_")) {
+      return "topk";
+    }
+    if (ir.result != null && ir.result.mode != null
+        && "TOP_K".equalsIgnoreCase(ir.result.mode.trim())) {
+      return "topk";
+    }
+    return "SRQ";
+  }
+
+  /** Load frozen e2e_v2 catalog roles once; ST-Ranges kept raw then normalized at classify. */
+  static Map<String, String> loadQueryTypeRoles(Path root) {
+    Map<String, String> out = new LinkedHashMap<String, String>();
+    Path cat = root == null
+        ? java.nio.file.Paths.get("experiments/workloads/bound_ir_e2e_v2.catalog.json")
+        : root.resolve("experiments/workloads/bound_ir_e2e_v2.catalog.json");
+    if (!Files.isRegularFile(cat)) {
+      return out;
+    }
+    try {
+      JsonNode rootNode = MAPPER.readTree(cat.toFile());
+      for (String lvl : new String[] {"simple", "complex"}) {
+        JsonNode block = rootNode.get(lvl);
+        if (block == null || !block.has("roles") || !block.get("roles").isArray()) {
+          continue;
+        }
+        for (JsonNode role : block.get("roles")) {
+          if (role == null || !role.has("query_id") || !role.has("type")) {
+            continue;
+          }
+          out.put(role.get("query_id").asText(), role.get("type").asText());
+        }
+      }
+    } catch (Exception ignore) {
+      // optional metadata
+    }
+    return out;
+  }
+
+  static void putParamRowFields(Map<String, Object> row, SuiteSpec suite, RunCell cell) {
+    if (row == null) {
+      return;
+    }
+    String eval = inferEvalLevel(suite);
+    if (eval != null) {
+      row.put("eval_level", eval);
+    }
+    if (cell == null || cell.overrides == null) {
+      return;
+    }
+    putIfPresent(row, cell.overrides, "beam_width");
+    putIfPresent(row, cell.overrides, "max_candidates");
+    putIfPresent(row, cell.overrides, "max_llm_calls");
+    if (cell.extras != null) {
+      if (cell.extras.get("param_axis") != null) {
+        row.put("param_axis", cell.extras.get("param_axis"));
+      }
+      if (cell.extras.get("param_value") != null) {
+        row.put("param_value", cell.extras.get("param_value"));
+      }
+    }
+  }
+
+  private static void putIfPresent(Map<String, Object> row, Map<String, Object> src, String key) {
+    if (src.containsKey(key)) {
+      row.put(key, src.get(key));
+    }
+  }
+
+  static String inferEvalLevel(SuiteSpec suite) {
+    if (suite == null) {
+      return null;
+    }
+    String id = suite.id == null ? "" : suite.id.toLowerCase();
+    String wl = suite.workload == null ? "" : suite.workload.toLowerCase();
+    if (id.contains("simple") || wl.contains("simple")) {
+      return "simple";
+    }
+    if (id.contains("complex") || wl.contains("complex")) {
+      return "complex";
+    }
+    return null;
   }
 
   /** LLM rows that fell back to a rule/CBO plan must not share the pure-LLM arm name. */

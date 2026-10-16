@@ -49,6 +49,9 @@ public final class XztCodec {
       qe = Math.min(1.0, qs + Math.pow(0.5, 16));
     }
     // Classic interval overlap: start ∈ [tLo, qe], end ∈ [qs, tHi] (unit square).
+    // Do not span-fill: collapsing [first.lo, last.hi] makes XZT ≈ full table
+    // (force_mix: P_XZT/P_XZTXZ candidates≈48650). Same tradeoff as spatial XZ —
+    // physical coarsening is CodeRangeBudget.mergeToBudgetGapAware in the adapter.
     return sfc.ranges(0.0, qs, qe, 1.0);
   }
 

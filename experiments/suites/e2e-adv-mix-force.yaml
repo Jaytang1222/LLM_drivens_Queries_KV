@@ -1,0 +1,11 @@
+# Force-plan census over the adv-mix workload (same queries as e2e-adv-mix).
+kind: compare
+id: e2e-adv-mix-force
+workload: experiments/workloads/bound_ir_adv_mix_v1.json
+manifest: tdrive_v1_ready
+require_oracle: false
+trials: 1
+stages:
+  - e2e
+arms:
+  - fixed-plan

@@ -1,6 +1,9 @@
 package kart.compile;
 
+import kart.codec.CodeRange;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -22,6 +25,11 @@ public final class ScanTask {
    * Widening ranges to stay under caps is not truncation; dropping cells is.
    */
   public boolean truncated;
+  /**
+   * When set, index postings whose code falls outside these precise ranges (after
+   * physical merge coarsening) are dropped before candidate materialization.
+   */
+  public List<CodeRange> preciseFilter = Collections.emptyList();
 
   public ScanTask() {}
 

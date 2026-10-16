@@ -30,7 +30,15 @@ public final class NativePolicyArm implements Arm {
 
   @Override
   public TrialResult run(BoundIr ir, BenchContext ctx) throws Exception {
-    QueryEngine engine = ctx.newEngine(mode);
+    // Same ADV menu as KART when KART_ADVANCED_INDEXES=1 (fair planner compare).
+    // Previously id=cbo forced classic-only, which mixed menu asymmetry into e2e.
+    boolean allowAdvanced = kart.search.LegalActionGenerator.advancedIndexesEnabled();
+    QueryEngine engine = ctx.newEngine(mode, allowAdvanced);
+    // Same ADV inject/validate menu as KART; CBO Final stays CostModel (no AdvFinalCalibrator)
+    // so planner policy — not menu asymmetry — drives the e2e contrast.
+    if ("cbo".equals(id)) {
+      engine.setUseAdvFinalCalibrator(false);
+    }
     Path artifactDir = ctx.artifactDir(id, ir.query_id);
     long t0 = System.currentTimeMillis();
     QueryEngine.RunResult rr = engine.run(ir, artifactDir, ctx.planOnly, forcePlanId);

@@ -4,8 +4,9 @@
 # Risk arm no_coverage: --allow-unsafe --factor no_coverage
 kind: ablation
 id: ablation
-workload: experiments/workloads/bound_ir_complex_v1.json
-oracle: experiments/workloads/bound_ir_complex_v1.oracle.json
+# Canonical complex = bound_ir_complex_v2 (frozen with E2/E3).
+workload: experiments/workloads/bound_ir_complex_v2.json
+oracle: experiments/workloads/bound_ir_complex_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

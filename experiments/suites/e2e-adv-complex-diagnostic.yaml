@@ -1,0 +1,19 @@
+# Small mechanism pilot only; this suite is not a formal benchmark result.
+# Enable the same advanced-index candidate inventory for KART and CBO so their
+# comparison does not change the physical-index menu between those two planners.
+# Set KART_ADVANCED_INDEXES=1 in the run environment before invoking bench-suite.
+# Run only after the target HBase snapshot is available on the server.
+kind: compare
+id: e2e-adv-complex-diagnostic
+workload: experiments/workloads/bound_ir_adv_complex_diag_v1.json
+oracle: experiments/workloads/bound_ir_adv_complex_diag_v1.oracle.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - e2e
+arms:
+  - fullscan
+  - rbo
+  - cbo
+  - kart

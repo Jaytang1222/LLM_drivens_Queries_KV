@@ -110,16 +110,18 @@ public final class CostModel {
         card.features.put("missing_region_map", Boolean.TRUE);
       }
 
+      long setRows = features.estIndexRowsAfterCodeFilter >= 0L
+          ? features.estIndexRowsAfterCodeFilter : features.estIndexRows;
       double mergeExtra = 0.0;
       if (features.mergeImpl != null && "SORT_MERGE".equals(features.mergeImpl)) {
-        mergeExtra = coeffs.beta_sort_merge * features.estIndexRows
-            * Math.log(Math.max(2.0, (double) features.estIndexRows));
+        mergeExtra = coeffs.beta_sort_merge * setRows
+            * Math.log(Math.max(2.0, (double) setRows));
       }
       long soft = coeffs.soft_memory_bytes > 0 ? coeffs.soft_memory_bytes : (512L * 1024L * 1024L);
       long spill = features.estSpillBytes > 0
           ? features.estSpillBytes
           : Math.max(0L, features.estRawBytes - soft);
-      lSet = coeffs.beta_hash * features.estIndexRows
+      lSet = coeffs.beta_hash * setRows
           + coeffs.beta_emit * features.estCandidateChunks
           + coeffs.beta_spill * spill
           + mergeExtra;

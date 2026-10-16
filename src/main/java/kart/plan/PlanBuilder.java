@@ -28,8 +28,8 @@ public final class PlanBuilder {
    * @param allowIntersect when false, omit INTERSECT families (single-index + {@code P_FULL} only)
    */
   public static List<PlanEnvelope> buildCandidates(BoundIr ir, boolean allowIntersect) {
-    boolean hasT = ir.temporal != null;
-    boolean hasZ = ir.spatial != null;
+    boolean hasT = BoundIr.hasTemporal(ir);
+    boolean hasZ = BoundIr.hasSpatial(ir);
     int vehicleIdx = vehicleEqPredicateIndex(ir);
     boolean hasH = vehicleIdx >= 0;
 
@@ -97,8 +97,8 @@ public final class PlanBuilder {
     if (!allowIntersect) {
       return out;
     }
-    boolean hasT = ir.temporal != null;
-    boolean hasZ = ir.spatial != null;
+    boolean hasT = BoundIr.hasTemporal(ir);
+    boolean hasZ = BoundIr.hasSpatial(ir);
     boolean hasH = vehicleEqPredicateIndex(ir) >= 0;
     if (hasT && hasZ) {
       out.add(buildForAccess(ir, true, true, false, "SORT_MERGE", null));
@@ -279,15 +279,25 @@ public final class PlanBuilder {
     Op zScan = spatialOp != null ? spatialOp : Op.ZORDER_RANGE_SCAN;
 
     if (useT) {
-      if ("TIME_BIPART".equals(partitionKind) && ir.temporal != null) {
-        long mid = provedTimeMidpoint(ir.temporal.start_ms, ir.temporal.end_ms);
+      if ("TIME_BIPART".equals(partitionKind) && BoundIr.hasTemporal(ir)) {
+        long coverLo = Long.MAX_VALUE;
+        long coverHi = Long.MIN_VALUE;
+        for (BoundIr.Temporal w : BoundIr.temporalsOf(ir)) {
+          if (w.start_ms < coverLo) {
+            coverLo = w.start_ms;
+          }
+          if (w.end_ms > coverHi) {
+            coverHi = w.end_ms;
+          }
+        }
+        long mid = provedTimeMidpoint(coverLo, coverHi);
         Map<String, Object> p0 = params("predicate_ref", "/temporal");
-        p0.put("start_ms", Long.valueOf(ir.temporal.start_ms));
+        p0.put("start_ms", Long.valueOf(coverLo));
         p0.put("end_ms", Long.valueOf(mid));
         p0.put("partition", "TIME_BIPART_0");
         Map<String, Object> p1 = params("predicate_ref", "/temporal");
         p1.put("start_ms", Long.valueOf(mid));
-        p1.put("end_ms", Long.valueOf(ir.temporal.end_ms));
+        p1.put("end_ms", Long.valueOf(coverHi));
         p1.put("partition", "TIME_BIPART_1");
         String t0 = b.add(tScan, noInputs(), p0);
         String t1 = b.add(tScan, noInputs(), p1);
@@ -297,14 +307,15 @@ public final class PlanBuilder {
       }
     }
     if (useZ) {
-      if ("Z_QUAD".equals(partitionKind) && ir.spatial != null && zScan == Op.ZORDER_RANGE_SCAN) {
-        double mx = (ir.spatial.min_x + ir.spatial.max_x) / 2.0;
-        double my = (ir.spatial.min_y + ir.spatial.max_y) / 2.0;
+      if ("Z_QUAD".equals(partitionKind) && BoundIr.hasSpatial(ir) && zScan == Op.ZORDER_RANGE_SCAN) {
+        BoundIr.Spatial su = BoundIr.spatialUnion(ir);
+        double mx = (su.min_x + su.max_x) / 2.0;
+        double my = (su.min_y + su.max_y) / 2.0;
         List<String> parts = new ArrayList<String>();
-        parts.add(zPart(b, ir, ir.spatial.min_x, ir.spatial.min_y, mx, my, "Z_QUAD_0"));
-        parts.add(zPart(b, ir, mx, ir.spatial.min_y, ir.spatial.max_x, my, "Z_QUAD_1"));
-        parts.add(zPart(b, ir, ir.spatial.min_x, my, mx, ir.spatial.max_y, "Z_QUAD_2"));
-        parts.add(zPart(b, ir, mx, my, ir.spatial.max_x, ir.spatial.max_y, "Z_QUAD_3"));
+        parts.add(zPart(b, ir, su.min_x, su.min_y, mx, my, "Z_QUAD_0"));
+        parts.add(zPart(b, ir, mx, su.min_y, su.max_x, my, "Z_QUAD_1"));
+        parts.add(zPart(b, ir, su.min_x, my, mx, su.max_y, "Z_QUAD_2"));
+        parts.add(zPart(b, ir, mx, my, su.max_x, su.max_y, "Z_QUAD_3"));
         accessIds.add(b.add(Op.UNION, parts, params("partition_proof", "Z_QUAD")));
       } else {
         accessIds.add(b.add(zScan, noInputs(), params("predicate_ref", "/spatial")));
@@ -372,10 +383,10 @@ public final class PlanBuilder {
   private static String addFilterAndSuffix(Builder b, BoundIr ir, String cur, int vehicleIdx) {
     Map<String, Object> filterParams = new LinkedHashMap<String, Object>();
     List<String> refs = new ArrayList<String>();
-    if (ir.temporal != null) {
+    if (BoundIr.hasTemporal(ir)) {
       refs.add("/temporal");
     }
-    if (ir.spatial != null) {
+    if (BoundIr.hasSpatial(ir)) {
       refs.add("/spatial");
     }
     if (ir.predicates != null) {

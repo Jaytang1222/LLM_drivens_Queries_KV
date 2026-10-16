@@ -203,6 +203,25 @@ public class CostModelTest {
     assertEquals(20.0, card.l_hat_reconstruct, 1e-6);
   }
 
+  @Test
+  void setCostUsesPostingsKeptAfterAdvancedPreciseFilter() {
+    AppConfig.CostCoeffs c = new AppConfig.CostCoeffs();
+    c.calibrated = true;
+    c.beta_hash = 1.0;
+    c.beta_emit = 0.0;
+    c.beta_spill = 0.0;
+    c.beta_sort_merge = 0.0;
+    CostFeatures f = new CostFeatures();
+    f.scanRanges = 1L;
+    f.estIndexRows = 100L;
+    f.estIndexRowsAfterCodeFilter = 10L;
+    f.estCandidateChunks = 0L;
+    f.estRawBytes = 0L;
+
+    CostCard card = new CostModel(c).estimateFinal(f);
+    assertEquals(10.0, card.l_hat_set, 1e-9);
+  }
+
   /** Test-only handle factory via reflection. */
   private static final class SafePlanHandleForTest {
     static SafePlanHandle create(PlanEnvelope env, PhysicalPlan phys) {

@@ -118,8 +118,58 @@ class AdvancedRewriteSurvivalTest {
     ObjectNode f = m.createObjectNode();
     f.put("cbo_plan", "P_XZ");
     f.put("cbo_plan_alias", "P_Z");
+    // mayHold is a conservative search gate and may over-approximate aliases;
+    // exact()/related() perform the strict match used before applying a rewrite.
     assertTrue(mayHoldOn(m, f, "P_Z"));
     assertTrue(mayHoldOn(m, f, "P_XZ"));
+  }
+
+  @Test
+  void exactAndRelatedRulesDoNotAliasClassicRulesOntoTs() {
+    com.fasterxml.jackson.databind.ObjectMapper m = new com.fasterxml.jackson.databind.ObjectMapper();
+    com.fasterxml.jackson.databind.node.ArrayNode rules = m.createArrayNode();
+    ObjectNode legacy = rules.addObject();
+    legacy.put("id", "legacy_p_z");
+    legacy.put("status", "confirmed");
+    legacy.put("admission", "train_measured_v1");
+    legacy.put("support", 3);
+    legacy.put("source_sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    legacy.putArray("when").add(m.createArrayNode().add("cbo_plan").add("==").add("P_Z"));
+    legacy.putObject("set").put("range_budget", "r256");
+
+    ObjectNode c = RewriteProtocol.newContext("TRAJECTORY_IDS");
+    ((ObjectNode) c.get("features")).put("cbo_plan", "P_TS").put("cbo_plan_alias", "P_Z");
+    RewriteProtocol.addSlot(c, "access", "keep").put("drop_spatial_branch", -80);
+    RewriteProtocol.addSlot(c, "range_budget", "r64").put("r256", -150);
+
+    assertTrue(DualRewritePolicy.exact(rules, c) == null);
+    assertEquals(0, DualRewritePolicy.related(rules, c).size());
+    assertTrue(!DualRewritePolicy.mayHaveRuleForPlan(rules, "P_TS"),
+        "a plan-specific P_Z rule cannot justify building a rewrite context for P_TS");
+    assertTrue(DualRewritePolicy.mayHaveRuleForPlan(rules, "P_Z"),
+        "classic plans retain their existing rewrite path");
+
+    ObjectNode generic = rules.addObject();
+    generic.put("id", "generic_resource_rule");
+    generic.put("status", "confirmed");
+    generic.put("admission", "train_measured_v1");
+    generic.put("support", 3);
+    generic.put("source_sha256", "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc");
+    generic.putArray("when").add(m.createArrayNode().add("chunks_keep").add(">=").add(1));
+    generic.putObject("set").put("fetch_batch", "b2000");
+    assertTrue(DualRewritePolicy.mayHaveRuleForPlan(rules, "P_TS"),
+        "a rule without an exact plan constraint may still apply to an advanced plan");
+
+    ObjectNode tsRule = rules.addObject();
+    tsRule.put("id", "ts_exact");
+    tsRule.put("status", "confirmed");
+    tsRule.put("admission", "train_measured_v1");
+    tsRule.put("support", 3);
+    tsRule.put("source_sha256", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    tsRule.putArray("when").add(m.createArrayNode().add("cbo_plan").add("==").add("P_TS"));
+    tsRule.putObject("set").put("range_budget", "r256");
+    assertTrue(DualRewritePolicy.mayHaveRuleForPlan(rules, "P_TS"),
+        "an explicitly trained advanced-plan rule must retain the full rewrite path");
   }
 
   @Test

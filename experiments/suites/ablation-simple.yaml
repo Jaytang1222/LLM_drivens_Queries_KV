@@ -1,8 +1,9 @@
 # Simple-level dual-rewrite leave-one-out. Complex stays on ablation.yaml.
 kind: ablation
 id: ablation-simple
-workload: experiments/workloads/bound_ir_simple_v1.json
-oracle: experiments/workloads/bound_ir_simple_v1.oracle.json
+# Canonical simple = bound_ir_simple_v2 (frozen with E2/E3).
+workload: experiments/workloads/bound_ir_simple_v2.json
+oracle: experiments/workloads/bound_ir_simple_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

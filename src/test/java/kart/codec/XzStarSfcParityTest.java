@@ -19,7 +19,8 @@ public class XzStarSfcParityTest {
     long a = sfc.indexMbr(10, 10, 20, 20, true);
     long b = sfc.indexMbr(10, 10, 20, 20, true);
     assertTrue(a == b);
-    List<CodeRange> ranges = sfc.ranges(5, 5, 25, 25);
+    // Coverage check uses span-fill; query path keeps unfilled ranges for selectivity.
+    List<CodeRange> ranges = XzStarSfc.fillInternalGaps(sfc.ranges(5, 5, 25, 25));
     assertFalse(ranges.isEmpty());
     boolean covers = false;
     for (CodeRange r : ranges) {
@@ -37,7 +38,7 @@ public class XzStarSfcParityTest {
     long code = xzt.indexInterval(1000L, 5000L);
     assertTrue(code == xzt.indexInterval(1000L, 5000L));
     // Exact covering query (same window as indexed span) must include the code.
-    List<CodeRange> ranges = xzt.rangesCovering(1000L, 5000L);
+    List<CodeRange> ranges = XzStarSfc.fillInternalGaps(xzt.rangesCovering(1000L, 5000L));
     assertFalse(ranges.isEmpty());
     boolean covers = false;
     for (CodeRange r : ranges) {

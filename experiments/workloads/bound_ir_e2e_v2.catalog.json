@@ -1,0 +1,357 @@
+{
+  "version": "e2e_v2",
+  "design": {
+    "n_per_level": 24,
+    "types": [
+      "SRQ",
+      "ST-Ranges",
+      "SS",
+      "topk"
+    ],
+    "index_families": [
+      "Z/H/TZ",
+      "XZ",
+      "TS",
+      "XZT"
+    ],
+    "simple_intent": "classic Z/H/TZ win; compact ST / multi-AOI / veh / similarity",
+    "complex_intent": "ADV XZ/TS/XZTXZ + classic multi-AOI/fat-Z; diverse win modes",
+    "evidence": "force_mix8 / e2e_mix8r pockets",
+    "frozen": true
+  },
+  "simple": {
+    "summary": {
+      "n": 24,
+      "by_type": {
+        "SRQ": 6,
+        "ST-Ranges": 6,
+        "SS": 6,
+        "topk": 6
+      },
+      "by_target_index": {
+        "TZ": 8,
+        "Z": 14,
+        "H": 2
+      }
+    },
+    "roles": [
+      {
+        "query_id": "s_srq_short_1",
+        "type": "SRQ",
+        "target_index": "TZ",
+        "scene": "short_st"
+      },
+      {
+        "query_id": "s_srq_short_2",
+        "type": "SRQ",
+        "target_index": "TZ",
+        "scene": "short_st"
+      },
+      {
+        "query_id": "s_srq_fat_1",
+        "type": "SRQ",
+        "target_index": "Z",
+        "scene": "selective_fat"
+      },
+      {
+        "query_id": "s_srq_veh_1",
+        "type": "SRQ",
+        "target_index": "H",
+        "scene": "vehicle_eq"
+      },
+      {
+        "query_id": "s_srq_veh_2",
+        "type": "SRQ",
+        "target_index": "H",
+        "scene": "vehicle_eq_t"
+      },
+      {
+        "query_id": "s_srq_s_1",
+        "type": "SRQ",
+        "target_index": "Z",
+        "scene": "spatial_only"
+      },
+      {
+        "query_id": "s_str_aoi_1",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_compact"
+      },
+      {
+        "query_id": "s_str_aoi_2",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_compact"
+      },
+      {
+        "query_id": "s_str_aoi_3",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_compact"
+      },
+      {
+        "query_id": "s_str_twin_1",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_window_compact"
+      },
+      {
+        "query_id": "s_str_twin_2",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_window_compact"
+      },
+      {
+        "query_id": "s_str_twin_3",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_window_compact"
+      },
+      {
+        "query_id": "s_ss_dtw_1",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_DTW"
+      },
+      {
+        "query_id": "s_ss_frechet_2",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_FRECHET"
+      },
+      {
+        "query_id": "s_ss_hausdorff_3",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_HAUSDORFF"
+      },
+      {
+        "query_id": "s_ss_dtw_4",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_DTW"
+      },
+      {
+        "query_id": "s_ss_frechet_5",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_FRECHET"
+      },
+      {
+        "query_id": "s_ss_hausdorff_6",
+        "type": "SS",
+        "target_index": "Z",
+        "scene": "sim_HAUSDORFF"
+      },
+      {
+        "query_id": "s_topk_k3_1",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k3"
+      },
+      {
+        "query_id": "s_topk_k3_2",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k3"
+      },
+      {
+        "query_id": "s_topk_k3_3",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k3"
+      },
+      {
+        "query_id": "s_topk_k10_4",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k10"
+      },
+      {
+        "query_id": "s_topk_k10_5",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k10"
+      },
+      {
+        "query_id": "s_topk_k10_6",
+        "type": "topk",
+        "target_index": "TZ",
+        "scene": "topk_k10"
+      }
+    ]
+  },
+  "complex": {
+    "summary": {
+      "n": 24,
+      "by_type": {
+        "SRQ": 6,
+        "ST-Ranges": 6,
+        "SS": 6,
+        "topk": 6
+      },
+      "by_target_index": {
+        "XZ": 2,
+        "TS": 1,
+        "XZTXZ": 2,
+        "Z": 7,
+        "XZ/Z": 6,
+        "XZ/TS": 6
+      }
+    },
+    "roles": [
+      {
+        "query_id": "c_srq_xz_1",
+        "type": "SRQ",
+        "target_index": "XZ",
+        "scene": "fat_wide_xz"
+      },
+      {
+        "query_id": "c_srq_xz_2",
+        "type": "SRQ",
+        "target_index": "XZ",
+        "scene": "fat_wide_xz"
+      },
+      {
+        "query_id": "c_srq_ts_1",
+        "type": "SRQ",
+        "target_index": "TS",
+        "scene": "fat_wide_ts"
+      },
+      {
+        "query_id": "c_srq_xzt_1",
+        "type": "SRQ",
+        "target_index": "XZTXZ",
+        "scene": "fat_mega_xzt"
+      },
+      {
+        "query_id": "c_srq_xzt_2",
+        "type": "SRQ",
+        "target_index": "XZTXZ",
+        "scene": "hybrid_xzt"
+      },
+      {
+        "query_id": "c_srq_z_1",
+        "type": "SRQ",
+        "target_index": "Z",
+        "scene": "selective_fat_z"
+      },
+      {
+        "query_id": "c_str_aoi_1",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_fat"
+      },
+      {
+        "query_id": "c_str_aoi_2",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_fat"
+      },
+      {
+        "query_id": "c_str_aoi_3",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_aoi_fat"
+      },
+      {
+        "query_id": "c_str_twin_1",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_window_fat"
+      },
+      {
+        "query_id": "c_str_twin_2",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "multi_window_fat"
+      },
+      {
+        "query_id": "c_str_combo_1",
+        "type": "ST-Ranges",
+        "target_index": "Z",
+        "scene": "aoi_plus_window"
+      },
+      {
+        "query_id": "c_ss_dtw_1",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_DTW"
+      },
+      {
+        "query_id": "c_ss_frechet_2",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_FRECHET"
+      },
+      {
+        "query_id": "c_ss_hausdorff_3",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_HAUSDORFF"
+      },
+      {
+        "query_id": "c_ss_dtw_4",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_DTW"
+      },
+      {
+        "query_id": "c_ss_frechet_5",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_FRECHET"
+      },
+      {
+        "query_id": "c_ss_hausdorff_6",
+        "type": "SS",
+        "target_index": "XZ/Z",
+        "scene": "sim_wide_HAUSDORFF"
+      },
+      {
+        "query_id": "c_topk_k3_1",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k3"
+      },
+      {
+        "query_id": "c_topk_k3_2",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k3"
+      },
+      {
+        "query_id": "c_topk_k3_3",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k3"
+      },
+      {
+        "query_id": "c_topk_k10_4",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k10"
+      },
+      {
+        "query_id": "c_topk_k10_5",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k10"
+      },
+      {
+        "query_id": "c_topk_k10_6",
+        "type": "topk",
+        "target_index": "XZ/TS",
+        "scene": "topk_fat_k10"
+      }
+    ]
+  },
+  "frozen": true,
+  "frozen_date": "2026-10-15",
+  "canonical_for": [
+    "comparative_E2",
+    "comparative_E3",
+    "ablation",
+    "parameter"
+  ]
+}

@@ -1,0 +1,14 @@
+# E1 smoke on nl_ir_v4 (40). Formal table still parse.yaml after freeze.
+kind: compare
+id: parse-v4-smoke
+workload: experiments/workloads/nl_ir_v4.json
+oracle: experiments/workloads/nl_ir_v4.json
+manifest: tdrive_v1_ready
+require_oracle: true
+trials: 1
+stages:
+  - parse
+arms:
+  - kart
+  - din-sql-spider
+  - sag-mql-nofeedback

@@ -1,8 +1,9 @@
 # Simple-level plan stage. Complex stays on plan.yaml.
+# simple_v2: classic pockets; balanced SRQ/ST-Ranges/SS/topk (n=24).
 kind: compare
 id: plan-simple
-workload: experiments/workloads/bound_ir_simple_v1.json
-oracle: experiments/workloads/bound_ir_simple_v1.oracle.json
+workload: experiments/workloads/bound_ir_simple_v2.json
+oracle: experiments/workloads/bound_ir_simple_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 3

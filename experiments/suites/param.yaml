@@ -1,15 +1,22 @@
-# Parameter sweep — overlay planner knobs (does not rewrite config/planner.yaml)
+# Parameter OAT sweep — complex layer (eval_level=complex).
+# Formal defaults (3,4,4) are cell overlays; does not rewrite config/planner.yaml.
+# Formal first-run: --cache cold --trials 1; needs KART_ADVANCED_INDEXES=1.
 kind: param
 id: param
-workload: experiments/workloads/tdrive_smoke.json
-oracle: experiments/workloads/tdrive_smoke.oracle.json
+workload: experiments/workloads/bound_ir_complex_v2.json
+oracle: experiments/workloads/bound_ir_complex_v2.oracle.json
 manifest: tdrive_v1_ready
 require_oracle: true
 trials: 1
-limit: 2
 stages:
   - e2e
-base_arm: rule
+base_arm: kart
+grid_mode: oat
+defaults:
+  beam_width: 3
+  max_candidates: 4
+  max_llm_calls: 4
 grid:
-  beam_width: [1, 3]
-  max_candidates: [4, 8]
+  beam_width: [1, 3, 5, 7]
+  max_candidates: [4, 6, 8, 10]
+  max_llm_calls: [0, 4, 8, 12]

@@ -4,6 +4,8 @@ import kart.compile.LayoutContext;
 import kart.compile.PhysicalPlan;
 import kart.compile.QueryCompiler;
 import kart.compile.ScanTask;
+import kart.codec.CodeRange;
+import kart.catalog.StatsSnapshot;
 import kart.ir.BoundIr;
 import kart.plan.PlanBuilder;
 import kart.plan.PlanEnvelope;
@@ -127,5 +129,91 @@ public final class CostFeaturesExtractorAlignTest {
     }
     assertTrue(f.rpcPerRange >= 1.0);
     assertEquals(f.scanRanges * f.rpcPerRange, f.rpcEst, 1e-9);
+  }
+
+  @Test
+  void advancedPostingEstimateFallsBackToSampleAndSeparatesFilteredRows() {
+    LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
+    BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+    List<CodeRange> precise = layout.xzSfc().ranges(ir.spatial.min_x, ir.spatial.min_y,
+        ir.spatial.max_x, ir.spatial.max_y);
+    assertTrue(!precise.isEmpty());
+    long inside = precise.get(0).lo;
+    long outside = precise.get(precise.size() - 1).hi + 1L;
+    while (kart.compile.CodeRangeBudget.containsCode(precise, outside)) {
+      outside++;
+    }
+
+    StatsSnapshot stats = new StatsSnapshot();
+    stats.sample_rate = 0.5;
+    StatsSnapshot.SampleChunk hit = new StatsSnapshot.SampleChunk();
+    hit.xz_code = Long.valueOf(inside);
+    StatsSnapshot.SampleChunk miss = new StatsSnapshot.SampleChunk();
+    miss.xz_code = Long.valueOf(outside);
+    stats.sample_chunks.add(hit);
+    stats.sample_chunks.add(miss);
+
+    PlanEnvelope pXz = null;
+    for (PlanEnvelope plan : PlanBuilder.buildCandidates(ir)) {
+      CostFeaturesExtractor.AccessShape shape = CostFeaturesExtractor.accessShape(plan);
+      if (shape.usedXz && !shape.intersect && !shape.usedTshape) {
+        pXz = plan;
+        break;
+      }
+    }
+    assertTrue(pXz != null, "need a single-index XZ plan");
+    PhysicalPlan phys = new QueryCompiler(layout).compile(pXz, ir);
+    CostFeatures f = new CostFeaturesExtractor(layout, stats).extractFinal(phys, pXz, ir);
+
+    assertEquals(2L, f.estIndexRowsAfterCodeFilter);
+    assertEquals(2L, f.estIndexRows);
+    assertTrue(f.missingStats, "sample extrapolation must be marked uncertain");
+    assertEquals("SAMPLE_EXTRAPOLATION", f.extras.get("xz_posting_count_source"));
+    assertEquals(1, ((Number) f.extras.get("xz_sample_matches_scanned")).intValue());
+  }
+
+  @Test
+  void legacySamplesWithoutAdvancedCodesAreNotTreatedAsPostingSamples() {
+    LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
+    BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+    StatsSnapshot stats = new StatsSnapshot();
+    stats.sample_rate = 0.01;
+    stats.sample_chunks.add(new StatsSnapshot.SampleChunk());
+    stats.sample_chunks.add(new StatsSnapshot.SampleChunk());
+    PlanEnvelope pXz = null;
+    for (PlanEnvelope plan : PlanBuilder.buildCandidates(ir)) {
+      CostFeaturesExtractor.AccessShape shape = CostFeaturesExtractor.accessShape(plan);
+      if (shape.usedXz && !shape.intersect && !shape.usedTshape) {
+        pXz = plan;
+        break;
+      }
+    }
+    assertTrue(pXz != null, "need a single-index XZ plan");
+    PhysicalPlan phys = new QueryCompiler(layout).compile(pXz, ir);
+    CostFeatures f = new CostFeaturesExtractor(layout, stats).extractFinal(phys, pXz, ir);
+
+    assertEquals("RANGE_UPPER_BOUND", f.extras.get("xz_posting_count_source"));
+    assertTrue(f.missingStats, "legacy samples without XZ codes must stay uncertain");
+  }
+
+  @Test
+  void fastAdvancedRangeCountMatchesThePhysicalBudgetedTasks() {
+    LayoutContext layout = LayoutContext.from(FixtureBuilder.fixtureManifest());
+    BoundIr ir = QueryIrFixtureTest.fixtureQuery();
+    PlanEnvelope pXz = null;
+    for (PlanEnvelope plan : PlanBuilder.buildCandidates(ir)) {
+      CostFeaturesExtractor.AccessShape shape = CostFeaturesExtractor.accessShape(plan);
+      if (shape.usedXz && !shape.intersect && !shape.usedTshape) {
+        pXz = plan;
+        break;
+      }
+    }
+    assertTrue(pXz != null, "need a single-index XZ plan");
+    CostFeatures fast = new CostFeaturesExtractor(layout, new StatsSnapshot()).extractFast(pXz, ir);
+    PhysicalPlan phys = new QueryCompiler(layout).compile(pXz, ir);
+    CostFeatures fin = new CostFeaturesExtractor(layout, new StatsSnapshot())
+        .extractFinal(phys, pXz, ir);
+    assertEquals(phys.scanTasks.size(), fast.scanRanges);
+    assertEquals(fin.scanRanges, fast.scanRanges);
   }
 }

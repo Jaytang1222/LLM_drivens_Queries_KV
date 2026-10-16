@@ -142,19 +142,39 @@ public final class FullScanOracle {
   }
 
   private boolean hasMatchingPoint(Trajectory t, BoundIr ir) {
-    boolean needTemporal = ir.temporal != null;
-    boolean needSpatial = ir.spatial != null;
+    // Match ExactSTFilter: temporal_parts/spatial_parts OR within each dimension.
+    List<BoundIr.Temporal> temps = BoundIr.temporalsOf(ir);
+    List<BoundIr.Spatial> spaces = BoundIr.spatialsOf(ir);
+    boolean needTemporal = !temps.isEmpty();
+    boolean needSpatial = !spaces.isEmpty();
     if (!needTemporal && !needSpatial) {
       // no ST predicate: attribute-only or empty — attribute handled above; empty means all
       return true;
     }
     for (CanonicalPoint p : t.points()) {
-      boolean okT = !needTemporal
-          || (p.timestampMs >= ir.temporal.start_ms && p.timestampMs < ir.temporal.end_ms);
-      boolean okS = !needSpatial
-          || (p.xM >= ir.spatial.min_x && p.xM <= ir.spatial.max_x
-          && p.yM >= ir.spatial.min_y && p.yM <= ir.spatial.max_y);
+      boolean okT = !needTemporal || inAnyTemporal(temps, p.timestampMs);
+      boolean okS = !needSpatial || inAnySpatial(spaces, p.xM, p.yM);
       if (okT && okS) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean inAnyTemporal(List<BoundIr.Temporal> temps, long t) {
+    for (BoundIr.Temporal w : temps) {
+      if (w != null && t >= w.start_ms && t < w.end_ms) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean inAnySpatial(List<BoundIr.Spatial> spaces, double x, double y) {
+    for (BoundIr.Spatial s : spaces) {
+      if (s != null
+          && x >= s.min_x && x <= s.max_x
+          && y >= s.min_y && y <= s.max_y) {
         return true;
       }
     }

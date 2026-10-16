@@ -4,7 +4,7 @@
 - 状态：规范已锁定；规划侧 leave-one-out 开关与 `experiments/suites/ablation.yaml` 已按本文落地。正式主表仍须 HBase 冷跑与 Oracle 门禁，不得以「脚本能启动」代替。
 - 上游：`spec/design.md` §8–10、`spec/IMPLEMENTATION_PLAN.md` §19.2、`docs/environment-lock.md`
 - 正交规范：[`spec/comparative_experiment.md`](comparative_experiment.md)（外部方法 / HBase 基线横比；**不**在消融中复用为臂）
-- 数据与用例：与对比实验同一 **复杂度分层** 工作负载——`bound_ir_simple_v1`（简单层）与 `bound_ir_complex_v1`（复杂层）；套件 `ablation-simple.yaml` / `ablation.yaml`。旧 `bound_ir_cmp_v3` 仅回归
+- 数据与用例：与对比实验同一 **复杂度分层** 工作负载——`bound_ir_simple_v2`（简单层）与 `bound_ir_complex_v2`（复杂层，现行冻结）；套件 `ablation-simple.yaml` / `ablation.yaml`。旧 `*_v1` / `bound_ir_cmp_v3` 仅回归
 
 ---
 
@@ -192,8 +192,9 @@ experiments/results/<run_id>/
 
 | 文件 | 用途 |
 |---|---|
-| `experiments/workloads/bound_ir_simple_v1.json` | 简单层金标（与对比 `eval_level=simple` 同一冻结） |
-| `experiments/workloads/bound_ir_complex_v1.json` | 复杂层金标（与对比 `eval_level=complex` 同一冻结；**勿覆盖**） |
+| `experiments/workloads/bound_ir_simple_v2.json` | 简单层金标（与对比 `eval_level=simple` 同一冻结） |
+| `experiments/workloads/bound_ir_complex_v2.json` | 复杂层金标（与对比 `eval_level=complex` 同一冻结；**勿覆盖**） |
+| `experiments/workloads/bound_ir_simple_v1.json` / `bound_ir_complex_v1.json` | 历史分层集（仅回归） |
 | `experiments/workloads/bound_ir_cmp_v3.json` | 历史 20 条；仅回归 |
 | `experiments/workloads/bound_ir_v1.json` | 历史 BoundIR-65；仅回归 / oracle-diff，**不是**消融主表 |
 
@@ -326,6 +327,6 @@ experiments/results/<run_id>/
 1. ~~修正 suite：`base_arm=kart`（Dual rewrite），因子对齐 §4~~ 已落地
 2. ~~`cbo_only` / `no_online_llm` / `no_offline_llm` 经 `action_mode` overlay，不换 Native policy 臂~~ 已落地
 3. ~~`no_fast_cost` / `no_final_cost` / `no_coverage`~~ 已落地
-4. 与对比实验同一 `bound_ir_complex_v1` 跑正式 cold 主表 + 风险表
+4. 与对比实验同一 `bound_ir_complex_v2` 跑正式 cold 主表 + 风险表
 
 入口：`scripts/bench-ablation.sh`。因子语义未按 §4 执行的 run 仍不得进论文主表。

@@ -1,0 +1,24 @@
+{
+  "version": "adv_gold_v1",
+  "note": "Force-plan warm gold = global best exec (FULL/TZ/XZ/TS). On this T-Drive table ADV often beats P_TZ but loses to P_FULL; gold prefers global best for e2e. TS selectable via gold or similarity inject. KART_ADV_ADMIT_VS_TZ=1 without gold → admit P_XZ vs expensive TZ.",
+  "plans": {
+    "st_ll_1": "P_FULL",
+    "st_ll_2": "P_FULL",
+    "st_sl_1": "P_FULL",
+    "st_sl_2": "P_FULL",
+    "c3_tz_a": "P_FULL",
+    "c3_tz_b": "P_FULL",
+    "c3_tz_c": "P_FULL",
+    "a2_tz_hard_a": "P_FULL",
+    "a2_tz_hard_b": "P_FULL",
+    "a2_tz_hard_c": "P_FULL",
+    "a2_tz_hard_d": "P_FULL",
+    "a2_tz_hard_e": "P_FULL",
+    "a2_tz_hard_f": "P_FULL",
+    "a2_tzh_g": "P_TZ",
+    "a2_tzh_a__tpad125": "P_TZ",
+    "mechv2_004": "P_FULL",
+    "r9_locked_td_1": "P_FULL",
+    "h_st_3": "P_TZ"
+  }
+}
