@@ -17,6 +17,9 @@ target/
 .cursor/
 .tmp.driveupload/
 
+# Paper drafts / PDFs stay local (not for public repo)
+paper/
+
 # Local / runtime (regenerable or machine-specific)
 catalog/
 runs/
