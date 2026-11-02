@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>10.242.104.108</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.clientPort</name>
+    <value>2181</value>
+  </property>
+  <property>
+    <name>zookeeper.znode.parent</name>
+    <value>/hbase-tyq</value>
+  </property>
+  <property>
+    <name>hbase.client.operation.timeout</name>
+    <value>120000</value>
+  </property>
+  <property>
+    <name>hbase.rpc.timeout</name>
+    <value>60000</value>
+  </property>
+  <property>
+    <name>hbase.client.retries.number</name>
+    <value>10</value>
+  </property>
+</configuration>

@@ -16,8 +16,13 @@ import java.util.concurrent.Callable;
     description = "Run a compare/ablation/param / E1-E3 experiment suite (Oracle-gated trials)")
 public final class BenchSuiteCmd implements Callable<Integer> {
 
-  @Option(names = "--suite", required = true, description = "Suite YAML path")
-  private Path suitePath;
+  @Option(names = "--suite", required = true,
+      description = "Suite id (parse|e2e|...) or YAML path / path#id")
+  private String suite;
+
+  @Option(names = "--suite-id",
+      description = "Suite id when --suite points at a suites catalog YAML")
+  private String suiteId;
 
   @Option(names = "--run-id", description = "Result directory id under experiments/results/")
   private String runId;
@@ -61,7 +66,6 @@ public final class BenchSuiteCmd implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
-    Path suite = suitePath.isAbsolute() ? suitePath : root.resolve(suitePath);
     String rid = runId;
     if (rid == null || rid.trim().isEmpty()) {
       rid = "bench-" + new SimpleDateFormat("yyyyMMdd-HHmmss").format(new Date());
@@ -69,7 +73,8 @@ public final class BenchSuiteCmd implements Callable<Integer> {
 
     SuiteRunner.Options opt = new SuiteRunner.Options();
     opt.root = root;
-    opt.suitePath = suite;
+    opt.suiteRef = suite;
+    opt.suiteId = suiteId;
     opt.runId = rid.trim();
     opt.allowUnsafe = allowUnsafe;
     opt.armFilter = toSet(arms);

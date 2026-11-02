@@ -13,12 +13,20 @@ public final class AdvQueryRouterTest {
 
   @Test
   void fatTemporalRoutesToSpatialXz() {
-    BoundIr ir = st(20L * 3600L * 1000L, true);
+    BoundIr ir = tsBand(20L * 3600L * 1000L);
     assertEquals(AdvQueryRouter.Route.SPATIAL_XZ, AdvQueryRouter.route(ir));
     List<List<String>> specs = AdvQueryRouter.injectSpecs(ir);
     assertTrue(specs.size() <= 2);
-    // Default fixture area is wide-scale → TS primary.
     assertEquals(IndexId.TSHAPE, specs.get(0).get(0));
+    assertEquals("P_TS", AdvQueryRouter.primaryPlanId(ir));
+  }
+
+  @Test
+  void smallFatSpatialStaysClassic() {
+    BoundIr ir = st(20L * 3600L * 1000L, true);
+    assertEquals(AdvQueryRouter.Route.SPATIAL_XZ, AdvQueryRouter.route(ir));
+    assertTrue(AdvQueryRouter.injectSpecs(ir).isEmpty());
+    assertEquals(null, AdvQueryRouter.primaryPlanId(ir));
   }
 
   @Test
@@ -27,6 +35,16 @@ public final class AdvQueryRouterTest {
     assertEquals(AdvQueryRouter.Route.CLASSIC_ONLY, AdvQueryRouter.route(ir));
     assertTrue(AdvQueryRouter.forceClassic(ir));
     assertTrue(AdvQueryRouter.injectSpecs(ir).isEmpty());
+  }
+
+  @Test
+  void largeShortAllowsHybridXztInject() {
+    BoundIr ir = st(3L * 3600L * 1000L, true);
+    ir.spatial.max_x = 20_000;
+    ir.spatial.max_y = 15_000; // 3e8 m² >= xzWide
+    assertTrue(!AdvQueryRouter.forceClassic(ir));
+    assertEquals(AdvQueryRouter.Route.HYBRID, AdvQueryRouter.route(ir));
+    assertEquals("P_XZTXZ", AdvQueryRouter.primaryPlanId(ir));
   }
 
   @Test
@@ -51,7 +69,7 @@ public final class AdvQueryRouterTest {
 
   @Test
   void fatWideInjectsTsOnly() {
-    BoundIr ir = st(20L * 3600L * 1000L, true);
+    BoundIr ir = tsBand(20L * 3600L * 1000L);
     List<List<String>> specs = AdvQueryRouter.injectSpecs(ir);
     assertEquals(1, specs.size());
     assertEquals(IndexId.TSHAPE, specs.get(0).get(0));
@@ -71,8 +89,8 @@ public final class AdvQueryRouterTest {
   @Test
   void fatLargeWideInjectsXz() {
     BoundIr ir = st(20L * 3600L * 1000L, true);
-    ir.spatial.max_x = 13_000;
-    ir.spatial.max_y = 12_000; // area=1.56e8 ≥ xz-wide
+    ir.spatial.max_x = 14_000;
+    ir.spatial.max_y = 13_000; // area=1.82e8, XZ band under 2.0e8 mega
     List<List<String>> specs = AdvQueryRouter.injectSpecs(ir);
     assertEquals(1, specs.size());
     assertEquals(IndexId.XZ, specs.get(0).get(0));
@@ -99,6 +117,14 @@ public final class AdvQueryRouterTest {
     ir.spatial_parts = java.util.Arrays.asList(a, b);
     assertTrue(AdvQueryRouter.forceClassic(ir));
     assertTrue(AdvQueryRouter.injectSpecs(ir).isEmpty());
+  }
+
+  /** 1.55e8 m²: TS band, under the 1.65e8 XZ floor. */
+  private static BoundIr tsBand(long spanMs) {
+    BoundIr ir = st(spanMs, true);
+    ir.spatial.max_x = 12_500;
+    ir.spatial.max_y = 12_400;
+    return ir;
   }
 
   private static BoundIr st(long spanMs, boolean spatial) {

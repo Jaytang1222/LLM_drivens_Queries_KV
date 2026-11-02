@@ -23,17 +23,22 @@ public final class TidAssigner {
     List<Trajectory> out = new ArrayList<Trajectory>(sorted.size());
     long tid = 1;
     for (Trajectory t : sorted) {
-      List<CanonicalPoint> pts = new ArrayList<CanonicalPoint>(t.size());
-      for (CanonicalPoint p : t.points()) {
-        pts.add(new CanonicalPoint(p.vehicleId, p.trajectoryId, tid, p.seq,
-            p.timestampMs, p.xM, p.yM));
-      }
-      Trajectory nt = new Trajectory(t.vehicleId, t.trajectoryId, tid, pts);
-      nt.dedupRemoved = t.dedupRemoved;
-      nt.sameTDropped = t.sameTDropped;
-      out.add(nt);
+      out.add(withTid(t, tid));
       tid++;
     }
     return out;
+  }
+
+  /** Rewrite trajectory + points with a final tid (spill / streaming builds). */
+  public static Trajectory withTid(Trajectory t, long tid) {
+    List<CanonicalPoint> pts = new ArrayList<CanonicalPoint>(t.size());
+    for (CanonicalPoint p : t.points()) {
+      pts.add(new CanonicalPoint(p.vehicleId, p.trajectoryId, tid, p.seq,
+          p.timestampMs, p.xM, p.yM));
+    }
+    Trajectory nt = new Trajectory(t.vehicleId, t.trajectoryId, tid, pts);
+    nt.dedupRemoved = t.dedupRemoved;
+    nt.sameTDropped = t.sameTDropped;
+    return nt;
   }
 }

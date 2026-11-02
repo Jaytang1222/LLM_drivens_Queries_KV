@@ -15,6 +15,8 @@ public final class Projection {
   public static final String DEFAULT_CRS = "EPSG:32650";
   /** UTM zone 34N — suitable for Aegean / Greek AIS (~lon 23°E). */
   public static final String AIS_CRS = "EPSG:32634";
+  /** UTM zone 29N — Porto / northern Portugal (~lon 8.6°W). */
+  public static final String PORTO_CRS = "EPSG:32629";
 
   private final String crs;
   private final CoordinateTransform toUtm;

@@ -1,0 +1,728 @@
+{
+  "workload_id": "E1_query",
+  "manifest_id": "porto_v1_ready",
+  "evaluation_role": "e1_canonical_frozen_porto",
+  "frozen": true,
+  "frozen_date": "2026-10-27",
+  "source_workload": "datasets/tdrive-query/E1_query.json",
+  "llm_provider": "deepseek",
+  "llm_model": "deepseek-flash",
+  "n": 36,
+  "queries": [
+    {
+      "query_id": "e1v4_b_simple_srq_2",
+      "utterance": "Show trajectories of taxi 20000271 intersecting porto_topk_box between 2013-07-05T13:24:26Z and 2013-07-05T13:32:14Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_srq",
+      "gold_bound_ir_ref": "s_srq_h_1",
+      "eval_level": "simple",
+      "source_kind": "basic",
+      "query_type": "SRQ",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_simple_srq_1",
+      "utterance": "List trajectory ids intersecting porto_topk_box between 2013-07-05T13:25:38Z and 2013-07-05T13:31:02Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_srq",
+      "gold_bound_ir_ref": "s_srq_ts_1",
+      "eval_level": "simple",
+      "source_kind": "poi",
+      "query_type": "SRQ",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_simple_ss_1",
+      "utterance": "Among trajectories intersecting porto_topk_box between 2013-07-05T10:28:20Z and 2013-07-05T16:28:20Z, find trajectories similar to 96037 under DTW (top-5)",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_ss",
+      "gold_bound_ir_ref": "s_ss_tz_2",
+      "eval_level": "simple",
+      "source_kind": "basic",
+      "query_type": "SS",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000692-1373030981620000692",
+        "20000518-1373028593620000518",
+        "20000620-1373022524620000620",
+        "20000516-1373039127620000516"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 77896,
+          "trajectory_id": "20000224-1373029855620000224",
+          "distance": 1723.8831637340832
+        },
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 9512.447038766699
+        },
+        {
+          "tid": 185462,
+          "trajectory_id": "20000518-1373028593620000518",
+          "distance": 13968.73091049092
+        },
+        {
+          "tid": 219991,
+          "trajectory_id": "20000620-1373022524620000620",
+          "distance": 18198.968702870723
+        },
+        {
+          "tid": 184156,
+          "trajectory_id": "20000516-1373039127620000516",
+          "distance": 18780.489876018342
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_simple_ss_1",
+      "utterance": "Among trajectories intersecting porto_topk_box between 2013-07-05T10:28:20Z and 2013-07-05T16:28:20Z, find trajectories similar to 96037 under FRECHET (top-5)",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_ss",
+      "gold_bound_ir_ref": "s_ss_tz_3",
+      "eval_level": "simple",
+      "source_kind": "poi",
+      "query_type": "SS",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000692-1373030981620000692",
+        "20000467-1373029893620000467",
+        "20000518-1373028593620000518",
+        "20000516-1373039127620000516"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 77896,
+          "trajectory_id": "20000224-1373029855620000224",
+          "distance": 218.01804881760927
+        },
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 624.7339546321303
+        },
+        {
+          "tid": 165236,
+          "trajectory_id": "20000467-1373029893620000467",
+          "distance": 768.1403904524067
+        },
+        {
+          "tid": 185462,
+          "trajectory_id": "20000518-1373028593620000518",
+          "distance": 771.4515680971818
+        },
+        {
+          "tid": 184156,
+          "trajectory_id": "20000516-1373039127620000516",
+          "distance": 858.2541044024579
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_simple_topk_1",
+      "utterance": "Top-10 FRECHET neighbors of 96037 intersecting porto_topk_box between 2013-07-05T13:25:02Z and 2013-07-05T13:31:38Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_topk",
+      "gold_bound_ir_ref": "s_topk_ts_3",
+      "eval_level": "simple",
+      "source_kind": "basic",
+      "query_type": "topk",
+      "gold_trajectory_ids": [
+        "20000692-1373030981620000692"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 624.7339546321303
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_simple_topk_1",
+      "utterance": "Top-3 DTW neighbors of 96037 intersecting porto_topk_box between 2013-07-05T13:25:02Z and 2013-07-05T13:31:38Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_topk",
+      "gold_bound_ir_ref": "s_topk_ts_4",
+      "eval_level": "simple",
+      "source_kind": "poi",
+      "query_type": "topk",
+      "gold_trajectory_ids": [
+        "20000692-1373030981620000692"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 9512.447038766699
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_simple_str_1",
+      "utterance": "List trajectory ids that intersect ANY of the registered regions [porto_topk_box, porto_smoke_anchor] between 2013-07-05T10:28:19Z and 2013-07-05T16:28:19Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_stranges",
+      "gold_bound_ir_ref": "s_str_z_2",
+      "eval_level": "simple",
+      "source_kind": "basic",
+      "query_type": "ST-Ranges",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_simple_str_1",
+      "utterance": "List trajectory ids that intersect ANY of the registered regions [porto_topk_box, porto_smoke_anchor] between 2013-07-05T10:28:19Z and 2013-07-05T16:28:19Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_stranges",
+      "gold_bound_ir_ref": "s_str_z_3",
+      "eval_level": "simple",
+      "source_kind": "poi",
+      "query_type": "ST-Ranges",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_simple_str_2",
+      "utterance": "List trajectory ids that intersect ANY of the registered regions [porto_topk_box, porto_smoke_anchor] between 2013-07-05T10:28:19Z and 2013-07-05T16:28:19Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_stranges",
+      "gold_bound_ir_ref": "s_str_z_4",
+      "eval_level": "simple",
+      "source_kind": "poi",
+      "query_type": "ST-Ranges",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1rc_r_edit",
+      "utterance": "Top-3 trajectories most similar to 20000271-1373030600620000271 using EDIT_DISTANCE",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_r_pair",
+      "utterance": "Find pairs of taxis that were within 100 meters of each other between 2013-07-05T13:21:43Z and 2013-07-05T13:34:55Z",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_hist",
+      "utterance": "Return a histogram of trips per hour in Cedofeita on 2008-02-03",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_cluster",
+      "utterance": "Cluster trajectories in Campanhã into 5 groups on 2008-02-03",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_weather",
+      "utterance": "Join taxi trajectories with the weather rainfall table for 2008-02-03",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_longest",
+      "utterance": "Find the single taxi with the longest route in Baixa between 2013-07-05T13:21:43Z and 2013-07-05T13:34:55Z",
+      "eval_level": "simple",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_vague",
+      "utterance": "Find taxis that went there yesterday",
+      "eval_level": "simple",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_box",
+      "utterance": "Trajectories in the box",
+      "eval_level": "simple",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_busy",
+      "utterance": "Which taxis were around there this morning",
+      "eval_level": "simple",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1v4_b_complex_srq_4",
+      "utterance": "Show trajectories of taxi 20000271 intersecting porto_topk_box between 2013-07-05T13:16:38Z and 2013-07-05T13:40:02Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_srq",
+      "gold_bound_ir_ref": "c_srq_h_1",
+      "eval_level": "complex",
+      "source_kind": "basic",
+      "query_type": "SRQ",
+      "gold_trajectory_ids": [
+        "20000271-1373030600620000271"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_complex_srq_3",
+      "utterance": "List trajectory ids intersecting porto_topk_box between 2013-07-05T13:20:32Z and 2013-07-05T13:36:08Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_srq",
+      "gold_bound_ir_ref": "c_srq_ts_1",
+      "eval_level": "complex",
+      "source_kind": "poi",
+      "query_type": "SRQ",
+      "gold_trajectory_ids": [
+        "20000137-1373029714620000137",
+        "20000224-1373031194620000224",
+        "20000233-1373030174620000233",
+        "20000235-1373030421620000235",
+        "20000242-1373030319620000242",
+        "20000254-1373030248620000254",
+        "20000271-1373030600620000271",
+        "20000310-1373030806620000310",
+        "20000359-1373029963620000359",
+        "20000435-1373030887620000435",
+        "20000451-1373030904620000451",
+        "20000464-1373029767620000464",
+        "20000464-1373030787620000464",
+        "20000481-1373030793620000481",
+        "20000557-1373030926620000557",
+        "20000565-1373029940620000565",
+        "20000626-1373030112620000626",
+        "20000668-1373030114620000668",
+        "20000692-1373030981620000692"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_complex_srq_5",
+      "utterance": "List trajectory ids intersecting porto_topk_box between 2013-07-05T13:23:50Z and 2013-07-05T13:32:50Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_srq",
+      "gold_bound_ir_ref": "c_srq_tz_1",
+      "eval_level": "complex",
+      "source_kind": "basic",
+      "query_type": "SRQ",
+      "gold_trajectory_ids": [
+        "20000242-1373030319620000242",
+        "20000271-1373030600620000271",
+        "20000359-1373029963620000359",
+        "20000692-1373030981620000692"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_complex_ss_4",
+      "utterance": "Among trajectories intersecting porto_topk_box between 2013-07-05T10:28:20Z and 2013-07-05T16:28:20Z, find trajectories similar to 96037 under DTW (top-5)",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_ss",
+      "gold_bound_ir_ref": "c_ss_tz_2",
+      "eval_level": "complex",
+      "source_kind": "basic",
+      "query_type": "SS",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000692-1373030981620000692",
+        "20000518-1373028593620000518",
+        "20000620-1373022524620000620",
+        "20000516-1373039127620000516"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 77896,
+          "trajectory_id": "20000224-1373029855620000224",
+          "distance": 1723.8831637340832
+        },
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 9512.447038766699
+        },
+        {
+          "tid": 185462,
+          "trajectory_id": "20000518-1373028593620000518",
+          "distance": 13968.73091049092
+        },
+        {
+          "tid": 219991,
+          "trajectory_id": "20000620-1373022524620000620",
+          "distance": 18198.968702870723
+        },
+        {
+          "tid": 184156,
+          "trajectory_id": "20000516-1373039127620000516",
+          "distance": 18780.489876018342
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_complex_ss_3",
+      "utterance": "Among trajectories intersecting porto_topk_box between 2013-07-05T10:28:20Z and 2013-07-05T16:28:20Z, find trajectories similar to 96037 under FRECHET (top-5)",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_ss",
+      "gold_bound_ir_ref": "c_ss_tz_3",
+      "eval_level": "complex",
+      "source_kind": "poi",
+      "query_type": "SS",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000692-1373030981620000692",
+        "20000467-1373029893620000467",
+        "20000518-1373028593620000518",
+        "20000516-1373039127620000516"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 77896,
+          "trajectory_id": "20000224-1373029855620000224",
+          "distance": 218.01804881760927
+        },
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 624.7339546321303
+        },
+        {
+          "tid": 165236,
+          "trajectory_id": "20000467-1373029893620000467",
+          "distance": 768.1403904524067
+        },
+        {
+          "tid": 185462,
+          "trajectory_id": "20000518-1373028593620000518",
+          "distance": 771.4515680971818
+        },
+        {
+          "tid": 184156,
+          "trajectory_id": "20000516-1373039127620000516",
+          "distance": 858.2541044024579
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_complex_topk_4",
+      "utterance": "Top-10 FRECHET neighbors of 96037 intersecting porto_topk_box between 2013-07-05T13:19:38Z and 2013-07-05T13:37:02Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_topk",
+      "gold_bound_ir_ref": "c_topk_ts_3",
+      "eval_level": "complex",
+      "source_kind": "basic",
+      "query_type": "topk",
+      "gold_trajectory_ids": [
+        "20000224-1373031194620000224",
+        "20000310-1373030806620000310",
+        "20000692-1373030981620000692",
+        "20000467-1373029893620000467",
+        "20000233-1373030174620000233",
+        "20000668-1373030114620000668",
+        "20000626-1373030112620000626",
+        "20000435-1373030887620000435",
+        "20000242-1373030319620000242",
+        "20000206-1373030906620000206"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 77897,
+          "trajectory_id": "20000224-1373031194620000224",
+          "distance": 551.6937456804825
+        },
+        {
+          "tid": 109253,
+          "trajectory_id": "20000310-1373030806620000310",
+          "distance": 598.2417284380624
+        },
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 624.7339546321303
+        },
+        {
+          "tid": 165236,
+          "trajectory_id": "20000467-1373029893620000467",
+          "distance": 768.1403904524067
+        },
+        {
+          "tid": 80631,
+          "trajectory_id": "20000233-1373030174620000233",
+          "distance": 809.1465976090687
+        },
+        {
+          "tid": 235219,
+          "trajectory_id": "20000668-1373030114620000668",
+          "distance": 1471.5265843694076
+        },
+        {
+          "tid": 223286,
+          "trajectory_id": "20000626-1373030112620000626",
+          "distance": 1958.0071981523422
+        },
+        {
+          "tid": 154817,
+          "trajectory_id": "20000435-1373030887620000435",
+          "distance": 2392.6527564045073
+        },
+        {
+          "tid": 83541,
+          "trajectory_id": "20000242-1373030319620000242",
+          "distance": 2750.1665567607974
+        },
+        {
+          "tid": 74537,
+          "trajectory_id": "20000206-1373030906620000206",
+          "distance": 2925.6132009341636
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_complex_topk_3",
+      "utterance": "Top-3 DTW neighbors of 96037 intersecting porto_topk_box between 2013-07-05T13:19:02Z and 2013-07-05T13:37:38Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_topk",
+      "gold_bound_ir_ref": "c_topk_ts_4",
+      "eval_level": "complex",
+      "source_kind": "poi",
+      "query_type": "topk",
+      "gold_trajectory_ids": [
+        "20000692-1373030981620000692",
+        "20000224-1373031194620000224",
+        "20000310-1373030806620000310"
+      ],
+      "gold_top_k": [
+        {
+          "tid": 246135,
+          "trajectory_id": "20000692-1373030981620000692",
+          "distance": 9512.447038766699
+        },
+        {
+          "tid": 77897,
+          "trajectory_id": "20000224-1373031194620000224",
+          "distance": 9895.615180634224
+        },
+        {
+          "tid": 109253,
+          "trajectory_id": "20000310-1373030806620000310",
+          "distance": 12625.68034935432
+        }
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_b_complex_str_4",
+      "utterance": "List trajectory ids that intersect ANY of the registered regions [porto_topk_box, porto_smoke_anchor] between 2013-07-05T10:28:19Z and 2013-07-05T16:28:19Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "basic_stranges",
+      "gold_bound_ir_ref": "c_str_z_2",
+      "eval_level": "complex",
+      "source_kind": "basic",
+      "query_type": "ST-Ranges",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000271-1373030600620000271",
+        "20000692-1373030981620000692"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1v4_p_complex_str_3",
+      "utterance": "List trajectory ids that intersect ANY of the registered regions [porto_topk_box, porto_smoke_anchor] between 2013-07-05T10:28:19Z and 2013-07-05T16:28:19Z",
+      "reject_expected": false,
+      "clarify_expected": false,
+      "layer": "poi_stranges",
+      "gold_bound_ir_ref": "c_str_z_3",
+      "eval_level": "complex",
+      "source_kind": "poi",
+      "query_type": "ST-Ranges",
+      "gold_trajectory_ids": [
+        "20000224-1373029855620000224",
+        "20000271-1373030600620000271",
+        "20000467-1373029893620000467",
+        "20000516-1373039127620000516",
+        "20000692-1373030981620000692"
+      ],
+      "nl_aligned_to_gold": true
+    },
+    {
+      "query_id": "e1rc_r_path",
+      "utterance": "Find trajectories whose continuous path segment crosses the ring road (not just GPS samples)",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_r_speed",
+      "utterance": "Find trajectories of taxi 20000271 whose average speed exceeded 80 km/h between 2013-07-05T13:23:50Z and 2013-07-05T13:32:50Z",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_median",
+      "utterance": "Compute the median trip duration inside porto_smoke_anchor on 2008-02-03",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_ranklen",
+      "utterance": "Rank trajectories by total length in kilometers inside porto_smoke_anchor between 2013-07-05T13:23:50Z and 2013-07-05T13:32:50Z",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_delete",
+      "utterance": "Delete trajectories of taxi 20000271 older than 2008-02-03",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1g_r_export",
+      "utterance": "Export every trajectory in porto_topk_box on 2008-02-03 as a downloadable CSV file",
+      "eval_level": "complex",
+      "layer": "reject",
+      "reject_expected": true,
+      "clarify_expected": false,
+      "query_type": "reject",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_sim",
+      "utterance": "Show similar trajectories",
+      "eval_level": "complex",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_near",
+      "utterance": "Find similar taxis near there",
+      "eval_level": "complex",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    },
+    {
+      "query_id": "e1rc_c_cbd",
+      "utterance": "Something near Aliados yesterday evening",
+      "eval_level": "complex",
+      "layer": "clarify",
+      "reject_expected": false,
+      "clarify_expected": true,
+      "query_type": "clarify",
+      "gold_bound_ir_ref": null,
+      "gold_trajectory_ids": []
+    }
+  ],
+  "note": "Porto E1 mirrors T-Drive E1 size/types; NL remapped to Porto places/times/taxi; gold ids from frozen simple/complex oracles; gold_bound_ir_ref is string query_id for NlItem.; pass-NL aligned to gold BoundIR windows/regions 2026-10-27",
+  "acceptance": null
+}

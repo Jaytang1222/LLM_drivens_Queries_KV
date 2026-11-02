@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Java port of TMan-spatial {@code index.XZStarSFC} (XZ* encode + SRQ ranges).
- * Source: experiments/third_party/tman-spatial/.../XZStarSFC.scala + ElementKNN.scala.
+ * Source: experiments/adapters/upstream/tman-spatial/.../XZStarSFC.scala + ElementKNN.scala.
  * Default beta=1 (2×2 shape) matches XZStarIndex wrapper.
  */
 public final class XzStarSfc {
@@ -262,6 +262,43 @@ public final class XzStarSfc {
     }
     List<CodeRange> out = new ArrayList<CodeRange>(1);
     out.add(new CodeRange(lo, hi, contained));
+    return out;
+  }
+
+  /**
+   * Merge only short holes. Overlapping XZ* MBRs that miss the raw enumeration
+   * sit in gaps of a few codes; collapsing the whole span scans ~100× more postings.
+   */
+  public static final long RECALL_GAP = 64L;
+
+  public static List<CodeRange> fillRecallGaps(List<CodeRange> ranges) {
+    return fillGapsUpTo(ranges, RECALL_GAP);
+  }
+
+  public static List<CodeRange> fillGapsUpTo(List<CodeRange> ranges, long maxGap) {
+    if (ranges == null || ranges.size() <= 1 || maxGap < 0L) {
+      return ranges;
+    }
+    List<CodeRange> sorted = new ArrayList<CodeRange>(ranges);
+    Collections.sort(sorted, new Comparator<CodeRange>() {
+      @Override
+      public int compare(CodeRange a, CodeRange b) {
+        return Long.compare(a.lo, b.lo);
+      }
+    });
+    List<CodeRange> out = new ArrayList<CodeRange>();
+    CodeRange cur = sorted.get(0);
+    for (int i = 1; i < sorted.size(); i++) {
+      CodeRange next = sorted.get(i);
+      if (next.lo <= cur.hi + 1L + maxGap) {
+        cur = new CodeRange(cur.lo, Math.max(cur.hi, next.hi),
+            cur.contained && next.contained);
+      } else {
+        out.add(cur);
+        cur = next;
+      }
+    }
+    out.add(cur);
     return out;
   }
 

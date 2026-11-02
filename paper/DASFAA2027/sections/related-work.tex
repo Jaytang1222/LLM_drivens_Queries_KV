@@ -1,0 +1,15 @@
+\section{Related Work}\label{sec:related-work}
+
+\subsection{Trajectory Indexing for Key-Value Stores}
+Early systems linearize spatial locations to support ordered-key scans: UlTraMan applies space-filling-curve encoding to trajectory data, and TrajMesa builds on XZ-order-based keys for spatial retrieval~\cite{ultraman,trajmesa}.
+  Later work improves how a trajectory or region is represented in those keys. TraSS uses trajectory-shape encoding to prune candidates for similarity search, while TMan introduces richer spatial encodings, including XZ* region combinations and TShape multi-scale shape partitions~\cite{trass,tman}.
+  These indexes reduce scan ranges or candidate volume, and are available as candidate sources in KART; KART focuses on selecting among such access paths while preserving coverage.
+
+\subsection{Natural-Language Interfaces to Databases}
+Text-to-SQL work first improved generation by decomposing the task: DIN-SQL separates schema linking from SQL construction and adds self-correction, while DTS-SQL further studies decomposed generation with smaller language models~\cite{din,dts}.
+  More recently, TEND extends natural-language querying to NoSQL and evaluates execution-verified Text-to-NoSQL translation; its SAG method grounds schema paths using stored data~\cite{tend}.
+  Together, these methods progress from structured-query generation toward schema grounding for non-relational stores. 
+
+\subsection{Learning-Based Query Optimization}
+Learned optimization has progressed from guiding plan choices to comparing plans and improving cost estimates. Bao uses learned guidance over optimizer-generated plans~\cite{bao}; Lero learns to rank alternative plans directly~\cite{lero}; and ParamTree develops a learned cost model for query optimization~\cite{paramtree}.
+  These approaches use workload or execution evidence to improve plan selection. KART adapts cost guidance to key-value access plans, whose costs depend on scans, index intersections, and candidate retrieval, while validating plan safety independently.

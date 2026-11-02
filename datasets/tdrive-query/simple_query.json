@@ -1,0 +1,2986 @@
+{
+  "workload_id": "simple_query",
+  "manifest_id": "tdrive_v1_ready",
+  "evaluation_role": "e2e_ablation_param_canonical_frozen",
+  "eval_level": "simple",
+  "frozen": true,
+  "frozen_date": "2026-10-22",
+  "source_workload": "experiments/workloads/bound_ir_simple_v3.json",
+  "n": 24,
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_z_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 468143.32069319376,
+        "min_y": 4440461.933118469,
+        "max_x": 472615.45664819336,
+        "max_y": 4444934.069073469,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_h_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 468140.77588316775,
+        "min_y": 4440459.388308443,
+        "max_x": 473618.00145821937,
+        "max_y": 4445936.613883495,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_tz_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 465907.25271569396,
+        "min_y": 4438225.86514097,
+        "max_x": 474851.52462569316,
+        "max_y": 4447170.137050969,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202039700000,
+        "end_ms": 1202050500000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_xz_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 463578.65341632586,
+        "min_y": 4435897.265841601,
+        "max_x": 477180.12392506126,
+        "max_y": 4449498.736350337,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202009100000,
+        "end_ms": 1202081100000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_ts_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464214.97466772515,
+        "min_y": 4436533.587092999,
+        "max_x": 476543.80267366196,
+        "max_y": 4448862.415098939,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202019900000,
+        "end_ms": 1202070300000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_srq_xzt_1",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 462173.6945202726,
+        "min_y": 4434792.306945548,
+        "max_x": 477985.0828211145,
+        "max_y": 4450603.69524639,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202039700000,
+        "end_ms": 1202050500000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_2",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4441085.539916219,
+          "max_x": 470110.42588044365,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4441085.539916219,
+          "max_x": 473091.84985044337,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4444066.963886219,
+          "max_x": 470110.42588044365,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4444066.963886219,
+          "max_x": 473091.84985044337,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 468366.92749094375,
+          "min_y": 4440685.539916219,
+          "max_x": 469410.42588044365,
+          "max_y": 4441729.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471348.35146094346,
+          "min_y": 4440685.539916219,
+          "max_x": 472391.84985044337,
+          "max_y": 4441729.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 468366.92749094375,
+          "min_y": 4443666.963886219,
+          "max_x": 469410.42588044365,
+          "max_y": 4444710.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471348.35146094346,
+          "min_y": 4443666.963886219,
+          "max_x": 472391.84985044337,
+          "max_y": 4444710.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_h_2",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 467914.6371619203,
+          "min_y": 4440233.249587196,
+          "max_x": 469192.6564627657,
+          "max_y": 4441511.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471566.1208786214,
+          "min_y": 4440233.249587196,
+          "max_x": 472844.1401794668,
+          "max_y": 4441511.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 467914.6371619203,
+          "min_y": 4443884.733303897,
+          "max_x": 469192.6564627657,
+          "max_y": 4445162.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471566.1208786214,
+          "min_y": 4443884.733303897,
+          "max_x": 472844.1401794668,
+          "max_y": 4445162.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_h_3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 469114.6371619203,
+          "min_y": 4441033.249587196,
+          "max_x": 470392.6564627657,
+          "max_y": 4442311.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472766.1208786214,
+          "min_y": 4441033.249587196,
+          "max_x": 474044.1401794668,
+          "max_y": 4442311.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 469114.6371619203,
+          "min_y": 4444684.733303897,
+          "max_x": 470392.6564627657,
+          "max_y": 4445962.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472766.1208786214,
+          "min_y": 4444684.733303897,
+          "max_x": 474044.1401794668,
+          "max_y": 4445962.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_4",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4441085.539916219,
+          "max_x": 470110.42588044365,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4441085.539916219,
+          "max_x": 473091.84985044337,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4444066.963886219,
+          "max_x": 470110.42588044365,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4444066.963886219,
+          "max_x": 473091.84985044337,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_h_4",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [
+        {
+          "field": "vehicle_id",
+          "op": "EQ",
+          "value": "8857"
+        }
+      ],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 468214.6371619203,
+          "min_y": 4440233.249587196,
+          "max_x": 469492.6564627657,
+          "max_y": 4441511.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471866.1208786214,
+          "min_y": 4440233.249587196,
+          "max_x": 473144.1401794668,
+          "max_y": 4441511.268888041,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 468214.6371619203,
+          "min_y": 4443884.733303897,
+          "max_x": 469492.6564627657,
+          "max_y": 4445162.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471866.1208786214,
+          "min_y": 4443884.733303897,
+          "max_x": 473144.1401794668,
+          "max_y": 4445162.752604743,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202036910000,
+        "end_ms": 1202094510000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_5",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4441085.539916219,
+          "max_x": 470110.42588044365,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4441085.539916219,
+          "max_x": 473091.84985044337,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4444066.963886219,
+          "max_x": 470110.42588044365,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4444066.963886219,
+          "max_x": 473091.84985044337,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_6",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 468366.92749094375,
+          "min_y": 4440685.539916219,
+          "max_x": 469410.42588044365,
+          "max_y": 4441729.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471348.35146094346,
+          "min_y": 4440685.539916219,
+          "max_x": 472391.84985044337,
+          "max_y": 4441729.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 468366.92749094375,
+          "min_y": 4443666.963886219,
+          "max_x": 469410.42588044365,
+          "max_y": 4444710.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 471348.35146094346,
+          "min_y": 4443666.963886219,
+          "max_x": 472391.84985044337,
+          "max_y": 4444710.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_str_z_7",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial_parts": [
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4441085.539916219,
+          "max_x": 470110.42588044365,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4441085.539916219,
+          "max_x": 473091.84985044337,
+          "max_y": 4442129.038305719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 469066.92749094375,
+          "min_y": 4444066.963886219,
+          "max_x": 470110.42588044365,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        },
+        {
+          "min_x": 472048.35146094346,
+          "min_y": 4444066.963886219,
+          "max_x": 473091.84985044337,
+          "max_y": 4445110.462275719,
+          "relation": "INTERSECTS",
+          "boundary": "INCLUDED"
+        }
+      ],
+      "temporal": {
+        "start_ms": 1202016300000,
+        "end_ms": 1202073900000
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_ss_xz_2",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 5,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 463578.65341632586,
+        "min_y": 4435897.265841601,
+        "max_x": 477180.12392506126,
+        "max_y": 4449498.736350337,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202009100000,
+        "end_ms": 1202081100000
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_ss_ts_2",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 5,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464214.97466772515,
+        "min_y": 4436533.587092999,
+        "max_x": 476543.80267366196,
+        "max_y": 4448862.415098939,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202019900000,
+        "end_ms": 1202070300000
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 45720,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_ss_xzt_2",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 5,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 462173.6945202726,
+        "min_y": 4434792.306945548,
+        "max_x": 477985.0828211145,
+        "max_y": 4450603.69524639,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202039700000,
+        "end_ms": 1202050500000
+      },
+      "similarity": {
+        "metric": "HAUSDORFF",
+        "reference_tid": 25697,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_xz_3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464278.65341632586,
+        "min_y": 4436297.265841601,
+        "max_x": 477880.12392506126,
+        "max_y": 4449898.736350337,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202009100000,
+        "end_ms": 1202081100000
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_ts_3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 10,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464214.9746677246,
+        "min_y": 4436533.587093,
+        "max_x": 476543.80267366255,
+        "max_y": 4448862.415098938,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202019900000,
+        "end_ms": 1202070300000
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 45720,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_xzt_3",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 462473.6945202726,
+        "min_y": 4434792.306945548,
+        "max_x": 478285.0828211145,
+        "max_y": 4450603.69524639,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202039700000,
+        "end_ms": 1202050500000
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 25697,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_xz_4",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 10,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464778.65341632586,
+        "min_y": 4436697.265841601,
+        "max_x": 478380.12392506126,
+        "max_y": 4450298.736350337,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202009100000,
+        "end_ms": 1202081100000
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 41360,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_ts_4",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 3,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 464914.9746677246,
+        "min_y": 4436933.587093,
+        "max_x": 477243.80267366255,
+        "max_y": 4449262.415098938,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202019900000,
+        "end_ms": 1202070300000
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 45720,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    },
+    {
+      "ir_version": "1.0",
+      "query_id": "s_topk_xzt_4",
+      "source": {
+        "dataset_id": "tdrive_v1",
+        "entity": "trajectory"
+      },
+      "predicates": [],
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "k": 10,
+        "tie_breaker": "TID_ASC"
+      },
+      "snapshot": {
+        "manifest_id": "tdrive_v1_ready",
+        "semantics_version": "point_dtw_v1"
+      },
+      "spatial": {
+        "min_x": 462773.6945202726,
+        "min_y": 4434792.306945548,
+        "max_x": 478585.0828211145,
+        "max_y": 4450603.69524639,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "temporal": {
+        "start_ms": 1202060310000,
+        "end_ms": 1202071110000
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 25697,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "eval_level": "simple"
+    }
+  ],
+  "answers": [
+    {
+      "query_id": "s_srq_z_1",
+      "trajectory_ids": [
+        "10230-10230_29",
+        "10344-10344_30",
+        "1040-1040_6",
+        "1047-1047_20",
+        "1055-1055_9",
+        "1056-1056_20",
+        "107-107_12",
+        "1495-1495_11",
+        "16-16_22",
+        "16-16_23",
+        "1697-1697_16",
+        "1928-1928_10",
+        "2376-2376_10",
+        "2376-2376_8",
+        "2376-2376_9",
+        "2405-2405_13",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2413-2413_16",
+        "2414-2414_20",
+        "2415-2415_16",
+        "2616-2616_30",
+        "27-27_1202061163",
+        "2765-2765_15",
+        "2820-2820_13",
+        "289-289_11",
+        "289-289_12",
+        "29-29_13",
+        "2944-2944_26",
+        "2950-2950_17",
+        "2951-2951_17",
+        "2969-2969_11",
+        "3045-3045_19",
+        "3336-3336_20",
+        "3441-3441_12",
+        "4458-4458_28",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4706-4706_9",
+        "476-476_8",
+        "4842-4842_16",
+        "4842-4842_18",
+        "4842-4842_20",
+        "4854-4854_95",
+        "4854-4854_96",
+        "4920-4920_24",
+        "4923-4923_12",
+        "4923-4923_13",
+        "5009-5009_25",
+        "5023-5023_21",
+        "5025-5025_16",
+        "5032-5032_25",
+        "5034-5034_21",
+        "511-511_19",
+        "512-512_18",
+        "5150-5150_12",
+        "516-516_15",
+        "529-529_7",
+        "5340-5340_15",
+        "5340-5340_16",
+        "5341-5341_16",
+        "5593-5593_16",
+        "5593-5593_21",
+        "5595-5595_24",
+        "5595-5595_25",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5793-5793_10",
+        "5817-5817_5",
+        "5975-5975_18",
+        "6077-6077_18",
+        "6289-6289_8",
+        "675-675_22",
+        "705-705_10",
+        "710-710_28",
+        "713-713_28",
+        "7143-7143_17",
+        "7356-7356_23",
+        "7396-7396_29",
+        "7425-7425_47",
+        "7427-7427_80",
+        "7427-7427_81",
+        "7427-7427_87",
+        "7812-7812_3",
+        "8857-8857_12",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8896-8896_7",
+        "9034-9034_13",
+        "9547-9547_5",
+        "9584-9584_8",
+        "9597-9597_14"
+      ]
+    },
+    {
+      "query_id": "s_srq_h_1",
+      "trajectory_ids": [
+        "8857-8857_12",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_srq_tz_1",
+      "trajectory_ids": [
+        "10344-10344_30",
+        "107-107_12",
+        "16-16_22",
+        "1696-1696_16",
+        "1928-1928_10",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2389-2389_21",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2413-2413_16",
+        "2765-2765_15",
+        "289-289_11",
+        "289-289_12",
+        "2944-2944_26",
+        "3283-3283_18",
+        "33-33_1202048277",
+        "3490-3490_7",
+        "4475-4475_14",
+        "463-463_10",
+        "4706-4706_8",
+        "476-476_8",
+        "4854-4854_95",
+        "4920-4920_24",
+        "4923-4923_13",
+        "5023-5023_21",
+        "5025-5025_16",
+        "5032-5032_25",
+        "516-516_15",
+        "529-529_7",
+        "5340-5340_15",
+        "5340-5340_16",
+        "5341-5341_16",
+        "5342-5342_27",
+        "5593-5593_16",
+        "5593-5593_21",
+        "5595-5595_24",
+        "5781-5781_10",
+        "5793-5793_10",
+        "705-705_10",
+        "710-710_28",
+        "713-713_28",
+        "715-715_110",
+        "7427-7427_80",
+        "8857-8857_14",
+        "9547-9547_5",
+        "9551-9551_14",
+        "9584-9584_8"
+      ]
+    },
+    {
+      "query_id": "s_srq_xz_1",
+      "trajectory_ids": [
+        "10021-10021_5",
+        "10023-10023_14",
+        "10023-10023_15",
+        "10024-10024_8",
+        "10153-10153_18",
+        "10180-10180_25",
+        "10180-10180_26",
+        "10180-10180_27",
+        "10196-10196_24",
+        "10218-10218_23",
+        "10218-10218_27",
+        "10219-10219_3",
+        "10230-10230_29",
+        "10232-10232_22",
+        "10232-10232_28",
+        "10344-10344_30",
+        "10356-10356_24",
+        "1040-1040_6",
+        "1046-1046_26",
+        "1047-1047_20",
+        "1050-1050_17",
+        "1054-1054_14",
+        "1055-1055_9",
+        "1056-1056_20",
+        "106-106_12",
+        "1069-1069_22",
+        "107-107_12",
+        "1078-1078_15",
+        "1087-1087_10",
+        "1087-1087_7",
+        "1118-1118_15",
+        "1121-1121_23",
+        "1125-1125_10",
+        "1125-1125_8",
+        "115-115_13",
+        "1246-1246_5",
+        "1278-1278_10",
+        "1319-1319_18",
+        "1319-1319_19",
+        "1337-1337_5",
+        "1444-1444_24",
+        "1445-1445_15",
+        "1468-1468_7",
+        "1492-1492_6",
+        "1495-1495_11",
+        "1495-1495_8",
+        "1518-1518_15",
+        "1521-1521_9",
+        "1526-1526_18",
+        "1536-1536_9",
+        "16-16_22",
+        "16-16_23",
+        "1652-1652_15",
+        "1685-1685_6",
+        "1696-1696_16",
+        "1697-1697_16",
+        "1697-1697_17",
+        "1720-1720_12",
+        "1727-1727_24",
+        "1730-1730_22",
+        "1735-1735_10",
+        "1866-1866_18",
+        "1872-1872_16",
+        "1872-1872_17",
+        "1904-1904_10",
+        "1928-1928_10",
+        "2015-2015_23",
+        "2016-2016_10",
+        "2016-2016_14",
+        "2028-2028_31",
+        "2189-2189_27",
+        "2189-2189_30",
+        "2372-2372_12",
+        "2372-2372_13",
+        "2374-2374_5",
+        "2376-2376_10",
+        "2376-2376_11",
+        "2376-2376_4",
+        "2376-2376_8",
+        "2376-2376_9",
+        "2389-2389_21",
+        "2399-2399_7",
+        "2399-2399_9",
+        "2405-2405_13",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2413-2413_16",
+        "2414-2414_20",
+        "2415-2415_16",
+        "2570-2570_19",
+        "2607-2607_29",
+        "2616-2616_30",
+        "263-263_11",
+        "27-27_1202039197",
+        "27-27_1202043061",
+        "27-27_1202061163",
+        "270-270_12",
+        "2759-2759_11",
+        "2759-2759_12",
+        "2762-2762_21",
+        "2765-2765_12",
+        "2765-2765_15",
+        "2766-2766_21",
+        "2766-2766_23",
+        "2766-2766_24",
+        "2771-2771_10",
+        "2771-2771_11",
+        "2771-2771_15",
+        "2771-2771_18",
+        "2773-2773_24",
+        "2776-2776_11",
+        "28-28_24",
+        "28-28_25",
+        "2808-2808_13",
+        "2820-2820_13",
+        "289-289_11",
+        "289-289_12",
+        "29-29_13",
+        "2941-2941_17",
+        "2944-2944_26",
+        "2950-2950_17",
+        "2951-2951_15",
+        "2951-2951_17",
+        "2952-2952_8",
+        "2954-2954_25",
+        "2955-2955_21",
+        "2969-2969_11",
+        "2983-2983_11",
+        "2983-2983_12",
+        "2986-2986_21",
+        "300-300_13",
+        "3041-3041_14",
+        "3045-3045_16",
+        "3045-3045_17",
+        "3045-3045_19",
+        "3056-3056_15",
+        "3068-3068_6",
+        "3082-3082_14",
+        "3082-3082_15",
+        "3083-3083_10",
+        "3092-3092_13",
+        "3092-3092_16",
+        "3096-3096_22",
+        "3096-3096_28",
+        "3096-3096_41",
+        "3108-3108_6",
+        "3131-3131_12",
+        "3247-3247_19",
+        "3268-3268_18",
+        "3283-3283_18",
+        "3296-3296_12",
+        "3297-3297_20",
+        "33-33_1202048277",
+        "3321-3321_18",
+        "3333-3333_9",
+        "3336-3336_18",
+        "3336-3336_20",
+        "3440-3440_5",
+        "3441-3441_12",
+        "3446-3446_4",
+        "3478-3478_12",
+        "3478-3478_15",
+        "3483-3483_10",
+        "3483-3483_9",
+        "3490-3490_7",
+        "3490-3490_8",
+        "3491-3491_8",
+        "3537-3537_12",
+        "3537-3537_7",
+        "3647-3647_23",
+        "3669-3669_10",
+        "3669-3669_8",
+        "3680-3680_12",
+        "3680-3680_13",
+        "3685-3685_9",
+        "3691-3691_22",
+        "3695-3695_18",
+        "3723-3723_8",
+        "3725-3725_8",
+        "3733-3733_21",
+        "3737-3737_18",
+        "3861-3861_12",
+        "3865-3865_29",
+        "3874-3874_12",
+        "3877-3877_15",
+        "3900-3900_12",
+        "3904-3904_25",
+        "3904-3904_26",
+        "3910-3910_17",
+        "3910-3910_18",
+        "3916-3916_13",
+        "3916-3916_17",
+        "3916-3916_21",
+        "3916-3916_22",
+        "4077-4077_18",
+        "4104-4104_9",
+        "4267-4267_25",
+        "4275-4275_15",
+        "4275-4275_17",
+        "4276-4276_11",
+        "4276-4276_9",
+        "4302-4302_12",
+        "4314-4314_20",
+        "4458-4458_28",
+        "4459-4459_24",
+        "4459-4459_33",
+        "4460-4460_12",
+        "4461-4461_19",
+        "4466-4466_21",
+        "4466-4466_26",
+        "4475-4475_10",
+        "4475-4475_13",
+        "4475-4475_14",
+        "4475-4475_15",
+        "4500-4500_4",
+        "4500-4500_5",
+        "4500-4500_8",
+        "459-459_10",
+        "459-459_12",
+        "463-463_10",
+        "4658-4658_22",
+        "4660-4660_14",
+        "4662-4662_9",
+        "4666-4666_10",
+        "4666-4666_9",
+        "4672-4672_16",
+        "4706-4706_8",
+        "4706-4706_9",
+        "476-476_8",
+        "4842-4842_15",
+        "4842-4842_16",
+        "4842-4842_18",
+        "4842-4842_20",
+        "4842-4842_21",
+        "4854-4854_95",
+        "4854-4854_96",
+        "4857-4857_15",
+        "489-489_8",
+        "489-489_9",
+        "4918-4918_14",
+        "4920-4920_24",
+        "4920-4920_25",
+        "4923-4923_12",
+        "4923-4923_13",
+        "4925-4925_19",
+        "5009-5009_11",
+        "5009-5009_18",
+        "5009-5009_21",
+        "5009-5009_22",
+        "5009-5009_25",
+        "5023-5023_21",
+        "5024-5024_11",
+        "5025-5025_16",
+        "5032-5032_14",
+        "5032-5032_25",
+        "5034-5034_20",
+        "5034-5034_21",
+        "5034-5034_23",
+        "5037-5037_18",
+        "5037-5037_19",
+        "504-504_9",
+        "507-507_7",
+        "510-510_14",
+        "510-510_15",
+        "511-511_19",
+        "512-512_18",
+        "5140-5140_5",
+        "5150-5150_12",
+        "516-516_15",
+        "517-517_12",
+        "5193-5193_17",
+        "5193-5193_23",
+        "5193-5193_25",
+        "5195-5195_7",
+        "5218-5218_12",
+        "5222-5222_11",
+        "5222-5222_17",
+        "5223-5223_9",
+        "5233-5233_12",
+        "5236-5236_19",
+        "529-529_7",
+        "5340-5340_15",
+        "5340-5340_16",
+        "5341-5341_11",
+        "5341-5341_13",
+        "5341-5341_16",
+        "5342-5342_27",
+        "5355-5355_6",
+        "5408-5408_16",
+        "5408-5408_21",
+        "5432-5432_70",
+        "5432-5432_72",
+        "5432-5432_79",
+        "5544-5544_10",
+        "5550-5550_16",
+        "5551-5551_17",
+        "5584-5584_30",
+        "5587-5587_7",
+        "5590-5590_11",
+        "5593-5593_16",
+        "5593-5593_21",
+        "5595-5595_11",
+        "5595-5595_24",
+        "5595-5595_25",
+        "5595-5595_28",
+        "5740-5740_10",
+        "5740-5740_12",
+        "5747-5747_10",
+        "5768-5768_11",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5781-5781_11",
+        "5781-5781_12",
+        "5785-5785_8",
+        "5785-5785_9",
+        "5787-5787_20",
+        "5790-5790_20",
+        "5793-5793_10",
+        "5797-5797_8",
+        "5803-5803_13",
+        "5810-5810_18",
+        "5810-5810_20",
+        "5815-5815_9",
+        "5817-5817_5",
+        "5967-5967_24",
+        "5967-5967_27",
+        "5967-5967_38",
+        "5975-5975_14",
+        "5975-5975_17",
+        "5975-5975_18",
+        "5975-5975_19",
+        "5977-5977_14",
+        "6048-6048_14",
+        "6060-6060_18",
+        "6061-6061_26",
+        "6066-6066_9",
+        "6077-6077_18",
+        "6100-6100_22",
+        "6101-6101_20",
+        "6101-6101_23",
+        "6104-6104_27",
+        "6105-6105_8",
+        "6105-6105_9",
+        "6115-6115_19",
+        "6115-6115_22",
+        "6115-6115_23",
+        "6128-6128_32",
+        "6129-6129_6",
+        "6129-6129_7",
+        "6259-6259_10",
+        "6259-6259_11",
+        "6288-6288_11",
+        "6288-6288_14",
+        "6288-6288_16",
+        "6289-6289_8",
+        "6338-6338_11",
+        "6458-6458_10",
+        "6475-6475_5",
+        "6502-6502_22",
+        "6507-6507_11",
+        "6511-6511_7",
+        "6511-6511_8",
+        "6529-6529_12",
+        "6538-6538_19",
+        "659-659_10",
+        "660-660_12",
+        "6649-6649_17",
+        "6649-6649_18",
+        "666-666_9",
+        "6667-6667_20",
+        "6673-6673_6",
+        "6688-6688_10",
+        "6702-6702_12",
+        "6702-6702_16",
+        "6702-6702_8",
+        "6705-6705_7",
+        "674-674_15",
+        "675-675_22",
+        "6879-6879_14",
+        "6879-6879_9",
+        "6882-6882_11",
+        "6908-6908_21",
+        "6919-6919_16",
+        "6921-6921_20",
+        "6930-6930_17",
+        "6933-6933_15",
+        "701-701_18",
+        "7025-7025_12",
+        "7026-7026_7",
+        "705-705_10",
+        "705-705_9",
+        "710-710_28",
+        "710-710_30",
+        "710-710_31",
+        "713-713_28",
+        "7140-7140_12",
+        "7140-7140_13",
+        "7143-7143_10",
+        "7143-7143_11",
+        "7143-7143_17",
+        "715-715_109",
+        "715-715_110",
+        "715-715_115",
+        "7186-7186_16",
+        "7190-7190_26",
+        "7190-7190_28",
+        "7192-7192_14",
+        "7192-7192_15",
+        "7192-7192_17",
+        "7193-7193_23",
+        "7225-7225_17",
+        "7225-7225_18",
+        "7227-7227_14",
+        "728-728_10",
+        "7343-7343_9",
+        "7347-7347_21",
+        "7356-7356_23",
+        "7387-7387_22",
+        "7387-7387_24",
+        "7387-7387_25",
+        "7391-7391_7",
+        "7396-7396_29",
+        "7425-7425_47",
+        "7427-7427_58",
+        "7427-7427_59",
+        "7427-7427_64",
+        "7427-7427_80",
+        "7427-7427_81",
+        "7427-7427_87",
+        "7434-7434_11",
+        "7435-7435_7",
+        "7436-7436_25",
+        "7551-7551_22",
+        "7554-7554_26",
+        "7586-7586_15",
+        "7594-7594_11",
+        "7594-7594_9",
+        "7625-7625_5",
+        "7625-7625_8",
+        "7746-7746_16",
+        "7768-7768_20",
+        "7790-7790_7",
+        "7806-7806_10",
+        "7810-7810_11",
+        "7812-7812_3",
+        "7828-7828_16",
+        "7949-7949_9",
+        "7964-7964_27",
+        "7964-7964_31",
+        "8088-8088_13",
+        "8088-8088_16",
+        "8099-8099_21",
+        "8104-8104_19",
+        "8105-8105_16",
+        "8249-8249_15",
+        "8307-8307_17",
+        "8329-8329_27",
+        "8329-8329_33",
+        "8466-8466_8",
+        "8472-8472_15",
+        "8473-8473_13",
+        "8474-8474_23",
+        "850-850_17",
+        "8501-8501_14",
+        "8513-8513_17",
+        "852-852_11",
+        "8538-8538_20",
+        "8666-8666_11",
+        "8667-8667_9",
+        "8676-8676_36",
+        "8676-8676_37",
+        "8688-8688_15",
+        "8688-8688_17",
+        "8705-8705_14",
+        "8728-8728_14",
+        "8738-8738_107",
+        "8738-8738_130",
+        "8738-8738_61",
+        "8855-8855_13",
+        "8857-8857_11",
+        "8857-8857_12",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8879-8879_12",
+        "8893-8893_19",
+        "8894-8894_13",
+        "8896-8896_7",
+        "8896-8896_8",
+        "891-891_11",
+        "891-891_12",
+        "891-891_14",
+        "891-891_15",
+        "8919-8919_14",
+        "8923-8923_17",
+        "8927-8927_7",
+        "9022-9022_27",
+        "9034-9034_13",
+        "909-909_6",
+        "9143-9143_6",
+        "9145-9145_17",
+        "9150-9150_19",
+        "9150-9150_23",
+        "9150-9150_25",
+        "9154-9154_8",
+        "9179-9179_16",
+        "9187-9187_35",
+        "9193-9193_50",
+        "9193-9193_51",
+        "9209-9209_6",
+        "9209-9209_8",
+        "9235-9235_9",
+        "924-924_5",
+        "924-924_7",
+        "930-930_24",
+        "930-930_25",
+        "932-932_8",
+        "9340-9340_10",
+        "9340-9340_8",
+        "935-935_10",
+        "935-935_9",
+        "9352-9352_10",
+        "9354-9354_9",
+        "9356-9356_16",
+        "9357-9357_11",
+        "9357-9357_9",
+        "9382-9382_7",
+        "9383-9383_10",
+        "9387-9387_9",
+        "9434-9434_6",
+        "9547-9547_5",
+        "9547-9547_6",
+        "9550-9550_13",
+        "9551-9551_12",
+        "9551-9551_14",
+        "9552-9552_12",
+        "9555-9555_12",
+        "9555-9555_14",
+        "9584-9584_7",
+        "9584-9584_8",
+        "9591-9591_10",
+        "9591-9591_11",
+        "9592-9592_6",
+        "9592-9592_9",
+        "9596-9596_20",
+        "9597-9597_14",
+        "9620-9620_11",
+        "9620-9620_12",
+        "9630-9630_20",
+        "9630-9630_22",
+        "9630-9630_27",
+        "9742-9742_17",
+        "9744-9744_12",
+        "9781-9781_13",
+        "9781-9781_18",
+        "9781-9781_20",
+        "9785-9785_10",
+        "9785-9785_11",
+        "9791-9791_11",
+        "9791-9791_14",
+        "9792-9792_22",
+        "9959-9959_16",
+        "9959-9959_17",
+        "9975-9975_11",
+        "9989-9989_14"
+      ]
+    },
+    {
+      "query_id": "s_srq_ts_1",
+      "trajectory_ids": [
+        "10023-10023_14",
+        "10023-10023_15",
+        "10024-10024_8",
+        "10153-10153_18",
+        "10180-10180_25",
+        "10196-10196_24",
+        "10218-10218_23",
+        "10230-10230_29",
+        "10344-10344_30",
+        "10356-10356_24",
+        "1040-1040_6",
+        "1046-1046_26",
+        "1047-1047_20",
+        "1056-1056_20",
+        "107-107_12",
+        "1078-1078_15",
+        "1118-1118_15",
+        "1121-1121_23",
+        "115-115_13",
+        "1246-1246_5",
+        "1319-1319_18",
+        "1337-1337_5",
+        "1445-1445_15",
+        "1468-1468_7",
+        "1492-1492_6",
+        "1495-1495_11",
+        "1518-1518_15",
+        "1521-1521_9",
+        "1526-1526_18",
+        "1536-1536_9",
+        "16-16_22",
+        "16-16_23",
+        "1696-1696_16",
+        "1697-1697_16",
+        "1720-1720_12",
+        "1872-1872_16",
+        "1928-1928_10",
+        "2015-2015_23",
+        "2016-2016_14",
+        "2028-2028_31",
+        "2189-2189_27",
+        "2189-2189_30",
+        "2372-2372_13",
+        "2376-2376_10",
+        "2376-2376_8",
+        "2376-2376_9",
+        "2389-2389_21",
+        "2399-2399_7",
+        "2399-2399_9",
+        "2405-2405_13",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2413-2413_16",
+        "2414-2414_20",
+        "2415-2415_16",
+        "2570-2570_19",
+        "2616-2616_30",
+        "27-27_1202039197",
+        "27-27_1202043061",
+        "27-27_1202061163",
+        "2759-2759_11",
+        "2762-2762_21",
+        "2765-2765_15",
+        "2766-2766_23",
+        "2766-2766_24",
+        "2771-2771_18",
+        "28-28_24",
+        "28-28_25",
+        "2808-2808_13",
+        "2820-2820_13",
+        "289-289_11",
+        "289-289_12",
+        "29-29_13",
+        "2941-2941_17",
+        "2944-2944_26",
+        "2950-2950_17",
+        "2954-2954_25",
+        "2955-2955_21",
+        "2969-2969_11",
+        "2983-2983_11",
+        "2983-2983_12",
+        "3045-3045_16",
+        "3045-3045_17",
+        "3045-3045_19",
+        "3082-3082_14",
+        "3092-3092_16",
+        "3096-3096_22",
+        "3096-3096_41",
+        "3131-3131_12",
+        "3247-3247_19",
+        "3268-3268_18",
+        "3283-3283_18",
+        "33-33_1202048277",
+        "3321-3321_18",
+        "3336-3336_20",
+        "3440-3440_5",
+        "3441-3441_12",
+        "3478-3478_15",
+        "3490-3490_7",
+        "3491-3491_8",
+        "3537-3537_7",
+        "3647-3647_23",
+        "3669-3669_8",
+        "3680-3680_13",
+        "3691-3691_22",
+        "3725-3725_8",
+        "3733-3733_21",
+        "3874-3874_12",
+        "3877-3877_15",
+        "3900-3900_12",
+        "3904-3904_25",
+        "3910-3910_17",
+        "3910-3910_18",
+        "3916-3916_13",
+        "4267-4267_25",
+        "4275-4275_17",
+        "4314-4314_20",
+        "4458-4458_28",
+        "4459-4459_24",
+        "4460-4460_12",
+        "4461-4461_19",
+        "4466-4466_26",
+        "4475-4475_10",
+        "4475-4475_13",
+        "4475-4475_14",
+        "4475-4475_15",
+        "4500-4500_4",
+        "4500-4500_5",
+        "459-459_10",
+        "459-459_12",
+        "463-463_10",
+        "4658-4658_22",
+        "4706-4706_8",
+        "4706-4706_9",
+        "476-476_8",
+        "4842-4842_18",
+        "4842-4842_20",
+        "4842-4842_21",
+        "4854-4854_95",
+        "4854-4854_96",
+        "4857-4857_15",
+        "489-489_8",
+        "4920-4920_24",
+        "4923-4923_12",
+        "4923-4923_13",
+        "4925-4925_19",
+        "5009-5009_18",
+        "5009-5009_21",
+        "5009-5009_22",
+        "5009-5009_25",
+        "5023-5023_21",
+        "5024-5024_11",
+        "5025-5025_16",
+        "5032-5032_25",
+        "5034-5034_21",
+        "5037-5037_18",
+        "507-507_7",
+        "510-510_14",
+        "510-510_15",
+        "511-511_19",
+        "512-512_18",
+        "5150-5150_12",
+        "516-516_15",
+        "5195-5195_7",
+        "5222-5222_17",
+        "529-529_7",
+        "5340-5340_15",
+        "5340-5340_16",
+        "5341-5341_13",
+        "5341-5341_16",
+        "5342-5342_27",
+        "5355-5355_6",
+        "5408-5408_16",
+        "5408-5408_21",
+        "5432-5432_70",
+        "5544-5544_10",
+        "5551-5551_17",
+        "5590-5590_11",
+        "5593-5593_16",
+        "5593-5593_21",
+        "5595-5595_24",
+        "5595-5595_25",
+        "5740-5740_10",
+        "5740-5740_12",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5781-5781_11",
+        "5781-5781_12",
+        "5790-5790_20",
+        "5793-5793_10",
+        "5797-5797_8",
+        "5803-5803_13",
+        "5810-5810_18",
+        "5810-5810_20",
+        "5817-5817_5",
+        "5967-5967_24",
+        "5967-5967_27",
+        "5967-5967_38",
+        "5975-5975_17",
+        "5975-5975_18",
+        "5977-5977_14",
+        "6048-6048_14",
+        "6060-6060_18",
+        "6061-6061_26",
+        "6077-6077_18",
+        "6100-6100_22",
+        "6104-6104_27",
+        "6105-6105_9",
+        "6115-6115_19",
+        "6129-6129_7",
+        "6259-6259_11",
+        "6288-6288_11",
+        "6288-6288_14",
+        "6338-6338_11",
+        "6458-6458_10",
+        "6475-6475_5",
+        "6507-6507_11",
+        "6511-6511_8",
+        "6529-6529_12",
+        "659-659_10",
+        "660-660_12",
+        "6649-6649_17",
+        "6649-6649_18",
+        "6673-6673_6",
+        "6688-6688_10",
+        "6702-6702_12",
+        "6702-6702_16",
+        "674-674_15",
+        "675-675_22",
+        "6879-6879_14",
+        "6879-6879_9",
+        "6908-6908_21",
+        "6921-6921_20",
+        "6930-6930_17",
+        "7025-7025_12",
+        "7026-7026_7",
+        "705-705_10",
+        "705-705_9",
+        "710-710_28",
+        "710-710_30",
+        "710-710_31",
+        "713-713_28",
+        "7140-7140_12",
+        "7140-7140_13",
+        "7143-7143_11",
+        "7143-7143_17",
+        "715-715_109",
+        "715-715_110",
+        "715-715_115",
+        "7186-7186_16",
+        "7192-7192_15",
+        "7193-7193_23",
+        "7225-7225_17",
+        "7225-7225_18",
+        "728-728_10",
+        "7347-7347_21",
+        "7356-7356_23",
+        "7387-7387_24",
+        "7387-7387_25",
+        "7391-7391_7",
+        "7396-7396_29",
+        "7425-7425_47",
+        "7427-7427_58",
+        "7427-7427_80",
+        "7427-7427_81",
+        "7427-7427_87",
+        "7434-7434_11",
+        "7594-7594_9",
+        "7746-7746_16",
+        "7768-7768_20",
+        "7810-7810_11",
+        "7812-7812_3",
+        "7828-7828_16",
+        "7964-7964_27",
+        "7964-7964_31",
+        "8088-8088_13",
+        "8088-8088_16",
+        "8104-8104_19",
+        "8249-8249_15",
+        "8329-8329_27",
+        "8466-8466_8",
+        "8472-8472_15",
+        "8473-8473_13",
+        "8474-8474_23",
+        "850-850_17",
+        "8513-8513_17",
+        "852-852_11",
+        "8666-8666_11",
+        "8688-8688_17",
+        "8705-8705_14",
+        "8738-8738_107",
+        "8855-8855_13",
+        "8857-8857_14",
+        "8857-8857_15",
+        "8879-8879_12",
+        "8893-8893_19",
+        "8894-8894_13",
+        "8896-8896_7",
+        "8896-8896_8",
+        "891-891_11",
+        "891-891_14",
+        "891-891_15",
+        "8923-8923_17",
+        "9022-9022_27",
+        "9034-9034_13",
+        "9143-9143_6",
+        "9145-9145_17",
+        "9179-9179_16",
+        "9209-9209_8",
+        "9235-9235_9",
+        "924-924_7",
+        "930-930_24",
+        "932-932_8",
+        "9340-9340_10",
+        "935-935_10",
+        "9352-9352_10",
+        "9356-9356_16",
+        "9357-9357_11",
+        "9357-9357_9",
+        "9547-9547_5",
+        "9551-9551_12",
+        "9551-9551_14",
+        "9555-9555_14",
+        "9584-9584_8",
+        "9592-9592_9",
+        "9597-9597_14",
+        "9630-9630_20",
+        "9630-9630_27",
+        "9742-9742_17",
+        "9744-9744_12",
+        "9781-9781_18",
+        "9785-9785_11",
+        "9791-9791_11",
+        "9959-9959_16",
+        "9959-9959_17",
+        "9975-9975_11"
+      ]
+    },
+    {
+      "query_id": "s_srq_xzt_1",
+      "trajectory_ids": [
+        "10024-10024_8",
+        "10218-10218_23",
+        "10232-10232_22",
+        "10343-10343_8",
+        "10344-10344_30",
+        "106-106_12",
+        "1069-1069_22",
+        "107-107_12",
+        "1078-1078_15",
+        "1319-1319_18",
+        "1444-1444_24",
+        "1445-1445_15",
+        "1518-1518_15",
+        "1526-1526_23",
+        "1536-1536_9",
+        "16-16_22",
+        "1655-1655_19",
+        "1696-1696_16",
+        "1735-1735_10",
+        "1928-1928_10",
+        "2016-2016_14",
+        "2189-2189_30",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2389-2389_21",
+        "2399-2399_7",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2413-2413_16",
+        "27-27_1202039197",
+        "27-27_1202043061",
+        "2765-2765_15",
+        "2766-2766_24",
+        "2771-2771_15",
+        "289-289_11",
+        "289-289_12",
+        "2941-2941_17",
+        "2944-2944_26",
+        "2986-2986_20",
+        "3045-3045_16",
+        "3056-3056_15",
+        "3082-3082_14",
+        "3082-3082_15",
+        "3131-3131_12",
+        "3283-3283_18",
+        "33-33_1202048277",
+        "3321-3321_18",
+        "3321-3321_19",
+        "3336-3336_18",
+        "3483-3483_10",
+        "3490-3490_7",
+        "3537-3537_12",
+        "3537-3537_7",
+        "3669-3669_10",
+        "3669-3669_9",
+        "3695-3695_18",
+        "3737-3737_18",
+        "3877-3877_15",
+        "3904-3904_25",
+        "3916-3916_16",
+        "3916-3916_17",
+        "4275-4275_17",
+        "4302-4302_12",
+        "4459-4459_24",
+        "4475-4475_14",
+        "459-459_12",
+        "463-463_10",
+        "4658-4658_22",
+        "4706-4706_8",
+        "476-476_8",
+        "4854-4854_95",
+        "489-489_9",
+        "4920-4920_24",
+        "4923-4923_13",
+        "5009-5009_18",
+        "5009-5009_21",
+        "5009-5009_22",
+        "5023-5023_21",
+        "5025-5025_16",
+        "5032-5032_25",
+        "507-507_7",
+        "510-510_14",
+        "510-510_15",
+        "5140-5140_16",
+        "5140-5140_17",
+        "5150-5150_12",
+        "516-516_15",
+        "5222-5222_17",
+        "5236-5236_20",
+        "529-529_7",
+        "5340-5340_15",
+        "5340-5340_16",
+        "5341-5341_16",
+        "5342-5342_27",
+        "5432-5432_73",
+        "5432-5432_79",
+        "5551-5551_17",
+        "5593-5593_16",
+        "5593-5593_21",
+        "5595-5595_24",
+        "5740-5740_12",
+        "5781-5781_10",
+        "5793-5793_10",
+        "5797-5797_8",
+        "5815-5815_9",
+        "5967-5967_24",
+        "5967-5967_25",
+        "6048-6048_14",
+        "6101-6101_18",
+        "6101-6101_19",
+        "6105-6105_9",
+        "6288-6288_11",
+        "6459-6459_8",
+        "6475-6475_5",
+        "6502-6502_22",
+        "6507-6507_11",
+        "659-659_10",
+        "6673-6673_6",
+        "6688-6688_10",
+        "6702-6702_12",
+        "6882-6882_11",
+        "6933-6933_15",
+        "7026-7026_7",
+        "705-705_10",
+        "710-710_28",
+        "713-713_28",
+        "7140-7140_12",
+        "7140-7140_13",
+        "715-715_109",
+        "715-715_110",
+        "7192-7192_17",
+        "7197-7197_14",
+        "7387-7387_24",
+        "7387-7387_25",
+        "7427-7427_80",
+        "7551-7551_22",
+        "7594-7594_11",
+        "7746-7746_16",
+        "7810-7810_11",
+        "7964-7964_27",
+        "8074-8074_20",
+        "8249-8249_15",
+        "8312-8312_20",
+        "8312-8312_21",
+        "8329-8329_27",
+        "850-850_17",
+        "8501-8501_14",
+        "852-852_11",
+        "8538-8538_18",
+        "8666-8666_11",
+        "8728-8728_14",
+        "8855-8855_13",
+        "8857-8857_14",
+        "891-891_11",
+        "8923-8923_17",
+        "9034-9034_13",
+        "9145-9145_17",
+        "9154-9154_8",
+        "932-932_8",
+        "9352-9352_10",
+        "9547-9547_5",
+        "9550-9550_13",
+        "9551-9551_14",
+        "9584-9584_8",
+        "9596-9596_20",
+        "9620-9620_12",
+        "9630-9630_27",
+        "9744-9744_12",
+        "9781-9781_18",
+        "9791-9791_11",
+        "9975-9975_11",
+        "9989-9989_14"
+      ]
+    },
+    {
+      "query_id": "s_str_z_2",
+      "trajectory_ids": [
+        "10230-10230_29",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2415-2415_16",
+        "27-27_1202061163",
+        "2951-2951_17",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4842-4842_16",
+        "5025-5025_16",
+        "529-529_7",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5793-5793_10",
+        "7427-7427_80",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_str_z_3",
+      "trajectory_ids": [
+        "10344-10344_30",
+        "2376-2376_10",
+        "2376-2376_8",
+        "2376-2376_9",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2414-2414_20",
+        "27-27_1202061163",
+        "2820-2820_13",
+        "2950-2950_17",
+        "4458-4458_28",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4706-4706_9",
+        "4923-4923_12",
+        "4923-4923_13",
+        "5009-5009_25",
+        "5025-5025_16",
+        "5032-5032_25",
+        "5034-5034_21",
+        "529-529_7",
+        "5593-5593_16",
+        "5595-5595_24",
+        "5768-5768_14",
+        "5817-5817_5",
+        "6077-6077_18",
+        "705-705_10",
+        "713-713_28",
+        "7427-7427_80",
+        "8857-8857_12",
+        "8896-8896_7",
+        "9584-9584_8",
+        "9597-9597_14"
+      ]
+    },
+    {
+      "query_id": "s_str_h_2",
+      "trajectory_ids": [
+        "8857-8857_12"
+      ]
+    },
+    {
+      "query_id": "s_str_h_3",
+      "trajectory_ids": [
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_str_z_4",
+      "trajectory_ids": [
+        "10230-10230_29",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2415-2415_16",
+        "27-27_1202061163",
+        "2951-2951_17",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4842-4842_16",
+        "5025-5025_16",
+        "529-529_7",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5793-5793_10",
+        "7427-7427_80",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_str_h_4",
+      "trajectory_ids": []
+    },
+    {
+      "query_id": "s_str_z_5",
+      "trajectory_ids": [
+        "10230-10230_29",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2415-2415_16",
+        "27-27_1202061163",
+        "2951-2951_17",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4842-4842_16",
+        "5025-5025_16",
+        "529-529_7",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5793-5793_10",
+        "7427-7427_80",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_str_z_6",
+      "trajectory_ids": [
+        "10344-10344_30",
+        "2376-2376_10",
+        "2376-2376_8",
+        "2376-2376_9",
+        "2405-2405_15",
+        "2406-2406_9",
+        "2414-2414_20",
+        "27-27_1202061163",
+        "2820-2820_13",
+        "2950-2950_17",
+        "4458-4458_28",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4706-4706_9",
+        "4923-4923_12",
+        "4923-4923_13",
+        "5009-5009_25",
+        "5025-5025_16",
+        "5032-5032_25",
+        "5034-5034_21",
+        "529-529_7",
+        "5593-5593_16",
+        "5595-5595_24",
+        "5768-5768_14",
+        "5817-5817_5",
+        "6077-6077_18",
+        "705-705_10",
+        "713-713_28",
+        "7427-7427_80",
+        "8857-8857_12",
+        "8896-8896_7",
+        "9584-9584_8",
+        "9597-9597_14"
+      ]
+    },
+    {
+      "query_id": "s_str_z_7",
+      "trajectory_ids": [
+        "10230-10230_29",
+        "2376-2376_10",
+        "2376-2376_9",
+        "2415-2415_16",
+        "27-27_1202061163",
+        "2951-2951_17",
+        "4475-4475_15",
+        "4706-4706_8",
+        "4842-4842_16",
+        "5025-5025_16",
+        "529-529_7",
+        "5768-5768_14",
+        "5781-5781_10",
+        "5793-5793_10",
+        "7427-7427_80",
+        "8857-8857_14",
+        "8857-8857_15"
+      ]
+    },
+    {
+      "query_id": "s_ss_xz_2",
+      "trajectory_ids": [
+        "7427-7427_80",
+        "7427-7427_81",
+        "8857-8857_11",
+        "4854-4854_95",
+        "4854-4854_96"
+      ],
+      "top_k": [
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 42399.958460950314
+        },
+        {
+          "tid": 34159,
+          "trajectory_id": "7427-7427_81",
+          "distance": 62953.95274455593
+        },
+        {
+          "tid": 41357,
+          "trajectory_id": "8857-8857_11",
+          "distance": 64637.16469722237
+        },
+        {
+          "tid": 20703,
+          "trajectory_id": "4854-4854_95",
+          "distance": 67886.72582892429
+        },
+        {
+          "tid": 20704,
+          "trajectory_id": "4854-4854_96",
+          "distance": 68464.76869329011
+        }
+      ]
+    },
+    {
+      "query_id": "s_ss_ts_2",
+      "trajectory_ids": [
+        "7427-7427_80",
+        "4854-4854_95",
+        "2944-2944_26",
+        "2405-2405_15",
+        "5342-5342_27"
+      ],
+      "top_k": [
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 2872.7572171570505
+        },
+        {
+          "tid": 20703,
+          "trajectory_id": "4854-4854_95",
+          "distance": 3838.8651886368016
+        },
+        {
+          "tid": 10864,
+          "trajectory_id": "2944-2944_26",
+          "distance": 5238.198486189597
+        },
+        {
+          "tid": 8333,
+          "trajectory_id": "2405-2405_15",
+          "distance": 5265.417043656561
+        },
+        {
+          "tid": 23130,
+          "trajectory_id": "5342-5342_27",
+          "distance": 5430.610021258429
+        }
+      ]
+    },
+    {
+      "query_id": "s_ss_xzt_2",
+      "trajectory_ids": [
+        "5342-5342_27",
+        "2944-2944_26",
+        "7427-7427_80",
+        "4706-4706_8",
+        "8857-8857_14"
+      ],
+      "top_k": [
+        {
+          "tid": 23130,
+          "trajectory_id": "5342-5342_27",
+          "distance": 4560.409074693993
+        },
+        {
+          "tid": 10864,
+          "trajectory_id": "2944-2944_26",
+          "distance": 4927.091489216499
+        },
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 5243.013500130018
+        },
+        {
+          "tid": 20101,
+          "trajectory_id": "4706-4706_8",
+          "distance": 5437.76420431663
+        },
+        {
+          "tid": 41360,
+          "trajectory_id": "8857-8857_14",
+          "distance": 5958.620995328197
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_xz_3",
+      "trajectory_ids": [
+        "7427-7427_80",
+        "7427-7427_81",
+        "8857-8857_11"
+      ],
+      "top_k": [
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 42399.958460950314
+        },
+        {
+          "tid": 34159,
+          "trajectory_id": "7427-7427_81",
+          "distance": 62953.95274455593
+        },
+        {
+          "tid": 41357,
+          "trajectory_id": "8857-8857_11",
+          "distance": 64637.16469722237
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_ts_3",
+      "trajectory_ids": [
+        "7427-7427_80",
+        "4854-4854_95",
+        "2944-2944_26",
+        "2405-2405_15",
+        "5342-5342_27",
+        "8896-8896_7",
+        "1697-1697_16",
+        "33-33_1202048277",
+        "7427-7427_87",
+        "4475-4475_15"
+      ],
+      "top_k": [
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 2872.7572171570505
+        },
+        {
+          "tid": 20703,
+          "trajectory_id": "4854-4854_95",
+          "distance": 3838.8651886368016
+        },
+        {
+          "tid": 10864,
+          "trajectory_id": "2944-2944_26",
+          "distance": 5238.198486189597
+        },
+        {
+          "tid": 8333,
+          "trajectory_id": "2405-2405_15",
+          "distance": 5265.417043656561
+        },
+        {
+          "tid": 23130,
+          "trajectory_id": "5342-5342_27",
+          "distance": 5430.610021258429
+        },
+        {
+          "tid": 41683,
+          "trajectory_id": "8896-8896_7",
+          "distance": 5549.1377428657
+        },
+        {
+          "tid": 5659,
+          "trajectory_id": "1697-1697_16",
+          "distance": 5725.749297534529
+        },
+        {
+          "tid": 13515,
+          "trajectory_id": "33-33_1202048277",
+          "distance": 5779.208266609643
+        },
+        {
+          "tid": 34160,
+          "trajectory_id": "7427-7427_87",
+          "distance": 5870.007314130116
+        },
+        {
+          "tid": 19014,
+          "trajectory_id": "4475-4475_15",
+          "distance": 5923.865500365755
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_xzt_3",
+      "trajectory_ids": [
+        "8857-8857_14",
+        "7427-7427_80",
+        "4854-4854_95"
+      ],
+      "top_k": [
+        {
+          "tid": 41360,
+          "trajectory_id": "8857-8857_14",
+          "distance": 27137.606765522723
+        },
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 65285.95685701798
+        },
+        {
+          "tid": 20703,
+          "trajectory_id": "4854-4854_95",
+          "distance": 92954.99329983535
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_xz_4",
+      "trajectory_ids": [
+        "5768-5768_11",
+        "16-16_22",
+        "5340-5340_15",
+        "5342-5342_27",
+        "7964-7964_31",
+        "1697-1697_16",
+        "7427-7427_80",
+        "511-511_19",
+        "8738-8738_61",
+        "1495-1495_11"
+      ],
+      "top_k": [
+        {
+          "tid": 25480,
+          "trajectory_id": "5768-5768_11",
+          "distance": 3181.3715213429314
+        },
+        {
+          "tid": 5141,
+          "trajectory_id": "16-16_22",
+          "distance": 4268.91746542745
+        },
+        {
+          "tid": 23068,
+          "trajectory_id": "5340-5340_15",
+          "distance": 4421.830233807843
+        },
+        {
+          "tid": 23130,
+          "trajectory_id": "5342-5342_27",
+          "distance": 4663.900639580894
+        },
+        {
+          "tid": 36139,
+          "trajectory_id": "7964-7964_31",
+          "distance": 5923.456472821466
+        },
+        {
+          "tid": 5659,
+          "trajectory_id": "1697-1697_16",
+          "distance": 5984.009648572595
+        },
+        {
+          "tid": 34158,
+          "trajectory_id": "7427-7427_80",
+          "distance": 6154.128151704851
+        },
+        {
+          "tid": 22132,
+          "trajectory_id": "511-511_19",
+          "distance": 6311.620803729721
+        },
+        {
+          "tid": 40888,
+          "trajectory_id": "8738-8738_61",
+          "distance": 7870.601619491312
+        },
+        {
+          "tid": 4640,
+          "trajectory_id": "1495-1495_11",
+          "distance": 7889.351870303787
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_ts_4",
+      "trajectory_ids": [
+        "4854-4854_95",
+        "8857-8857_14",
+        "4475-4475_15"
+      ],
+      "top_k": [
+        {
+          "tid": 20703,
+          "trajectory_id": "4854-4854_95",
+          "distance": 22609.49330558334
+        },
+        {
+          "tid": 41360,
+          "trajectory_id": "8857-8857_14",
+          "distance": 27055.842881881897
+        },
+        {
+          "tid": 19014,
+          "trajectory_id": "4475-4475_15",
+          "distance": 28876.938862847674
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_xzt_4",
+      "trajectory_ids": [
+        "3916-3916_22",
+        "1495-1495_11",
+        "2820-2820_13",
+        "5787-5787_20",
+        "3865-3865_29",
+        "10180-10180_26",
+        "7190-7190_28",
+        "7790-7790_7",
+        "3916-3916_21",
+        "10218-10218_27"
+      ],
+      "top_k": [
+        {
+          "tid": 16933,
+          "trajectory_id": "3916-3916_22",
+          "distance": 6362.913912938538
+        },
+        {
+          "tid": 4640,
+          "trajectory_id": "1495-1495_11",
+          "distance": 7288.473898137701
+        },
+        {
+          "tid": 10426,
+          "trajectory_id": "2820-2820_13",
+          "distance": 8045.774646520664
+        },
+        {
+          "tid": 25598,
+          "trajectory_id": "5787-5787_20",
+          "distance": 8397.838950135236
+        },
+        {
+          "tid": 16204,
+          "trajectory_id": "3865-3865_29",
+          "distance": 8461.85909304737
+        },
+        {
+          "tid": 762,
+          "trajectory_id": "10180-10180_26",
+          "distance": 8564.930021979715
+        },
+        {
+          "tid": 32674,
+          "trajectory_id": "7190-7190_28",
+          "distance": 8740.455720304293
+        },
+        {
+          "tid": 35637,
+          "trajectory_id": "7790-7790_7",
+          "distance": 8775.896474983792
+        },
+        {
+          "tid": 16932,
+          "trajectory_id": "3916-3916_21",
+          "distance": 8812.389599882757
+        },
+        {
+          "tid": 1048,
+          "trajectory_id": "10218-10218_27",
+          "distance": 8864.09323601187
+        }
+      ]
+    }
+  ],
+  "semantics_version": "point_similarity_v2",
+  "total": 24,
+  "non_empty": 23,
+  "note": "Self-contained BoundIR+oracle. SuiteRunner loads answers from this file when present (no sidecar .oracle.json needed). | ablation_v7: replaced 3 ss_tz with str_z duplicates (new ids) to stabilize median leave-one-out gaps"
+}

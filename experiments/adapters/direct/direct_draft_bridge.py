@@ -12,10 +12,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from llm_client import (  # noqa: E402
-    DRAFT_IR_HINT,
     LlmHttpError,
     LOGICAL_CATALOG,
     chat,
+    default_dataset_id,
+    draft_ir_hint,
     extract_json,
     merge_usage,
 )
@@ -24,13 +25,14 @@ from llm_client import (  # noqa: E402
 def _coerce_draft(draft):
     if not isinstance(draft, dict):
         return draft
+    did = default_dataset_id()
     if draft.get("ir_version") in (None, "1", 1):
         draft["ir_version"] = "1.0"
     src = draft.get("source")
     if not isinstance(src, dict):
-        draft["source"] = {"dataset_id": "tdrive_v1", "entity": "trajectory"}
+        draft["source"] = {"dataset_id": did, "entity": "trajectory"}
     else:
-        src.setdefault("dataset_id", "tdrive_v1")
+        src.setdefault("dataset_id", did)
         src.setdefault("entity", "trajectory")
     sem = draft.get("semantics")
     if not isinstance(sem, dict):
@@ -59,7 +61,7 @@ def run_direct(utterance: str, repair: bool = True) -> dict:
     msgs = [
         {
             "role": "system",
-            "content": "Emit ONLY DraftIR JSON.\n" + DRAFT_IR_HINT + "\n" + LOGICAL_CATALOG,
+            "content": "Emit ONLY DraftIR JSON.\n" + draft_ir_hint() + "\n" + LOGICAL_CATALOG,
         },
         {"role": "user", "content": utterance},
     ]

@@ -177,6 +177,29 @@ class DialogGateTest {
   }
 
   @Test
+  void explicitOrMaterializesSpatialPartsAndDoesNotClarify() {
+    ClarificationDetector c = new ClarificationDetector();
+    DraftIr d = new DraftIr();
+    d.result = new DraftIr.Result();
+    d.result.mode = "TRAJECTORY_IDS";
+    d.temporal = new DraftIr.Temporal();
+    d.temporal.start = "2008-02-03T21:20:00+08:00";
+    d.temporal.end = "2008-02-03T21:30:00+08:00";
+    d.missing.add("spatial");
+    String utt = "List trajectory ids that intersect ANY of the registered regions "
+        + "[tdrive_topk_box, tdrive_smoke_anchor] (multi-AOI OR / spatial_parts) "
+        + "between 2008-02-03T21:20:00+08:00 and 2008-02-03T21:30:00+08:00";
+    c.applyUtteranceGrounding(d, utt, new LinkedHashMap<String, String>());
+    c.enrichMissing(d);
+    assertNotNull(d.spatial_parts);
+    assertEquals(2, d.spatial_parts.size());
+    List<ClarificationDetector.Question> qs = c.detect(d, Collections.<String>emptySet());
+    for (ClarificationDetector.Question q : qs) {
+      assertFalse(q.field.contains("spatial"));
+    }
+  }
+
+  @Test
   void multiAoiSpatialPartsStayGrounded() {
     ClarificationDetector c = new ClarificationDetector();
     DraftIr d = new DraftIr();

@@ -1,21 +1,27 @@
 # Environment lock
 
-- Date: 2026-09-22 (P0); updated 2026-09-23 (P5 MVP close); **2026-09-25**（smoke **24/24**；cost 权威校准包；WSL canonical 路径锁定）
-- JDK: OpenJDK 1.8.0 (WSL Ubuntu-22.04), `JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64`
-- Maven: 3.6.3 (`/mnt/c/maven/apache-maven-3.6.3`)
-- HBase server: 2.2.3 install tree (`/home/jaytang/hbase`; Windows `F:\envs\hbase-2.2.3`) — **cluster status may report 2.1.2** (see below)
-- ZooKeeper: localhost:2181 (external)
+- Date: 2026-09-22 (P0); updated 2026-09-23 (P5 MVP close); **2026-09-25**（smoke **24/24**；cost 权威校准包；WSL canonical 路径锁定）；**2026-10-21 切换 4RS**
+- JDK: OpenJDK 1.8.0, `JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64`
+- Maven: 3.6.3
+- **HBase 4RS（正式实验环境）**
+  - Master+ZK+DN+RS: `10.242.104.108` (startserver02)
+  - RS+DN: `10.242.1.172` / `10.242.2.130` / `10.242.4.168` (startserver03/04/05)
+  - Install tree: `/data1/hbase/tyq/envs/{hadoop-2.8.5,hbase-2.2.3,zookeeper-3.4.10}`
+  - HDFS: `hdfs://10.242.104.108:9000`（DN 数据口 `50018`，避开他人默认 `50010`）
+  - HBase root: `hdfs://10.242.104.108:9000/hbase-tyq`；znode `/hbase-tyq`
+  - Master `16100` / RS `16120`（避开他人 `16000/16020`）
+  - 客户端: `src/main/resources/config/hbase/hbase-site.xml` → ZK `10.242.104.108:2181` + `zookeeper.znode.parent=/hbase-tyq`
 - Client: `org.apache.hbase:hbase-client:2.2.3`
-- **Canonical WSL workspace:** `/home/jaytang/projects/llm-kv` (`KART_DST`)
-- Windows source: `/mnt/f/Projects/LLM_KV` (`KART_SRC`)
-- Compat symlink only: `/home/jaytang/build/LLM_KV` → `KART_DST`（旧脚本兼容；禁止当作第二份工作树）
-- Experiment manifest: **`tdrive_v1_ready`** — see `docs/experiment-scope.md`
+- **Canonical 驱动机工作区:** `/home/tyq/projects/llm-kv`（大数据/结果优先 `/data1/hbase/tyq/...`）
+- Windows source: `F:/Projects/LLM_KV`
+- Experiment protocol: **`cache=warm`，`trials=10`**（报 t_plan / t_exec / t_e2e 的 P50/P95）
+- Experiment manifest: **`tdrive_v1_ready`** / **`porto_v1_ready`** — 须在 4RS 上重建后才有效
 
 ## Maven local repository (critical on WSL)
 
 Windows `settings.xml` may set `localRepository` to a path like `F:\maven-repository`. Under WSL that becomes a **relative** broken path (`$PWD/F:\...`), so compile sees empty jars.
 
-**Fix used by scripts:** always pass `-Dmaven.repo.local=$HOME/.m2/repository`（`kart.sh rebuild` / `kart.sh test` / `kart-env.sh`）。
+**Fix used by scripts:** always pass `-Dmaven.repo.local=$HOME/.m2/repository`（`kart.sh rebuild` / `kart.sh test`）。
 
 ## Dependency notes (OI-8)
 
@@ -44,7 +50,7 @@ Windows `settings.xml` may set `localRepository` to a path like `F:\maven-reposi
 Load secrets in WSL:
 
 ```bash
-./scripts/kart.sh probe          # loads .env via kart-env
+./scripts/kart.sh probe          # loads .env via kart.sh
 ./scripts/kart.sh chat           # live DeepSeek
 ./scripts/kart.sh chat-easy      # batch
 ```

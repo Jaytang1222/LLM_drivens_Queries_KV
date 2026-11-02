@@ -33,7 +33,7 @@ public final class SummaryMd {
     if (suite != null && suite.kind != null && "ablation".equalsIgnoreCase(suite.kind.trim())) {
       sb.append("Ablation is **leave-one-out vs Full KART** (`spec/ablation_experiment.md`). ")
           .append("External comparative arms are not in this table. ")
-          .append("`no_coverage` (if present) is a **risk control**, not a deployable baseline.\n\n");
+          .append("`no_verify` / `no_coverage` (if present) is a **risk control**, not a deployable baseline.\n\n");
       int uniqueQ = uniqueQueryCount(trials);
       sb.append("- bound queries in this summary: `").append(uniqueQ).append("`");
       sb.append(" (formal BoundIR count is `").append(SuiteRunner.FORMAL_BOUND_IR_COUNT).append("`)\n");

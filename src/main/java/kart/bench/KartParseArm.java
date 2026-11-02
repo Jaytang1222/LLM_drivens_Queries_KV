@@ -52,11 +52,13 @@ public final class KartParseArm implements ParseArm {
     }
 
     AppConfig cfg = AppConfig.load(ctx.root);
-    IrSchemaValidator validator = new IrSchemaValidator(ctx.root.resolve("schemas"));
+    IrSchemaValidator validator = new IrSchemaValidator(kart.KartPaths.schemas(ctx.root));
     PromptBuilder prompts = new PromptBuilder(cfg.regions(), "tdrive_v1");
+    String crs = ctx.manifest != null && ctx.manifest.layout != null
+        ? ctx.manifest.layout.crs : null;
     IrBinder binder = new IrBinder(
         cfg.regions(), ctx.kv, ctx.layout.tableMeta, ctx.layout.shardCount,
-        ctx.manifest.manifest_id, "point_similarity_v2");
+        ctx.manifest.manifest_id, "point_similarity_v2", crs);
     QueryEngine engine = ctx.newEngine(PlannerMode.RULE);
     LlmUsageAccumulator usage = engine.usageAccumulator();
     Dialog dialog = new Dialog(ctx.llm, prompts, validator, binder, engine,

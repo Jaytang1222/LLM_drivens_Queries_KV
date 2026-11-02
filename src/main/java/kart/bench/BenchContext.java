@@ -80,7 +80,8 @@ public final class BenchContext {
   }
 
   public QueryEngine newEngine(kart.search.PlannerMode mode, boolean advancedIndexesEnabled) {
-    kart.exec.ExecLimits limits = kart.exec.ExecLimits.defaults();
+    // Prefer planner.cost soft_memory / max_exec / concurrency (defaults() is 512MiB and ignores YAML).
+    kart.exec.ExecLimits limits = kart.exec.ExecLimits.fromCostCoeffs(planner.cost);
     limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE, planner.max_candidate_chunks);
     limits.maxDtwCells = planner.max_dtw_cells;
     limits.fetchBatch = planner.fetch_batch_size;

@@ -9,6 +9,7 @@ import kart.geo.Rect;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,122 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IndexAndVerifyTest {
+
+  @Test
+  void checkpointedVerifyResumesWithoutExtraScan() throws Exception {
+    MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
+    List<Trajectory> trajs = FixtureBuilder.trajectories();
+    IndexBuilders.LayoutParams layout = FixtureBuilder.layoutParams();
+    Path ckpt = java.nio.file.Files.createTempFile("kart-verify", ".ckpt.json");
+    try {
+      PostingVerifier.Options opt = PostingVerifier.Options.checkpointed(ckpt);
+      opt.batchSize = 1;
+      PostingVerifier.Report first = new PostingVerifier(layout).verify(kv, trajs, opt);
+      assertTrue(first.ok(), "missing=" + first.missing);
+      assertTrue(java.nio.file.Files.isRegularFile(ckpt));
+      PostingVerifier.Report second = new PostingVerifier(layout).verify(kv, trajs, opt);
+      assertTrue(second.ok());
+    } finally {
+      java.nio.file.Files.deleteIfExists(ckpt);
+      kv.close();
+    }
+  }
+
+  @Test
+  void sampleVerifyKeepsPriorFullPrefixAndCompletes() throws Exception {
+    MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory();
+    List<Trajectory> trajs = FixtureBuilder.trajectories();
+    IndexBuilders.LayoutParams layout = FixtureBuilder.layoutParams();
+    Path ckpt = java.nio.file.Files.createTempFile("kart-verify-sample", ".ckpt.json");
+    try {
+      // Simulate a paused full verify that already covered a prefix.
+      PostingVerifier.Checkpoint prior = new PostingVerifier.Checkpoint();
+      prior.phase = "get";
+      prior.done = Math.max(1, trajs.size() / 2);
+      prior.total = trajs.size();
+      prior.batch_size = 1;
+      prior.check_extra = false;
+      prior.note = "in_progress";
+      new com.fasterxml.jackson.databind.ObjectMapper()
+          .writerWithDefaultPrettyPrinter()
+          .writeValue(ckpt.toFile(), prior);
+
+      PostingVerifier.Options opt = PostingVerifier.Options.checkpointed(ckpt);
+      opt.batchSize = 1;
+      opt.sampleSize = Math.min(3, trajs.size());
+      opt.sampleSeed = 42L;
+      PostingVerifier.Report report = new PostingVerifier(layout).verify(kv, trajs, opt);
+      assertTrue(report.ok(), "missing=" + report.missing);
+
+      PostingVerifier.Checkpoint after =
+          new com.fasterxml.jackson.databind.ObjectMapper()
+              .readValue(ckpt.toFile(), PostingVerifier.Checkpoint.class);
+      assertEquals("done", after.phase);
+      assertEquals(prior.done, after.done, "must not clobber prior full-scan prefix");
+      assertEquals("sample", after.verify_mode);
+      assertTrue(after.note != null && after.note.contains("sample_ok"));
+
+      // Resume after sample done must short-circuit.
+      PostingVerifier.Report again = new PostingVerifier(layout).verify(kv, trajs, opt);
+      assertTrue(again.ok());
+    } finally {
+      java.nio.file.Files.deleteIfExists(ckpt);
+      kv.close();
+    }
+  }
+
+  @Test
+  void checkpointedWriteResumesFromDone() throws Exception {
+    List<Trajectory> trajs = FixtureBuilder.trajectories();
+    IndexBuilders.LayoutParams layout = FixtureBuilder.layoutParams();
+    IndexBuilders builders = new IndexBuilders(layout);
+    Chunker chunker = new Chunker(256);
+    Path ckpt = java.nio.file.Files.createTempFile("kart-write", ".ckpt.json");
+    MemoryBackend kv = new MemoryBackend();
+    try {
+      SnapshotBuilder.Options opt = new SnapshotBuilder.Options();
+      opt.writeCheckpointFile = ckpt;
+      opt.writeBatchSize = 2;
+      opt.resume = true;
+      long points = SnapshotBuilder.writeTrajectories(kv, null, trajs, builders, chunker, ckpt, opt);
+      assertTrue(points > 0);
+      assertTrue(java.nio.file.Files.isRegularFile(ckpt));
+      SnapshotBuilder.WriteCheckpoint done =
+          new com.fasterxml.jackson.databind.ObjectMapper()
+              .readValue(ckpt.toFile(), SnapshotBuilder.WriteCheckpoint.class);
+      assertEquals(trajs.size(), done.done);
+      assertEquals("done", done.phase);
+
+      // already_done short-circuit: empty kv must not receive puts
+      MemoryBackend empty = new MemoryBackend();
+      long skipped = SnapshotBuilder.writeTrajectories(
+          empty, null, trajs, builders, chunker, ckpt, opt);
+      assertEquals(points, skipped);
+      empty.close();
+
+      // Mid-resume: first 2 already in kv2, ckpt says done=2, finish the rest
+      MemoryBackend kv2 = new MemoryBackend();
+      SnapshotBuilder.writeTrajectories(
+          kv2, null, trajs.subList(0, 2), builders, chunker, null, opt);
+      SnapshotBuilder.WriteCheckpoint mid = new SnapshotBuilder.WriteCheckpoint();
+      mid.phase = "write";
+      mid.done = 2;
+      mid.total = trajs.size();
+      mid.batch_size = 2;
+      mid.points = trajs.get(0).size() + trajs.get(1).size();
+      new com.fasterxml.jackson.databind.ObjectMapper().writerWithDefaultPrettyPrinter()
+          .writeValue(ckpt.toFile(), mid);
+      long allPoints = SnapshotBuilder.writeTrajectories(
+          kv2, null, trajs, builders, chunker, ckpt, opt);
+      assertEquals(points, allPoints);
+      PostingVerifier.Report report = new PostingVerifier(layout).verify(kv2, trajs);
+      assertTrue(report.ok(), "missing=" + report.missing);
+      kv2.close();
+    } finally {
+      java.nio.file.Files.deleteIfExists(ckpt);
+      kv.close();
+    }
+  }
 
   @Test
   void fixturePostingsMatchExpectedAndVerifyOk() throws Exception {

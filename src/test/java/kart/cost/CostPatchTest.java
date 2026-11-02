@@ -1,9 +1,11 @@
 package kart.cost;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class CostPatchTest {
 
@@ -33,5 +35,27 @@ class CostPatchTest {
     CostCard none = card("P_T");
     CostPatch.apply(null, none);
     assertEquals(150.0, none.estimated_ms, 1e-9);
+  }
+
+  @Test
+  void rewriteAdjustScalesResourceSlotsNotFeatures() throws Exception {
+    ObjectMapper m = new ObjectMapper();
+    ObjectNode ctx = m.createObjectNode();
+    ctx.put("query", "TOP_K");
+    ObjectNode feats = ctx.putObject("features");
+    feats.put("cbo_plan", "P_Z");
+    feats.put("k", 3);
+    ObjectNode slots = ctx.putObject("slots");
+    slots.putObject("access").putObject("options").put("keep", 0).put("drop_spatial_branch", -40);
+    slots.putObject("topk").putObject("options").put("off", 0).put("lb2", -100);
+    slots.putObject("fetch_batch").putObject("options").put("b500", 0).put("b2000", -50);
+    String doc = "{\"patches\":[{\"id\":\"topk_queries\",\"when\":[[\"query\",\"==\",\"TOP_K\"]],"
+        + "\"scale\":{\"topk\":1.3,\"fetch\":0.8}}]}";
+    assertEquals("topk_queries", CostPatch.adjustRewriteResourceSlots(ctx, m.readTree(doc)));
+    assertEquals(-130.0, slots.path("topk").path("options").path("lb2").asDouble(), 1e-9);
+    assertEquals(-40.0, slots.path("fetch_batch").path("options").path("b2000").asDouble(), 1e-9);
+    assertEquals(-40.0, slots.path("access").path("options").path("drop_spatial_branch").asDouble(), 1e-9);
+    assertEquals(3, feats.path("k").asInt());
+    assertNull(CostPatch.adjustRewriteResourceSlots(ctx, null));
   }
 }

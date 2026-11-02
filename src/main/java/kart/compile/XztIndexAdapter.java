@@ -26,7 +26,7 @@ public final class XztIndexAdapter {
 
   public List<ScanTask> scanTasks(long startMs, long endMs, String sourceNodeId, int maxRanges) {
     // Span-fill for overlap recall (same hole class as spatial XZ*).
-    List<CodeRange> precise = XzStarSfc.fillInternalGaps(CodeRangeBudget.mergeOverlapping(
+    List<CodeRange> precise = XzStarSfc.fillRecallGaps(CodeRangeBudget.mergeOverlapping(
         layout.xztCodec().rangesCovering(startMs, endMs)));
     List<CodeRange> physical = CodeRangeBudget.mergeToBudgetGapAware(
         precise, maxRanges, layout.xztPostingGapCost());

@@ -74,9 +74,9 @@ public final class PlanValidator {
   private static IrSchemaValidator loadSchemasQuietly() {
     try {
       Path root = Paths.get(System.getProperty("kart.root", ".")).toAbsolutePath().normalize();
-      Path dir = root.resolve("schemas");
+      Path dir = kart.KartPaths.schemas(root);
       if (!Files.isDirectory(dir)) {
-        dir = Paths.get("schemas").toAbsolutePath().normalize();
+        dir = Paths.get(kart.KartPaths.SCHEMAS_DIR).toAbsolutePath().normalize();
       }
       if (Files.isDirectory(dir)) {
         return new IrSchemaValidator(dir);
@@ -901,7 +901,7 @@ public final class PlanValidator {
       long code = layout.xztCodec().indexInterval(a, b);
       // Adapters span-fill for recall; accept unfilled or filled cover.
       if (!codeInRanges(code, ranges)
-          && !codeInRanges(code, XzStarSfc.fillInternalGaps(ranges))) {
+          && !codeInRanges(code, XzStarSfc.fillRecallGaps(ranges))) {
         cert.unresolved_obligations.add("xzt_overlap_miss:code=" + code);
         report.addCertificate(cert);
         report.fail("CoverageCheck", "XZT SRQ misses overlapping interval code=" + code

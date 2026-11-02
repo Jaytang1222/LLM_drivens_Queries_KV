@@ -48,9 +48,9 @@ class QueryNlAcceptanceTest {
   @BeforeAll
   static void init() throws Exception {
     root = Paths.get("").toAbsolutePath();
-    Path schemas = root.resolve("schemas");
+    Path schemas = root.resolve("src/main/resources/schemas");
     if (!Files.isDirectory(schemas)) {
-      schemas = root.resolve("../schemas");
+      schemas = root.resolve("../src/main/resources/schemas");
     }
     validator = new IrSchemaValidator(schemas);
     AppConfig cfg = AppConfig.load(Files.isDirectory(root.resolve("config"))

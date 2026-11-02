@@ -9,7 +9,9 @@ import kart.data.Trajectory;
 import kart.geo.Rect;
 import kart.ir.BoundIr;
 import kart.oracle.FullScanOracle;
+import kart.oracle.StreamingFullScanOracle;
 import kart.snapshot.TDriveLoader;
+import kart.data.TidAssigner;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -20,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,7 +55,8 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
   @Option(names = "--workload-out", defaultValue = "experiments/workloads/tdrive_smoke.json")
   private Path workloadOut;
 
-  @Option(names = "--oracle-out", defaultValue = "experiments/workloads/tdrive_smoke.oracle.json")
+  /** Default same as workload-out (answers embedded). Sidecar only if set to a different path. */
+  @Option(names = "--oracle-out", defaultValue = "experiments/workloads/tdrive_smoke.json")
   private Path oracleOut;
 
   @Option(names = "--config-root")
@@ -66,13 +70,21 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       description = "Evaluate BoundIRs from an existing workload JSON and write/merge oracle answers")
   private boolean evaluateWorkload;
 
+  @Option(names = "--stream-batch", defaultValue = "2000",
+      description = "Raw trajectories per clean batch for streaming --evaluate-workload")
+  private int streamBatch;
+
   @Option(names = "--workload-in",
       description = "Input BoundIR workload for --evaluate-workload (default: --workload-out)")
   private Path workloadIn;
 
   @Option(names = "--format", defaultValue = "tdrive",
-      description = "Input format for --data: tdrive|ais")
+      description = "Input format for --data: tdrive|ais|porto")
   private String format;
+
+  @Option(names = "--dataset-id",
+      description = "BoundIR source.dataset_id (default: derived from --manifest, e.g. porto_v1_ready→porto_v1)")
+  private String datasetId;
 
   @Option(names = "--crs",
       description = "Projected CRS when loading data (default: from manifest.layout.crs or EPSG:32650)")
@@ -87,11 +99,11 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
   private long diagnosticSeed;
 
   @Option(names = "--diagnostic-workload-out",
-      defaultValue = "experiments/workloads/bound_ir_adv_complex_diag_v1.json")
+      defaultValue = "experiments/results/bound_ir_adv_complex_diag_v1.json")
   private Path diagnosticWorkloadOut;
 
   @Option(names = "--diagnostic-oracle-out",
-      defaultValue = "experiments/workloads/bound_ir_adv_complex_diag_v1.oracle.json")
+      defaultValue = "experiments/results/bound_ir_adv_complex_diag_v1.json")
   private Path diagnosticOracleOut;
 
   @Option(names = "--diagnostic-overwrite",
@@ -179,12 +191,20 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     cache.put("total", queries.size());
     cache.put("answers", answers);
 
+    // Self-contained smoke pack (SuiteRunner / smoke-tdrive read embedded answers).
+    workload.put("answers", answers);
+    workload.put("oracle_total", Integer.valueOf(queries.size()));
+    workload.put("oracle_non_empty", Integer.valueOf(nonEmpty));
+    workload.put("oracle_embedded", Boolean.TRUE);
+
     Path wOut = workloadOut.isAbsolute() ? workloadOut : root.resolve(workloadOut);
     Path oOut = oracleOut.isAbsolute() ? oracleOut : root.resolve(oracleOut);
     Files.createDirectories(wOut.getParent());
-    Files.createDirectories(oOut.getParent());
     Files.write(wOut, MAPPER.writeValueAsString(workload).getBytes(StandardCharsets.UTF_8));
-    Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    if (!oOut.toAbsolutePath().normalize().equals(wOut.toAbsolutePath().normalize())) {
+      Files.createDirectories(oOut.getParent());
+      Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    }
 
     System.out.println("ORACLE_CACHE_OK workload=" + wOut + " oracle=" + oOut
         + " queries=" + queries.size() + " non_empty=" + nonEmpty);
@@ -308,18 +328,26 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       System.err.println("refusing to write diagnostic set with underfilled Top-K Oracle answers");
       return 2;
     }
-    if ((Files.exists(wOut) || Files.exists(oOut)) && !diagnosticOverwrite) {
-      System.err.println("refusing to overwrite existing diagnostic output: " + wOut + " or " + oOut);
+    boolean sameOut = wOut.toAbsolutePath().normalize().equals(oOut.toAbsolutePath().normalize());
+    if ((Files.exists(wOut) || (!sameOut && Files.exists(oOut))) && !diagnosticOverwrite) {
+      System.err.println("refusing to overwrite existing diagnostic output: " + wOut
+          + (sameOut ? "" : (" or " + oOut)));
       return 2;
     }
-    if (Files.exists(wOut) != Files.exists(oOut)) {
+    if (!sameOut && Files.exists(wOut) != Files.exists(oOut)) {
       System.err.println("refusing partial overwrite; workload and Oracle outputs must both exist or both be absent");
       return 2;
     }
+    workload.put("answers", answers);
+    workload.put("oracle_total", Integer.valueOf(queries.size()));
+    workload.put("oracle_non_empty", Integer.valueOf(nonEmpty));
+    workload.put("oracle_embedded", Boolean.TRUE);
     Files.createDirectories(wOut.getParent());
-    Files.createDirectories(oOut.getParent());
     Files.write(wOut, MAPPER.writeValueAsString(workload).getBytes(StandardCharsets.UTF_8));
-    Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    if (!sameOut) {
+      Files.createDirectories(oOut.getParent());
+      Files.write(oOut, MAPPER.writeValueAsString(cache).getBytes(StandardCharsets.UTF_8));
+    }
     System.out.println("ADV_DIAG_OK workload=" + wOut + " oracle=" + oOut
         + " queries=" + queries.size() + " non_empty=" + nonEmpty
         + " topk_non_empty=" + topKNonEmpty + " seed=" + diagnosticSeed);
@@ -687,12 +715,26 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     return ir;
   }
 
+  private String resolveDatasetId() {
+    if (datasetId != null && !datasetId.trim().isEmpty()) {
+      return datasetId.trim();
+    }
+    return datasetIdFromManifest(manifestId);
+  }
+
+  private static String datasetIdFromManifest(String mid) {
+    if (mid != null && mid.endsWith("_ready")) {
+      return mid.substring(0, mid.length() - "_ready".length());
+    }
+    return mid != null ? mid : "tdrive_v1";
+  }
+
   private static BoundIr base(String id, Manifest m) {
     BoundIr ir = new BoundIr();
     ir.ir_version = "1.0";
     ir.query_id = id;
     ir.source = new BoundIr.Source();
-    ir.source.dataset_id = "tdrive_v1";
+    ir.source.dataset_id = datasetIdFromManifest(m != null ? m.manifest_id : null);
     ir.source.entity = "trajectory";
     ir.semantics = new BoundIr.Semantics();
     ir.semantics.mode = "OBSERVED_POINT";
@@ -846,6 +888,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
   /**
    * Recompute FullScanOracle answers for every BoundIR in an existing workload.
    * Merges into oracle-out (replacing answers for matching query_id).
+   * Streams parse/clean in batches so large scales do not require loading the full dataset.
    */
   private int evaluateExistingWorkload(Path root) throws Exception {
     Path wIn = workloadIn != null ? workloadIn : workloadOut;
@@ -879,9 +922,59 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       queries.add(MAPPER.treeToValue(q, BoundIr.class));
     }
     Path data = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
-    System.out.println("ORACLE_EVAL_PHASE=load_cleaned data=" + data + " queries=" + queries.size());
-    List<Trajectory> trajs = loadTrajectories(data, domain, m);
-    FullScanOracle oracle = new FullScanOracle(trajs);
+    String fmt = format == null || format.trim().isEmpty() ? "tdrive" : format.trim();
+    String useCrs = resolveCrs(m);
+    int batch = streamBatch <= 0 ? TDriveLoader.DEFAULT_STREAM_BATCH : streamBatch;
+
+    System.out.println("ORACLE_EVAL_PHASE=inventory_tids data=" + data
+        + " queries=" + queries.size() + " batch=" + batch);
+    final Map<String, Long> tidById = TDriveLoader.inventoryTids(data, domain, fmt, useCrs, batch);
+    System.out.println("ORACLE_EVAL_PHASE=inventory_done trajs=" + tidById.size());
+
+    final Set<Long> needRefs = StreamingFullScanOracle.requiredRefTids(queries);
+    final Map<Long, Trajectory> refsByTid = new HashMap<Long, Trajectory>();
+    if (!needRefs.isEmpty()) {
+      System.out.println("ORACLE_EVAL_PHASE=load_refs need=" + needRefs.size());
+      TDriveLoader.forEachCleanedBatch(data, domain, fmt, useCrs, batch,
+          new TDriveLoader.CleanedBatchConsumer() {
+            @Override
+            public void accept(List<Trajectory> cleaned) {
+              for (Trajectory t0 : cleaned) {
+                Long tid = tidById.get(t0.trajectoryId);
+                if (tid == null || !needRefs.contains(tid) || refsByTid.containsKey(tid)) {
+                  continue;
+                }
+                refsByTid.put(tid, TidAssigner.withTid(t0, tid.longValue()));
+                if (refsByTid.size() >= needRefs.size()) {
+                  return;
+                }
+              }
+            }
+          });
+      if (refsByTid.size() < needRefs.size()) {
+        Set<Long> missing = new HashSet<Long>(needRefs);
+        missing.removeAll(refsByTid.keySet());
+        System.err.println("reference tid(s) not found in data: " + missing);
+        return 3;
+      }
+    }
+
+    System.out.println("ORACLE_EVAL_PHASE=stream_scan");
+    final StreamingFullScanOracle.Session session =
+        new StreamingFullScanOracle.Session(queries, refsByTid);
+    TDriveLoader.forEachCleanedBatch(data, domain, fmt, useCrs, batch,
+        new TDriveLoader.CleanedBatchConsumer() {
+          @Override
+          public void accept(List<Trajectory> cleaned) {
+            for (Trajectory t0 : cleaned) {
+              Long tid = tidById.get(t0.trajectoryId);
+              if (tid == null) {
+                continue;
+              }
+              session.accept(TidAssigner.withTid(t0, tid.longValue()));
+            }
+          }
+        });
 
     Map<String, Map<String, Object>> byId = new LinkedHashMap<String, Map<String, Object>>();
     if (Files.isRegularFile(oOut)) {
@@ -898,8 +991,9 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
       }
     }
     int nonEmpty = 0;
-    for (BoundIr ir : queries) {
-      FullScanOracle.Answer ans = oracle.evaluate(ir);
+    for (int i = 0; i < queries.size(); i++) {
+      BoundIr ir = queries.get(i);
+      FullScanOracle.Answer ans = session.answer(i);
       Map<String, Object> row = new LinkedHashMap<String, Object>();
       row.put("query_id", ir.query_id);
       row.put("trajectory_ids", ans.trajectoryIds);
@@ -925,6 +1019,7 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     cache.put("manifest_id", manifestId);
     cache.put("semantics_version",
         rootNode.has("semantics_version") ? rootNode.get("semantics_version").asText() : m.semantics_version);
+    cache.put("source", "StreamingFullScanOracle");
     List<Map<String, Object>> answers = new ArrayList<Map<String, Object>>();
     for (BoundIr ir : queries) {
       answers.add(byId.get(ir.query_id));
@@ -939,16 +1034,19 @@ public final class BuildOracleCacheCmd implements Callable<Integer> {
     return 0;
   }
 
+  private String resolveCrs(Manifest m) {
+    if (crs != null && !crs.trim().isEmpty()) {
+      return crs.trim();
+    }
+    if (m != null && m.layout != null && m.layout.crs != null && !m.layout.crs.trim().isEmpty()) {
+      return m.layout.crs.trim();
+    }
+    return kart.geo.Projection.DEFAULT_CRS;
+  }
+
   private List<Trajectory> loadTrajectories(Path data, Rect domain, Manifest m) throws Exception {
     String fmt = format == null || format.trim().isEmpty() ? "tdrive" : format.trim();
-    String useCrs = crs;
-    if (useCrs == null || useCrs.trim().isEmpty()) {
-      if (m != null && m.layout != null && m.layout.crs != null && !m.layout.crs.trim().isEmpty()) {
-        useCrs = m.layout.crs.trim();
-      } else {
-        useCrs = kart.geo.Projection.DEFAULT_CRS;
-      }
-    }
+    String useCrs = resolveCrs(m);
     System.out.println("ORACLE_LOAD format=" + fmt + " crs=" + useCrs);
     return TDriveLoader.loadCleaned(data, domain, fmt, useCrs);
   }

@@ -18,89 +18,143 @@
 # - tdrive_topk_mid: WGS84 envelope of smoke topk_st_3 UTM box
 #
 regions:
-  - name: beijing_core
-    min_lon: 116.28
-    min_lat: 39.82
-    max_lon: 116.48
-    max_lat: 39.98
-
-  - name: tdrive_smoke_anchor
-    min_lon: 116.565
-    min_lat: 40.055
-    max_lon: 116.739
-    max_lat: 40.213
-
-  - name: tdrive_topk_box
-    min_lon: 116.642
-    min_lat: 40.126
-    max_lon: 116.662
-    max_lat: 40.142
-
-  # WGS84 envelope of smoke topk_st_2 UTM box (wider Top-K chat cases H8–H11)
-  - name: tdrive_topk_wide
-    min_lon: 116.638167
-    min_lat: 40.123236
-    max_lon: 116.666448
-    max_lat: 40.144943
-
-  # WGS84 envelope of smoke topk_s_1 UTM box (spatial-only Top-K)
-  - name: tdrive_topk_s1
-    min_lon: 116.644061
-    min_lat: 40.127758
-    max_lon: 116.660558
-    max_lat: 40.140421
-
-  # WGS84 envelope of smoke topk_st_3 UTM box (manual verify Mid Top-K)
-  - name: tdrive_topk_mid
-    min_lon: 116.609394
-    min_lat: 40.094615
-    max_lon: 116.695275
-    max_lat: 40.173549
-
-  - name: zhongguancun
-    min_lon: 116.28
-    min_lat: 39.95
-    max_lon: 116.35
-    max_lat: 40.01
-
-  - name: wangjing
-    min_lon: 116.44
-    min_lat: 39.97
-    max_lon: 116.51
-    max_lat: 40.03
-
-  - name: guomao
-    min_lon: 116.43
-    min_lat: 39.89
-    max_lon: 116.48
-    max_lat: 39.93
-
-  - name: beijing_cbd
-    min_lon: 116.43
-    min_lat: 39.89
-    max_lon: 116.48
-    max_lat: 39.93
-
-  - name: tiananmen
-    min_lon: 116.37
-    min_lat: 39.89
-    max_lon: 116.41
-    max_lat: 39.92
-
-  - name: capital_airport
-    min_lon: 116.55
-    min_lat: 40.04
-    max_lon: 116.65
-    max_lat: 40.10
-
-  - name: haidian_central
-    min_lon: 116.25
-    min_lat: 39.95
-    max_lon: 116.36
-    max_lat: 40.05
-
-  - name: chaoyang_central
-    min_lon: 116.42
-    min_lat: 39.90
-    max_lon: 116.55
-    max_lat: 40.02
+- name: beijing_core
+  min_lon: 116.28
+  min_lat: 39.82
+  max_lon: 116.48
+  max_lat: 39.98
+- name: tdrive_smoke_anchor
+  min_lon: 116.565
+  min_lat: 40.055
+  max_lon: 116.739
+  max_lat: 40.213
+- name: tdrive_topk_box
+  min_lon: 116.642
+  min_lat: 40.126
+  max_lon: 116.662
+  max_lat: 40.142
+- name: tdrive_topk_wide
+  min_lon: 116.638167
+  min_lat: 40.123236
+  max_lon: 116.666448
+  max_lat: 40.144943
+- name: tdrive_topk_s1
+  min_lon: 116.644061
+  min_lat: 40.127758
+  max_lon: 116.660558
+  max_lat: 40.140421
+- name: tdrive_topk_mid
+  min_lon: 116.609394
+  min_lat: 40.094615
+  max_lon: 116.695275
+  max_lat: 40.173549
+- name: zhongguancun
+  min_lon: 116.28
+  min_lat: 39.95
+  max_lon: 116.35
+  max_lat: 40.01
+- name: wangjing
+  min_lon: 116.44
+  min_lat: 39.97
+  max_lon: 116.51
+  max_lat: 40.03
+- name: guomao
+  min_lon: 116.43
+  min_lat: 39.89
+  max_lon: 116.48
+  max_lat: 39.93
+- name: beijing_cbd
+  min_lon: 116.43
+  min_lat: 39.89
+  max_lon: 116.48
+  max_lat: 39.93
+- name: tiananmen
+  min_lon: 116.37
+  min_lat: 39.89
+  max_lon: 116.41
+  max_lat: 39.92
+- name: capital_airport
+  min_lon: 116.55
+  min_lat: 40.04
+  max_lon: 116.65
+  max_lat: 40.1
+- name: haidian_central
+  min_lon: 116.25
+  min_lat: 39.95
+  max_lon: 116.36
+  max_lat: 40.05
+- name: chaoyang_central
+  min_lon: 116.42
+  min_lat: 39.9
+  max_lon: 116.55
+  max_lat: 40.02
+- min_lon: -8.613437
+  min_lat: 41.1495
+  max_lon: -8.612635
+  max_lat: 41.1501
+  name: porto_smoke_anchor
+- min_lon: -8.613658
+  min_lat: 41.149334
+  max_lon: -8.612414
+  max_lat: 41.150266
+  name: porto_topk_box
+- min_lon: -8.613658
+  min_lat: 41.149334
+  max_lon: -8.612414
+  max_lat: 41.150266
+  name: porto_topk_wide
+- min_lon: -8.613285
+  min_lat: 41.149613
+  max_lon: -8.612787
+  max_lat: 41.149987
+  name: porto_topk_mid
+- name: baixa
+  min_lon: -8.6225
+  min_lat: 41.1435
+  max_lon: -8.6065
+  max_lat: 41.1555
+- name: campanha
+  min_lon: -8.596
+  min_lat: 41.1415
+  max_lon: -8.576
+  max_lat: 41.1565
+- name: cedofeita
+  min_lon: -8.63
+  min_lat: 41.151
+  max_lon: -8.614
+  max_lat: 41.163
+- name: aliados
+  min_lon: -8.617
+  min_lat: 41.1445
+  max_lon: -8.605
+  max_lat: 41.1535
+- name: ribeira
+  min_lon: -8.621
+  min_lat: 41.136
+  max_lon: -8.609
+  max_lat: 41.145
+- name: porto_airport
+  min_lon: -8.691
+  min_lat: 41.227
+  max_lon: -8.651
+  max_lat: 41.257
+- name: matosinhos
+  min_lon: -8.702
+  min_lat: 41.173
+  max_lon: -8.678
+  max_lat: 41.191
+- name: boavista
+  min_lon: -8.638
+  min_lat: 41.152
+  max_lon: -8.622
+  max_lat: 41.164
+- name: trindade
+  min_lon: -8.615
+  min_lat: 41.14825
+  max_lon: -8.605
+  max_lat: 41.15575
+- name: foz
+  min_lon: -8.687
+  min_lat: 41.1445
+  max_lon: -8.667
+  max_lat: 41.1595

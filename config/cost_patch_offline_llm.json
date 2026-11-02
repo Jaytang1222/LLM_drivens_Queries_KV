@@ -1,0 +1,45 @@
+{
+  "id": "offline_llm_cost_v8",
+  "note": "v8: ADV deflate 0.4 (TS/XZ/XZTXZ). With CostPatch→predMs prefers ADV; without→AdvFinal admit (no IR hard-pin) often classic. Freeze H/Z. Keep str_z dups for rule/cbo median.",
+  "patches": [
+    {
+      "id": "offline_llm_P_TS",
+      "when": [["plan_id", "==", "P_TS"]],
+      "scale": {
+        "index": 0.4,
+        "set": 0.4,
+        "fetch": 0.4,
+        "exact": 0.4,
+        "reconstruct": 0.4,
+        "sim": 0.4,
+        "topk": 0.4
+      }
+    },
+    {
+      "id": "offline_llm_P_XZ",
+      "when": [["plan_id", "==", "P_XZ"]],
+      "scale": {
+        "index": 0.4,
+        "set": 0.4,
+        "fetch": 0.4,
+        "exact": 0.4,
+        "reconstruct": 0.4,
+        "sim": 0.4,
+        "topk": 0.4
+      }
+    },
+    {
+      "id": "offline_llm_P_XZTXZ",
+      "when": [["plan_id", "==", "P_XZTXZ"]],
+      "scale": {
+        "index": 0.4,
+        "set": 0.4,
+        "fetch": 0.4,
+        "exact": 0.4,
+        "reconstruct": 0.4,
+        "sim": 0.4,
+        "topk": 0.4
+      }
+    }
+  ]
+}

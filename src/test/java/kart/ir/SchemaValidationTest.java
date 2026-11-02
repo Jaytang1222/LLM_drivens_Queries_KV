@@ -19,9 +19,9 @@ class SchemaValidationTest {
   static void init() throws Exception {
     Path root = Paths.get("").toAbsolutePath();
     // when running from module root
-    Path schemas = root.resolve("schemas");
+    Path schemas = root.resolve("src/main/resources/schemas");
     if (!schemas.toFile().isDirectory()) {
-      schemas = root.resolve("../schemas");
+      schemas = root.resolve("../src/main/resources/schemas");
     }
     validator = new IrSchemaValidator(schemas);
   }

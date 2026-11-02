@@ -60,7 +60,7 @@ public final class ChatCmd implements Callable<Integer> {
   public Integer call() throws Exception {
     Path root = resolveRoot();
     AppConfig config = AppConfig.load(root);
-    IrSchemaValidator validator = new IrSchemaValidator(root.resolve("schemas"));
+    IrSchemaValidator validator = new IrSchemaValidator(kart.KartPaths.schemas(root));
     PromptBuilder prompts = new PromptBuilder(config.regions(), datasetId);
 
     LlmClient llm = buildLiveLlm();
@@ -75,6 +75,7 @@ public final class ChatCmd implements Callable<Integer> {
       LayoutContext layout;
       StatsSnapshot stats;
       String mid;
+      String crs = null;
       if (memory) {
         MemoryBackend mem = SnapshotBuilder.buildFixtureInMemory();
         kv = mem;
@@ -96,7 +97,10 @@ public final class ChatCmd implements Callable<Integer> {
         }
         layout = LayoutContext.from(manifest);
         stats = catalog.loadStats(mid).orElse(null);
-        Path site = root.resolve("config/hbase/hbase-site.xml");
+        if (manifest.layout != null) {
+          crs = manifest.layout.crs;
+        }
+        Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
         hbase = new HBaseBackend(HBaseBackend.open(site));
         kv = hbase;
         closeKv = true;
@@ -105,7 +109,7 @@ public final class ChatCmd implements Callable<Integer> {
 
       IrBinder binder = new IrBinder(
           config.regions(), kv, layout.tableMeta, layout.shardCount,
-          mid, "point_similarity_v2");
+          mid, "point_similarity_v2", crs);
       ExecLimits limits = ExecLimits.defaults();
       limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE,
           config.planner().max_candidate_chunks);

@@ -26,7 +26,7 @@ public final class ThirdPartyAudit {
     out.put("transplant_doc", "experiments/adapters/TRANSPLANT.md");
     out.put("claim", "control_flow_transplant_not_upstream_reproduction");
 
-    Path commits = root.resolve("experiments/third_party/commits.json");
+    Path commits = root.resolve("experiments/adapters/upstream/commits.json");
     if (Files.isRegularFile(commits)) {
       try {
         out.put("commits", MAPPER.readValue(commits.toFile(), Object.class));
@@ -40,14 +40,17 @@ public final class ThirdPartyAudit {
 
     Map<String, Object> entries = new LinkedHashMap<String, Object>();
     putEntry(entries, root, "din_sql",
-        "experiments/third_party/din-sql/DIN-SQL.py",
-        "experiments/third_party/din-sql/DIN-SQL_BIRD.py");
+        "experiments/adapters/upstream/din-sql/DIN-SQL.py",
+        "experiments/adapters/upstream/din-sql/DIN-SQL_BIRD.py");
     putEntry(entries, root, "text_to_nosql",
-        "experiments/third_party/text-to-nosql/src/tend/solver/sag/runtime.py");
+        "experiments/adapters/upstream/text-to-nosql/src/tend/solver/sag/runtime.py");
     putEntry(entries, root, "bao",
-        "experiments/third_party/bao/bao_server/main.py");
+        "experiments/adapters/upstream/bao/bao_server/main.py");
+    putEntry(entries, root, "paramtree",
+        "experiments/adapters/upstream/paramtree/model/query_inference.py",
+        "experiments/adapters/upstream/paramtree/model/paramtree.py");
     putEntry(entries, root, "llmopt",
-        "experiments/third_party/llmopt/README.md");
+        "experiments/adapters/upstream/llmopt/README.md");
     out.put("upstream_entries", entries);
 
     Map<String, Object> adapters = new LinkedHashMap<String, Object>();
@@ -59,8 +62,13 @@ public final class ThirdPartyAudit {
     hashFile(adapters, root, "sql_to_draft_ir", "experiments/adapters/translate/sql_to_draft_ir.py");
     hashFile(adapters, root, "mql_to_draft_ir", "experiments/adapters/translate/mql_to_draft_ir.py");
     hashFile(adapters, root, "llmopt_bridge", "experiments/adapters/llmopt/llmopt_bridge.py");
+    hashFile(adapters, root, "bao_bridge", "experiments/adapters/bao/bao_bridge.py");
+    hashFile(adapters, root, "bao_train", "experiments/adapters/bao/bao_train_from_kart.py");
+    hashFile(adapters, root, "kart_pg_plan_encode", "experiments/adapters/bao/kart_pg_plan_encode.py");
+    hashFile(adapters, root, "paramtree_bridge", "experiments/adapters/paramtree/paramtree_bridge.py");
+    hashFile(adapters, root, "paramtree_train", "experiments/adapters/paramtree/paramtree_train_from_kart.py");
+    hashFile(adapters, root, "kart_plan_to_paramtree", "experiments/adapters/paramtree/kart_plan_to_paramtree.py");
     hashFile(adapters, root, "llm_client", "experiments/adapters/llm_client.py");
-    hashFile(adapters, root, "bao_weights", "experiments/adapters/bao/kart_plan_family_weights.json");
     hashFile(adapters, root, "transplant_md", "experiments/adapters/TRANSPLANT.md");
     hashFile(adapters, root, "bird_knowledge", "experiments/adapters/din/bird_knowledge.txt");
     out.put("adapter_sha256", adapters);
@@ -124,6 +132,9 @@ public final class ThirdPartyAudit {
     }
     if ("bao".equals(a)) {
       return "bao";
+    }
+    if ("paramtree".equals(a)) {
+      return "paramtree";
     }
     if ("llmopt".equals(a)) {
       return "llmopt";

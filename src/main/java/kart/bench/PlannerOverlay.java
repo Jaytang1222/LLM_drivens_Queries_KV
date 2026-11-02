@@ -12,7 +12,8 @@ import java.util.Map;
 /** Apply suite/factor/param overrides onto a copied {@link AppConfig.PlannerConfig}. */
 public final class PlannerOverlay {
 
-  public static final String UNCALIBRATED_COEFFS = "config/cost_coeffs_uncalibrated.yaml";
+  public static final String UNCALIBRATED_COEFFS =
+      kart.KartPaths.UNCALIBRATED_COEFFS;
 
   private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
 

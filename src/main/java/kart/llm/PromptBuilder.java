@@ -46,6 +46,10 @@ public final class PromptBuilder {
     sb.append("continuous path / LINEAR_SEGMENT / polyline crossing; continuous Fréchet; ");
     sb.append("derived speed / dwell / stay-point predicates; pair co-location joins. ");
     sb.append("For those, put missing:[\"unsupported\"] and leave result incomplete.\n");
+    sb.append("Also UNSUPPORTED (missing:[\"unsupported\"], do not answer with a filter): ");
+    sb.append("GROUP BY / average / median / histogram / rank-by-length, ");
+    sb.append("weather joins, delete/update, prediction, clustering, CSV export, ");
+    sb.append("live/online status.\n");
     sb.append("HONESTY RULES (critical):\n");
     sb.append("- Never invent similarity.metric if the user did not name DTW, FRECHET, or HAUSDORFF;");
     sb.append(" omit it and set missing:[\"similarity.metric\"].\n");

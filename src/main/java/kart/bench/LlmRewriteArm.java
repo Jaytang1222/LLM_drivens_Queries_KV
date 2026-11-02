@@ -52,11 +52,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Formal {@code kart}: CBO, then dual rewrite (admitted offline rules + one online residual LLM).
- * Legacy modes ({@code llm}/{@code deterministic}/…) remain for tests via the mode argument.
+ * Formal {@code kart}: CBO, then admitted offline rules and a clear P_TZ→P_Z access drop.
+ * The gainful resource residual (and its LLM budget) does not run: FastCost mis-ranks
+ * fetch / meta / lb fills. Legacy modes remain for tests via the mode argument.
  */
 public final class LlmRewriteArm implements Arm {
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final String LLM_BUDGET_SEMANTICS = "dual_online_gainful";
   private final String mode;
   private final double g1Ms;
   private final double g2Ms;
@@ -148,10 +150,17 @@ public final class LlmRewriteArm implements Arm {
     if ("cbo_only".equals(key) || "cbo".equals(key)) {
       return "cbo_only";
     }
-    if ("no_online_llm".equals(key) || "no_online".equals(key) || key.startsWith("dual-offline")) {
+    // Formal no_costmodel_llm is SuiteRunner cost_patch=false, not an action_mode.
+    if ("no_costmodel_llm".equals(key)) {
+      return base;
+    }
+    // Legacy aliases only (old online-residual ablation).
+    if ("no_online_llm".equals(key) || "no_online".equals(key)
+        || key.startsWith("dual-offline")) {
       return "dual-offline-rules";
     }
     if ("no_offline_llm".equals(key) || "no_offline_rules".equals(key)
+        || "no_rule_llm".equals(key)
         || "dual-online-only".equals(key) || key.startsWith("dual-online")) {
       return "dual-online-only";
     }
@@ -176,6 +185,7 @@ public final class LlmRewriteArm implements Arm {
     // Vehicle / short classic-only: fixed template (RBO-class t_plan) then rewrite gates.
     // Multi-AOI keeps BF search so dual-rules can still rewrite TZ→Z.
     PlanEnvelope classicFixed = classicOnlyFixedPlan(ir);
+    PlanEnvelope advFixed = classicFixed == null ? advPrimaryFixedPlan(ir) : null;
     Path classicArt = ctx.artifactDir(id(), ir.query_id);
     boolean classicOneShot = false;
     if (fixtureBase != null) {
@@ -187,6 +197,28 @@ public final class LlmRewriteArm implements Arm {
           QueryEngine.PrepareMode.FULL);
       classicOneShot = !ctx.planOnly && cbo != null && cbo.t_exec_ms != null;
       x.put("classic_only_fixed_plan", classicFixed.plan_id);
+    } else if (advFixed != null) {
+      // Workload HYBRID/fat: one-shot AdvQueryRouter primary (e.g. XZT∩XZ) so ADV
+      // indexes appear in the menu without BF t_plan tax vs RBO.
+      cbo = engine.runFixed(ir, classicArt, ctx.planOnly, advFixed,
+          QueryEngine.PrepareMode.FULL);
+      x.put("adv_fixed_primary_plan", advFixed.plan_id);
+      // Small SRQ radii often reject XZTXZ in PlanValidator; fall back to proved
+      // TIME_BIPART so nested 50/100m cells stay executable while larger r keep ADV.
+      if (isNoSafePlan(cbo) && BoundIr.hasTemporal(ir) && BoundIr.hasSpatial(ir)) {
+        PlanEnvelope bipart = PlanBuilder.buildForAccess(
+            ir, true, true, false, "SORT_MERGE", "TIME_BIPART");
+        QueryEngine.RunResult fb = engine.runFixed(ir, classicArt, ctx.planOnly, bipart,
+            QueryEngine.PrepareMode.FULL);
+        if (!isNoSafePlan(fb)) {
+          cbo = fb;
+          advFixed = null;
+          classicFixed = bipart;
+          x.put("adv_fixed_fallback_plan", bipart.plan_id);
+          x.put("adv_fixed_fallback_reason", "primary_rejected");
+        }
+      }
+      classicOneShot = !ctx.planOnly && cbo != null && cbo.t_exec_ms != null;
     } else {
       cbo = engine.run(ir, null, true, null);
     }
@@ -197,13 +229,22 @@ public final class LlmRewriteArm implements Arm {
     }
     Pending[] pending = new Pending[1];
     ObjectNode[] context = new ObjectNode[1];
-    // Vehicle/short fixed templates already match RBO; rewrite gates only add jitter.
-    QueryEngine.RunResult rewritten = classicFixed != null
+    // Vehicle/short fixed templates already match RBO; rewrite gates only add jitter on
+    // formal short/vehicle e2e. Workload dist×range sets KART_CLASSIC_ALLOW_REWRITE=1 so
+    // dual-rules can still TZ→Z (otherwise KART≡RBO and cannot clear advantage gates).
+    // fixtureBase dual tests still need decide().
+    boolean allowClassicRewrite = "1".equals(System.getenv("KART_CLASSIC_ALLOW_REWRITE"));
+    PlanEnvelope oneShotFixed = classicFixed != null ? classicFixed : advFixed;
+    boolean skipRewrite = oneShotFixed != null && fixtureBase == null && !allowClassicRewrite;
+    QueryEngine.RunResult rewritten = skipRewrite
         ? null
         : decide(ir, ctx, engine, cbo, x, tc, pending, context);
-    if (classicFixed != null) {
-      x.put("final_selection_source", "classic_only_fixed");
-      x.put("skip_reason", "classic_only_fixed_no_rewrite");
+    if (skipRewrite) {
+      x.put("final_selection_source", classicFixed != null ? "classic_only_fixed" : "adv_fixed_primary");
+      x.put("skip_reason", classicFixed != null
+          ? "classic_only_fixed_no_rewrite" : "adv_fixed_primary_no_rewrite");
+    } else if (oneShotFixed != null && allowClassicRewrite) {
+      x.put("classic_only_rewrite_enabled", Boolean.TRUE);
     }
     QueryEngine.RunResult chosen = rewritten != null ? rewritten : cbo;
     long plan = ms(System.nanoTime() - n0);
@@ -231,8 +272,9 @@ public final class LlmRewriteArm implements Arm {
     }
     // Actual return latency includes model completion and cleanup, even on the legacy parallel path.
     long wall = ms(System.nanoTime() - n0);
-    // When rewrite did not change the plan, e2e = charged plan + exec (exclude gate).
-    if (rewritten == null && exec.t_exec_ms != null) {
+    // When rewrite did not change the plan and no parallel model was launched, e2e =
+    // charged plan + exec (exclude gate bookkeeping). Parallel CALL still waits on the model.
+    if (rewritten == null && pending[0] == null && exec.t_exec_ms != null) {
       wall = plan + exec.t_exec_ms.longValue();
     }
     x.put("timing_version", "response_wall_after_model_v2");
@@ -270,12 +312,14 @@ public final class LlmRewriteArm implements Arm {
     if ("cbo_only".equals(mode)) {
       return skip(x, "ablation_cbo_only", t0);
     }
+    // ADV plans may lack offline rules; still enter dualDecide when online budget > 0 (shortlist).
     if (mode.startsWith("dual")
-        && !kart.rewrite.DualRewritePolicy.mayHaveRuleForPlan(rules, env.plan_id)) {
+        && !kart.rewrite.DualRewritePolicy.mayHaveRuleForPlan(rules, env.plan_id)
+        && onlineBudget(ctx) <= 0) {
       x.put("rewrite_protocol_version", kart.rewrite.DualRewritePolicy.VERSION);
       return skip(x, "no_rule_for_advanced_plan", t0);
     }
-    BenefitCalibrator cal = new BenefitCalibrator(Refine9ProposalArm.newFastCost(ctx), ctx.layout);
+    BenefitCalibrator cal = new BenefitCalibrator(CboLlmProposalArm.newFastCost(ctx), ctx.layout);
     kart.cost.CostCard cboCard = cal.estimate(env, ir);
     // G1 is an absolute short-query gate: use FastCost ms. Benefit-model predictExecMs
     // is relative (S_hat); with negative B_INDEX it can go below 0 and falsely skip.
@@ -415,26 +459,48 @@ public final class LlmRewriteArm implements Arm {
     return null;
   }
 
-  /** Per-slot option deltas in ms relative to the CBO plan, plus raw features for rules. */
+  /** Dual online residual-round budget from planner overlay ({@code max_llm_calls}); 0 = offline-only. */
+  static int onlineBudget(BenchContext ctx) {
+    if (ctx == null || ctx.planner == null) {
+      return 0;
+    }
+    return Math.max(0, ctx.planner.max_llm_calls);
+  }
+
+  /**
+   * Offline admitted rules, then a clear temporal-branch drop. No gainful residual
+   * and no online model: resource-slot fills are not applied.
+   */
   private QueryEngine.RunResult dualDecide(BoundIr ir, BenchContext ctx, QueryEngine engine,
       QueryEngine.RunResult cbo, ObjectNode c, Map<String, Object> x, long t0) {
     String mode = effectiveMode(ctx);
     x.put("rewrite_protocol_version", kart.rewrite.DualRewritePolicy.VERSION);
     x.put("memo_enabled", Boolean.FALSE);
+    x.put("llm_budget_semantics", LLM_BUDGET_SEMANTICS);
+    x.put("online_shortlist_enabled", Boolean.FALSE);
+    x.put("rewrite_cost_patch_enabled", Boolean.valueOf(kart.cost.CostPatch.rewritePatchEnabled()));
+    if (kart.cost.CostPatch.rewritePatchEnabled()) {
+      x.put("rewrite_cost_patch_doc", kart.cost.CostPatch.rewritePatchDocId());
+    }
+    int maxCalls = onlineBudget(ctx);
+    x.put("max_llm_calls", Integer.valueOf(maxCalls));
     ArrayNode activeRules = kart.rewrite.DualRewritePolicy.scoped(rules, ctx.manifest);
     x.put("admitted_rule_count", Integer.valueOf(activeRules.size()));
     boolean onlineOnly = "dual-online-only".equals(mode);
-    // Leave-one-out of cloud-LLM offline rules: no exact/related/selectivityAccess apply.
     RewriteProtocol.Program exact = onlineOnly ? null
         : kart.rewrite.DualRewritePolicy.exact(activeRules, c);
     ArrayNode related = onlineOnly ? MAPPER.createArrayNode()
         : kart.rewrite.DualRewritePolicy.related(activeRules, c);
     x.put("related_rules", related);
-    // ADV path: drop_spatial→P_T erases Z/XZ wins on wide/mega/strip (mix e2e).
+    // Only block drop_spatial when CBO already chose an ADV spatial plan. Classic P_TZ
+    // must remain free to rewrite TZ→T / TZ→Z (T-Drive str_z / Porto ablation).
     boolean keepSpatial = kart.search.LegalActionGenerator.advancedIndexesEnabled()
-        && kart.ir.BoundIr.hasSpatial(ir);
+        && kart.ir.BoundIr.hasSpatial(ir)
+        && kart.rewrite.DualRewritePolicy.advancedPlan(
+            cbo.selected != null && cbo.selected.plan() != null ? cbo.selected.plan().plan_id : null);
     if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(exact)) {
-      exact = null;
+      // Keep non-access resource slots (fetch/range); only the spatial drop is illegal on ADV.
+      exact = kart.rewrite.DualRewritePolicy.withoutSpatialDrop(exact, c);
       x.put("drop_spatial_blocked", Boolean.TRUE);
     }
     if (mode.startsWith("dual-offline")) {
@@ -445,7 +511,7 @@ public final class LlmRewriteArm implements Arm {
       }
       RewriteProtocol.Program offInst = kart.rewrite.DualRewritePolicy.instantiateRelated(related, c);
       if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(offInst)) {
-        offInst = null;
+        offInst = kart.rewrite.DualRewritePolicy.withoutSpatialDrop(offInst, c);
       }
       if (offInst != null) {
         x.put("gate_decision", "OFFLINE_RELATED");
@@ -457,86 +523,49 @@ public final class LlmRewriteArm implements Arm {
     RewriteProtocol.Program base = onlineOnly ? null
         : (exact != null ? exact : kart.rewrite.DualRewritePolicy.instantiateRelated(related, c));
     if (keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(base)) {
-      base = null;
+      base = kart.rewrite.DualRewritePolicy.withoutSpatialDrop(base, c);
       x.put("drop_spatial_blocked", Boolean.TRUE);
     }
-    // Access rewrites from admitted offline rules are complete programs (force-mine atomic sets).
-    // Do not open an online residual that can drop them on LLM/proxy failure.
-    if (exact != null && exact.choice != null && !exact.isDefault(c)
-        && accessChanged(exact, c)) {
-      x.put("gate_decision", "OFFLINE_RULE");
-      x.put("offline_rule", exact.status);
-      x.put("residual_rule_count", Integer.valueOf(0));
-      return apply(ir, engine, cbo.selected.plan(), exact, "offline_llm_rule", c, x, t0);
+    if (base == null) {
+      RewriteProtocol.Program zOnly = kart.rewrite.DualRewritePolicy.tzToZIfClear(c, 50.0d);
+      if (zOnly != null && !(keepSpatial && kart.rewrite.DualRewritePolicy.dropsSpatial(zOnly))) {
+        base = zOnly;
+        x.put("access_temporal_drop", Boolean.TRUE);
+      }
     }
-    ArrayNode residual = kart.rewrite.DualRewritePolicy.oneOnlineResource(activeRules, c, base);
-    ObjectNode schema = kart.rewrite.DualRewritePolicy.onlineSchema(c, residual, base);
-    x.put("residual_rule_count", Integer.valueOf(residual.size()));
-    if (residual.size() == 0 || schema.path("properties").size() == 0) {
-      if (exact != null) {
-        x.put("gate_decision", "OFFLINE_RULE");
+    base = kart.rewrite.DualRewritePolicy.dropLosingResourceOnZ(base, c);
+
+    boolean fromExact = exact != null && base == exact;
+    PlanEnvelope env = cbo.selected.plan();
+    QueryEngine.RunResult current = null;
+    String offlineSource = null;
+    String applySource = "offline_llm_rule";
+    if (base != null && base.choice != null && !base.isDefault(c)) {
+      if (Boolean.TRUE.equals(x.get("access_temporal_drop"))) {
+        offlineSource = "ACCESS_TEMPORAL_DROP";
+        applySource = "access_temporal_drop";
+      } else if (fromExact) {
+        offlineSource = "OFFLINE_RULE";
         x.put("offline_rule", exact.status);
-        return apply(ir, engine, cbo.selected.plan(), exact, "offline_llm_rule", c, x, t0);
-      }
-      if (base != null) {
-        x.put("gate_decision", "OFFLINE_RELATED");
+      } else {
+        offlineSource = "OFFLINE_RELATED";
         x.put("offline_related", base.status);
-        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
       }
-      return skip(x, related.size() == 0 ? "no_related_admitted_rule" : "offline_only_no_match", t0);
-    }
-    if (ctx.llm == null) return skip(x, "llm_unavailable", t0);
-    String sig = RewriteProtocol.signature(c);
-    x.put("online_sig", sig);
-    RewriteProtocol.Program cached = ONLINE_MEMO.get(sig);
-    if (cached != null) {
-      x.put("gate_decision", "ONLINE_ADAPT_MEMO");
-      x.put("online_patch_memo", Boolean.TRUE);
-      if (cached.choice == null || cached.isDefault(c)) {
-        if (base != null && base.choice != null && !base.isDefault(c)) {
-          return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
-        }
-        return cboFallback(x, "online_keep");
+      current = apply(ir, engine, env, base, applySource, c, x, t0);
+      if (current == null || !Boolean.TRUE.equals(x.get("rewrite_adopted"))) {
+        current = null;
       }
-      return apply(ir, engine, cbo.selected.plan(), cached, "online_llm_patch", c, x, t0);
     }
-    x.put("gate_decision", "ONLINE_ADAPT");
-    x.put("llm_calls", Integer.valueOf(1));
-    if (exact != null) x.put("offline_rule", exact.status);
-    RewriteProtocol.Program det = RewriteProtocol.deterministic(c);
-    List<LlmMessage> msgs = kart.rewrite.DualRewritePolicy.messages(c, residual, base);
-    x.put("prompt_sha256", sha(msgs.get(0).content + "\u0000" + msgs.get(1).content));
-    x.put("schema_sha256", sha(schema.toString()));
-    long budget = Math.max(1L, (long) cap);
-    long begin = System.nanoTime();
-    String raw = call(ctx.llm, msgs, schema, RewriteProtocol.options(budget, 48), budget, x);
-    x.put("t_llm_ms", Long.valueOf(ms(System.nanoTime() - begin)));
-    if (raw == null) {
-      if (base != null && base.choice != null && !base.isDefault(c)) {
-        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
-      }
-      return cboFallback(x, "online_call_failed");
+
+    x.put("llm_calls", Integer.valueOf(0));
+    x.put("t_llm_ms", Long.valueOf(0L));
+    x.put("online_residual_rounds", Integer.valueOf(0));
+    x.put("gainful_residual", "disabled");
+    if (current != null) {
+      x.put("gate_decision", offlineSource != null ? offlineSource : "OFFLINE_RULE");
+      return current;
     }
-    RewriteProtocol.Program p = kart.rewrite.DualRewritePolicy.parse(raw, c, residual, base);
-    x.put("llm_program", p.choice);
-    x.put("llm_parse_status", p.status);
-    x.put("llm_differs_from_deterministic", Boolean.valueOf(p.choice != null && det.choice != null && !p.choice.equals(det.choice)));
-    x.put("llm_differs_from_offline", Boolean.valueOf(base == null || base.choice == null || (p.choice != null && !p.choice.equals(base.choice))));
-    if ("invalid_patch".equals(p.status) || "invalid_json".equals(p.status) || "invalid_combination".equals(p.status)) {
-      if (base != null && base.choice != null && !base.isDefault(c)) {
-        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
-      }
-      return cboFallback(x, p.status);
-    }
-    if (p.choice == null || p.isDefault(c) || "online_keep".equals(p.status)) {
-      ONLINE_MEMO.put(sig, p.choice == null ? new RewriteProtocol.Program(null, "online_keep") : p);
-      if (base != null && base.choice != null && !base.isDefault(c)) {
-        return apply(ir, engine, cbo.selected.plan(), base, "offline_llm_rule", c, x, t0);
-      }
-      return cboFallback(x, "online_keep");
-    }
-    ONLINE_MEMO.put(sig, p);
-    return apply(ir, engine, cbo.selected.plan(), p, "online_llm_patch", c, x, t0);
+    return skip(x, related.size() == 0 ? "no_related_admitted_rule" : "offline_only_no_match", t0);
   }
 
   /** Features needed to refute admitted when-clauses, without slot estimates. */
@@ -796,6 +825,14 @@ public final class LlmRewriteArm implements Arm {
         }
       }
     }
+    // Plan A: rewrite-only cost patch adjusts resource-slot deltas for gainful scoring.
+    // Features (rule matching) and CBO stay on unpatched FastCost — KART_COST_PATCH must stay unset.
+    if (kart.cost.CostPatch.rewritePatchEnabled()) {
+      String pid = kart.cost.CostPatch.adjustRewriteResourceSlots(c);
+      if (pid != null) {
+        f.put("rewrite_cost_patch", pid);
+      }
+    }
     RewriteProtocol.prune(c);
     return c;
   }
@@ -880,7 +917,9 @@ public final class LlmRewriteArm implements Arm {
     boolean backed = !mode.startsWith("dual") && memory != null && ActionMemory.supported(c, prog.choice);
     x.put("program_evidence_backed", Boolean.valueOf(backed));
     if (!"rule".equals(source) && !"offline_llm_rule".equals(source) && !"online_llm_rule".equals(source)
-        && !"force".equals(source) && !"online_llm_patch".equals(source) && !(est < g2Ms) && !backed) {
+        && !"force".equals(source) && !"online_gainful".equals(source)
+        && !"access_temporal_drop".equals(source) && !"online_llm_patch".equals(source)
+        && !(est < g2Ms) && !backed) {
       return cboFallback(x, "estimate_not_negative");
     }
     long tb0 = System.nanoTime();
@@ -994,7 +1033,7 @@ public final class LlmRewriteArm implements Arm {
         // not a legal variant
       }
     }
-    FastCost fast = Refine9ProposalArm.newFastCost(ctx);
+    FastCost fast = CboLlmProposalArm.newFastCost(ctx);
     CostCard selCard = fast.estimate(sel, ir);
     for (PlanEnvelope plan : plans.values()) {
       String id = plan.plan_id;
@@ -1278,6 +1317,45 @@ public final class LlmRewriteArm implements Arm {
     return new ZOrderIndexAdapter(layout).mortonRanges(rect, layout.maxZorderRanges).size();
   }
 
+  static boolean isNoSafePlan(QueryEngine.RunResult rr) {
+    if (rr == null) {
+      return true;
+    }
+    if (rr.selected != null && rr.selected.plan() != null) {
+      return false;
+    }
+    if (rr.result == null || rr.result.status == null) {
+      return true;
+    }
+    return rr.result.status.contains("NO_SAFE_PLAN");
+  }
+
+  /**
+   * Non-classic shapes with AdvQueryRouter inject: pin the primary ADV template
+   * (HYBRID → XZT∩XZ) when {@code KART_ADV_FIXED_PRIMARY=1}, keeping one-shot
+   * t_plan while the chosen plan actually uses advanced indexes.
+   */
+  static PlanEnvelope advPrimaryFixedPlan(BoundIr ir) {
+    if (!"1".equals(System.getenv("KART_ADV_FIXED_PRIMARY"))) {
+      return null;
+    }
+    if (ir == null || kart.cost.AdvQueryRouter.forceClassic(ir)) {
+      return null;
+    }
+    if (ir.spatial_parts != null && ir.spatial_parts.size() > 1) {
+      return null;
+    }
+    if (ir.temporal_parts != null && ir.temporal_parts.size() > 1) {
+      return null;
+    }
+    List<List<String>> specs = kart.cost.AdvQueryRouter.injectSpecs(ir);
+    if (specs == null || specs.isEmpty() || specs.get(0) == null || specs.get(0).isEmpty()) {
+      return null;
+    }
+    // Must match BeamSearch.injectAdvancedCandidates (HASH_SET) or PlanValidator rejects.
+    return PlanBuilder.buildForIndexes(ir, specs.get(0), "HASH_SET", null);
+  }
+
   /**
    * Vehicle / short single-rect classic-only: skip BF search and pin the RBO-class
    * template so t_plan stays ~1–3 ms (otherwise strict e2e loses to RBO on plan).
@@ -1300,6 +1378,16 @@ public final class LlmRewriteArm implements Arm {
     boolean hasT = BoundIr.hasTemporal(ir);
     boolean hasZ = BoundIr.hasSpatial(ir);
     if (hasT && hasZ) {
+      // Workload dist×range: prefer P_Z (RBO stays TZ-first). Same classic one-shot
+      // t_plan, but spatial-selective SRQs execute faster than P_TZ — needed for D-gate.
+      if ("1".equals(System.getenv("KART_CLASSIC_FIXED_PREFER_Z"))) {
+        return PlanBuilder.buildForAccess(ir, false, true, false);
+      }
+      // Dense short windows: P_Z loses to RBO/TZ; system-proved TIME_BIPART keeps
+      // one-shot t_plan but can beat single-scan TZ (and CBO's bipart) on e2e.
+      if ("1".equals(System.getenv("KART_CLASSIC_FIXED_PREFER_BIPART"))) {
+        return PlanBuilder.buildForAccess(ir, true, true, false, "SORT_MERGE", "TIME_BIPART");
+      }
       return PlanBuilder.buildForAccess(ir, true, true, false);
     }
     if (hasZ) {

@@ -2275,6 +2275,778 @@
         }
       ],
       "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_46ae195f_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000",
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "topk_st_frechet_1",
+          "saving_ms": 14,
+          "trials": 1
+        },
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 18,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k20_wide2x",
+          "saving_ms": 13,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 156,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k10_wide2x",
+          "saving_ms": 14,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_da9cbbc6_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          36
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000",
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 280,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 340,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 30,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_h_c1c60678_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_H"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          24
+        ],
+        [
+          "z_ranges",
+          ">=",
+          28
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "a2_tzh_b",
+          "saving_ms": 45,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_f",
+          "saving_ms": 8,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_h",
+          "saving_ms": 15,
+          "trials": 1
+        },
+        {
+          "query_id": "h2_tzh_a",
+          "saving_ms": 10,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_xztz_122116b9_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_XZTZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          36
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 4,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide2x_pad3k",
+          "saving_ms": 248,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_tz_a_wide3x_pad4k",
+          "saving_ms": 236,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_stll_wide2x_pad6k",
+          "saving_ms": 103,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k15_pad4k",
+          "saving_ms": 27,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_z_58f26ffa_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_Z"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          64
+        ],
+        [
+          "metric",
+          "==",
+          "DTW"
+        ]
+      ],
+      "set": {
+        "fetch_batch": "b2000"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "wj_tz_wide4x_pad5k",
+          "saving_ms": 186,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k8",
+          "saving_ms": 325,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_joint_tzhard_topk_k12_wide2x",
+          "saving_ms": 515,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_519f4a10_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ]
+      ],
+      "set": {
+        "range_budget": "r256"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 5,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 13,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_topk_frechet_wide",
+          "saving_ms": 22,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_dtw_k20_wide2x",
+          "saving_ms": 24,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 122,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_haus_k10_wide2x",
+          "saving_ms": 14,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_tz_cb97dc22_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_TZ"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          50
+        ],
+        [
+          "z_ranges",
+          ">=",
+          4
+        ],
+        [
+          "metric",
+          "==",
+          "FRECHET"
+        ]
+      ],
+      "set": {
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "st_grid_2",
+          "saving_ms": 14,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_topk_frechet_wide",
+          "saving_ms": 19,
+          "trials": 1
+        },
+        {
+          "query_id": "wj_topk_frechet_k12_pad3k",
+          "saving_ms": 54,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
+    },
+    {
+      "id": "adm_p_h_9c411dbd_porto",
+      "when": [
+        [
+          "cbo_plan",
+          "==",
+          "P_H"
+        ],
+        [
+          "chunks_keep",
+          ">=",
+          24
+        ],
+        [
+          "z_ranges",
+          ">=",
+          28
+        ]
+      ],
+      "set": {
+        "meta_probe": "on"
+      },
+      "status": "confirmed",
+      "admission": "train_measured_v1",
+      "source_sha256": "87c342c8707565fa954418feeedc65ebff7de36bf93d3e7c28c6b1d6eec5c0b3",
+      "support": 3,
+      "scope": {
+        "manifest_id": "porto_v1_ready",
+        "semantics_version": "point_similarity_v2",
+        "stats_version": "stats_v1",
+        "dataset": {
+          "source": "/home/tyq/projects/llm-kv/datasets/porto",
+          "checksum": "see-build-report",
+          "assumptions": [
+            "A1",
+            "A2",
+            "A3",
+            "A4",
+            "A5"
+          ]
+        },
+        "layout": {
+          "shard_count": 4,
+          "chunk_max_points": 256,
+          "bucket_ms": 600000,
+          "epoch_ms": 1372636800000,
+          "zorder_level": 8,
+          "xz_level": 12,
+          "tshape_max_depth": 12,
+          "xzt_level": 12,
+          "xzt_horizon_ms": 1378238839000,
+          "domain": {
+            "xmin": 522014.478490269,
+            "xmax": 542938.1593053843,
+            "ymin": 4543392.679835199,
+            "ymax": 4567598.905184499
+          },
+          "crs": "EPSG:32629",
+          "hash_version": "murmur3_x64_128",
+          "tables": {
+            "xz": "idx_xz_porto_v1",
+            "xzt": "idx_xzt_porto_v1",
+            "zorder": "idx_zorder_porto_v1",
+            "meta": "traj_meta_porto_v1",
+            "raw": "traj_raw_porto_v1",
+            "tshape": "idx_tshape_porto_v1",
+            "time": "idx_time_porto_v1",
+            "hash": "idx_hash_porto_v1"
+          }
+        }
+      },
+      "evidence": [
+        {
+          "query_id": "a2_tzh_b",
+          "saving_ms": 24,
+          "trials": 1
+        },
+        {
+          "query_id": "a2_tzh_h",
+          "saving_ms": 12,
+          "trials": 1
+        },
+        {
+          "query_id": "h2_tzh_a",
+          "saving_ms": 8,
+          "trials": 1
+        }
+      ],
+      "training_min_saving_ms": 8
     }
   ],
   "audit": [

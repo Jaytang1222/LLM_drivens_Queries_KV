@@ -190,6 +190,13 @@ public final class QueryEngine {
       this.limits.scanParallelism = fromCost.scanParallelism;
       this.limits.scanParallelismPerRs = fromCost.scanParallelismPerRs;
       this.limits.fetchParallelism = fromCost.fetchParallelism;
+      // Caller often passes ExecLimits.defaults(); still honor planner.yaml soft_memory / max_exec.
+      if (fromCost.softMemoryBytes > 0) {
+        this.limits.softMemoryBytes = fromCost.softMemoryBytes;
+      }
+      if (fromCost.maxExecMs > 0) {
+        this.limits.maxExecMs = fromCost.maxExecMs;
+      }
     }
     this.stats = stats;
     this.regionMapping = buildRegionMapping(kv);

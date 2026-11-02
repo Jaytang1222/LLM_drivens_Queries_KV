@@ -39,7 +39,8 @@ public final class SmokeTdriveCmd implements Callable<Integer> {
   @Option(names = "--workload", defaultValue = "experiments/workloads/tdrive_smoke.json")
   private Path workloadPath;
 
-  @Option(names = "--oracle", defaultValue = "experiments/workloads/tdrive_smoke.oracle.json")
+  /** Optional sidecar; default empty = use answers embedded in --workload. */
+  @Option(names = "--oracle", defaultValue = "")
   private Path oraclePath;
 
   @Option(names = "--catalog", defaultValue = "catalog")
@@ -61,18 +62,24 @@ public final class SmokeTdriveCmd implements Callable<Integer> {
   public Integer call() throws Exception {
     Path root = resolveRoot();
     Path wPath = workloadPath.isAbsolute() ? workloadPath : root.resolve(workloadPath);
-    Path oPath = oraclePath.isAbsolute() ? oraclePath : root.resolve(oraclePath);
     if (!Files.isRegularFile(wPath)) {
       System.err.println("workload not found: " + wPath);
       return 2;
     }
-    if (!Files.isRegularFile(oPath)) {
-      System.err.println("oracle cache not found: " + oPath + " (run build-oracle-cache first)");
-      return 2;
-    }
 
     JsonNode workload = MAPPER.readTree(Files.readAllBytes(wPath));
-    JsonNode oracleRoot = MAPPER.readTree(Files.readAllBytes(oPath));
+    JsonNode oracleRoot = workload;
+    if (oraclePath != null && oraclePath.toString() != null && !oraclePath.toString().trim().isEmpty()) {
+      Path oPath = oraclePath.isAbsolute() ? oraclePath : root.resolve(oraclePath);
+      if (!Files.isRegularFile(oPath)) {
+        System.err.println("oracle cache not found: " + oPath + " (run build-oracle-cache first)");
+        return 2;
+      }
+      oracleRoot = MAPPER.readTree(Files.readAllBytes(oPath));
+    } else if (workload.get("answers") == null || !workload.get("answers").isArray()) {
+      System.err.println("workload has no embedded answers; pass --oracle or rebuild with build-oracle-cache");
+      return 2;
+    }
     List<BoundIr> queries = new ArrayList<BoundIr>();
     for (JsonNode q : workload.get("queries")) {
       queries.add(MAPPER.treeToValue(q, BoundIr.class));
@@ -111,7 +118,7 @@ public final class SmokeTdriveCmd implements Callable<Integer> {
     Path runsRoot = runsDir.isAbsolute() ? runsDir : root.resolve(runsDir);
     Files.createDirectories(runsRoot);
 
-    Path site = root.resolve("config/hbase/hbase-site.xml");
+    Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     HBaseBackend kv = new HBaseBackend(HBaseBackend.open(site));
     kart.exec.ExecLimits limits = kart.exec.ExecLimits.defaults();
     limits.maxCandidateChunks = (int) Math.min(Integer.MAX_VALUE,

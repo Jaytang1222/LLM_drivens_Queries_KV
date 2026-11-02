@@ -1,6 +1,7 @@
 package kart.cost;
 
 import kart.ir.BoundIr;
+import kart.plan.Op;
 import kart.plan.PlanBuilder;
 import kart.search.IndexId;
 
@@ -53,7 +54,14 @@ public final class AdvQueryRouter {
       return false;
     }
     long sh = envLong("KART_ADV_SHORT_TEMPORAL_MS", DEFAULT_SHORT_TEMPORAL_MS);
-    return dt.longValue() < sh;
+    if (dt.longValue() >= sh) {
+      return false;
+    }
+    // Short+small stays classic (TZ one-shots). Short+wide: force grids show
+    // P_XZTXZ << P_TZ; allow shared ADV inject so learned arms can also see it.
+    // Integrity: menu stays symmetric — only the area gate changes.
+    double xzWide = envDouble("KART_ADV_XZ_WIDE_AREA", 165_000_000.0d);
+    return spatialArea(ir) < xzWide;
   }
 
   public static Route route(BoundIr ir) {
@@ -91,16 +99,18 @@ public final class AdvQueryRouter {
       double area = spatialArea(ir);
       // T-Drive: wide≈1.2e8–1.6e8, mega≈3.9e8–4.3e8. force_mix8: XZTXZ wins mega;
       // wide_1 (≥1.5e8) keeps a pure-XZ pocket; smaller wides keep TS.
-      double mega = envDouble("KART_ADV_MEGA_AREA", 250_000_000.0d);
-      double xzWide = envDouble("KART_ADV_XZ_WIDE_AREA", 150_000_000.0d);
+      // Grid on T-Drive: P_XZTXZ is the fast plan from ~160 km² up; P_XZ wins the
+      // band under that; P_TS only beats Z/TZ once the box is past ~145 km².
+      // Below tsMin the window stays classic so tight Z is not rewritten to TS.
+      double mega = envDouble("KART_ADV_MEGA_AREA", 200_000_000.0d);
+      double xzWide = envDouble("KART_ADV_XZ_WIDE_AREA", 165_000_000.0d);
+      double tsMin = envDouble("KART_ADV_TS_MIN_AREA", 145_000_000.0d);
       if (hasT && hasS && area >= mega) {
         out.add(Arrays.asList(IndexId.XZT, IndexId.XZ));
       } else if (hasS && area >= xzWide) {
         out.add(Collections.singletonList(IndexId.XZ));
-      } else if (hasS && injectTs) {
+      } else if (hasS && injectTs && area >= tsMin) {
         out.add(Collections.singletonList(IndexId.TSHAPE));
-      } else if (hasS) {
-        out.add(Collections.singletonList(IndexId.XZ));
       }
     } else if (r == Route.HYBRID) {
       // Single XZT∩XZ inject: cuts Final-cost t_plan (xzt_2 was losing to FULL on plan).
@@ -113,6 +123,28 @@ public final class AdvQueryRouter {
       }
     }
     return out;
+  }
+
+  /** Plan id of the single injected template, or null when this shape stays classic. */
+  public static String primaryPlanId(BoundIr ir) {
+    List<List<String>> specs = injectSpecs(ir);
+    if (specs.isEmpty()) {
+      return null;
+    }
+    return planIdForIndexes(specs.get(0));
+  }
+
+  static String planIdForIndexes(List<String> indexes) {
+    boolean xzt = indexes.contains(IndexId.XZT);
+    boolean ts = indexes.contains(IndexId.TSHAPE);
+    boolean xz = indexes.contains(IndexId.XZ);
+    boolean useT = xzt || indexes.contains(IndexId.TIME);
+    boolean useZ = ts || xz || indexes.contains(IndexId.ZORDER);
+    boolean useH = indexes.contains(IndexId.HASH);
+    Op temporal = xzt ? Op.XZT_RANGE_SCAN : Op.TIME_RANGE_SCAN;
+    Op spatial = ts ? Op.TSHAPE_RANGE_SCAN
+        : xz ? Op.XZ_RANGE_SCAN : Op.ZORDER_RANGE_SCAN;
+    return PlanBuilder.planName(useT, useZ, useH, temporal, spatial);
   }
 
   /**

@@ -121,7 +121,7 @@ public final class LlmOptPlanArm implements Arm {
       if (rootNode.has("provenance")) {
         tr.extras.put("provenance", rootNode.get("provenance").toString());
       } else {
-        tr.extras.put("llmopt_upstream", "experiments/third_party/llmopt/README.md");
+        tr.extras.put("llmopt_upstream", "experiments/adapters/upstream/llmopt/README.md");
       }
       tr.extras.put("llmopt_intentional_changes",
           "KART plan_id family; Java validator/executor instead of pg_hint_plan; fair LLM not author checkpoint");

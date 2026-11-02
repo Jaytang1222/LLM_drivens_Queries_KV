@@ -1,0 +1,38 @@
+% Shared, conservative extensions to the supplied Springer LNCS template.
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{placeins}
+\usepackage{needspace}
+\usepackage{microtype}
+\usepackage[hidelinks,bookmarksdepth=1]{hyperref}
+\urlstyle{rm}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\KART}{\textsc{Kart}}
+\newcommand{\fastcost}{\widehat{L}_{\mathrm{Fast}}}
+\newcommand{\finalcost}{\widehat{L}_{\mathrm{Final}}}
+\newcommand{\safeset}{\Pi_{\mathrm{safe}}^{B}}
+\newcommand{\snapshot}{\mathcal{D}}
+\newcommand{\TBD}{\textit{TBD}}
+\newcommand{\resultplaceholder}[2]{%
+  \fbox{\begin{minipage}{0.94\linewidth}
+  \centering\small\textbf{Figure placeholder}\\[2pt]
+  \textbf{#1}\\[3pt]
+  \raggedright #2
+  \end{minipage}}}
+% Use LNCS's own theorem spacing with a roman definition body, as in the reference.
+\spnewtheorem{kartdefinition}{\definitionname}{\bfseries}{\rmfamily}
+% Optional figure slot, disabled by default. Section 2 deliberately contains no figures.
+% Enable in the introduction after the challenges if a motivating example is needed.
+% Suggested artwork: one natural-language ST Top-k request on the left; temporal-only,
+% spatial-only, and index-intersection access alternatives in the center; on the right,
+% exact refinement and a separate example of an incomplete key range losing a match.
+% Do not show invented selectivity, cost, or experimental measurements.
+

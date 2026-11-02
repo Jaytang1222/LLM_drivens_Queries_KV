@@ -34,16 +34,23 @@ public final class IrBinder {
   private final int shardCount;
   private final String manifestId;
   private final String semanticsVersion;
-  private final Projection projection = new Projection();
+  private final Projection projection;
 
   public IrBinder(AppConfig.RegionsConfig regions, KvBackend kv, String tableMeta,
                   int shardCount, String manifestId, String semanticsVersion) {
+    this(regions, kv, tableMeta, shardCount, manifestId, semanticsVersion, null);
+  }
+
+  public IrBinder(AppConfig.RegionsConfig regions, KvBackend kv, String tableMeta,
+                  int shardCount, String manifestId, String semanticsVersion,
+                  String projectedCrs) {
     this.regions = regions == null ? new AppConfig.RegionsConfig() : regions;
     this.kv = kv;
     this.tableMeta = tableMeta;
     this.shardCount = shardCount;
     this.manifestId = manifestId;
     this.semanticsVersion = semanticsVersion == null ? "point_similarity_v2" : semanticsVersion;
+    this.projection = new Projection(projectedCrs);
   }
 
   public static final class BindResult {
@@ -331,11 +338,30 @@ public final class IrBinder {
   }
 
   private Long lookupTid(String extId) throws IOException {
-    if (kv == null) {
+    if (kv == null || extId == null) {
+      return null;
+    }
+    String key = extId.trim();
+    if (key.isEmpty()) {
       return null;
     }
     Map<String, Long> map = loadExtToTid();
-    return map.get(extId);
+    Long tid = map.get(key);
+    if (tid != null) {
+      return tid;
+    }
+    // NL / DraftIR may echo smoke-anchor internal tids (e.g. Porto remapped 96037).
+    if (key.chars().allMatch(Character::isDigit)) {
+      try {
+        long asTid = Long.parseLong(key);
+        if (lookupChunkCount(asTid) != null) {
+          return Long.valueOf(asTid);
+        }
+      } catch (NumberFormatException ignored) {
+        // fall through
+      }
+    }
+    return null;
   }
 
   /** Catalog meta {@code d:cc} chunk count for cost-model ref_len. */

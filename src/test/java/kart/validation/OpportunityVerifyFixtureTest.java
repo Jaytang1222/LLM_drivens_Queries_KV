@@ -36,7 +36,7 @@ final class OpportunityVerifyFixtureTest {
 
   @Test
   void invalidPlanVerifyHasFourCases() throws Exception {
-    Path p = resolve("experiments/workloads/invalid_plan_verify_v1.json");
+    Path p = resolve("src/test/resources/fixtures/invalid_plan_verify_v1.json");
     JsonNode root = MAPPER.readTree(Files.readAllBytes(p));
     assertEquals("invalid_plan_verify_v1", root.get("workload_id").asText());
     assertEquals(4, root.get("cases").size());
@@ -119,7 +119,7 @@ final class OpportunityVerifyFixtureTest {
 
   @Test
   void nlNegativeVerifySeparatesE1FromE2E3() throws Exception {
-    Path p = resolve("experiments/workloads/nl_negative_verify_v1.json");
+    Path p = resolve("src/test/resources/fixtures/nl_negative_verify_v1.json");
     JsonNode root = MAPPER.readTree(Files.readAllBytes(p));
     assertEquals(4, root.get("items").size());
     assertTrue(root.get("invalid_bound_ir_samples").size() >= 2);
@@ -127,7 +127,7 @@ final class OpportunityVerifyFixtureTest {
       assertTrue(it.has("expected_status"));
       assertTrue(it.has("utterance"));
     }
-    IrSchemaValidator schemas = new IrSchemaValidator(resolve("schemas"));
+    IrSchemaValidator schemas = new IrSchemaValidator(resolve("src/main/resources/schemas"));
     for (JsonNode sample : root.get("invalid_bound_ir_samples")) {
       assertEquals("INPUT_VALIDATION_ERROR", sample.get("expected_status").asText());
       assertFalse(schemas.validateBoundIr(sample.get("bound_ir").toString()).isEmpty(),
@@ -176,8 +176,8 @@ final class OpportunityVerifyFixtureTest {
 
   @Test
   void verifyWorkloadOracleAlignedWhenPresent() throws Exception {
-    Path wl = resolve("experiments/workloads/bound_ir_cbo_opportunity_verify_v1.json");
-    Path ora = resolve("experiments/workloads/bound_ir_cbo_opportunity_verify_v1.oracle.json");
+    Path wl = resolve("src/test/resources/fixtures/bound_ir_cbo_opportunity_verify_v1.json");
+    Path ora = resolve("src/test/resources/fixtures/bound_ir_cbo_opportunity_verify_v1.oracle.json");
     if (!Files.isRegularFile(wl) || !Files.isRegularFile(ora)) {
       return; // generator not run yet in this environment
     }

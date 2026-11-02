@@ -1,0 +1,14 @@
+{
+  "n": 480,
+  "skipped_eval_overlap": 0,
+  "exclude_query_ids_n": 24,
+  "exclude_workloads": [
+    "experiments/workloads/bound_ir_complex_v2.json"
+  ],
+  "sources": [
+    "experiments\\results\\e2e-simple-v2c-20261015-231403\\e2e.jsonl"
+  ],
+  "upstream": "bao_server/model.py BaoRegression.fit",
+  "reward": "t_exec_ms",
+  "select_buffers": "default_buffers shared at infer (not per-arm)"
+}

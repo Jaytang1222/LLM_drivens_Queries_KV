@@ -280,7 +280,7 @@ public final class ProcessParseArm implements ParseArm {
     String draftJson = root.get("draft").toString();
     out.draft_ir_json = draftJson;
     AppConfig cfg = AppConfig.load(ctx.root);
-    IrSchemaValidator validator = new IrSchemaValidator(ctx.root.resolve("schemas"));
+    IrSchemaValidator validator = new IrSchemaValidator(kart.KartPaths.schemas(ctx.root));
     try {
       if (!validator.validateDraftIr(draftJson).isEmpty()) {
         stampParseTimes(out, t0, procMs, modelMs, bindStart);
@@ -293,9 +293,11 @@ public final class ProcessParseArm implements ParseArm {
     }
 
     DraftIr draft = DraftIr.fromJson(draftJson);
+    String crs = ctx.manifest != null && ctx.manifest.layout != null
+        ? ctx.manifest.layout.crs : null;
     IrBinder binder = new IrBinder(
         cfg.regions(), ctx.kv, ctx.layout.tableMeta, ctx.layout.shardCount,
-        ctx.manifest.manifest_id, "point_similarity_v2");
+        ctx.manifest.manifest_id, "point_similarity_v2", crs);
     IrBinder.BindResult br = binder.bind(draft, System.currentTimeMillis());
     if (IrBinder.STATUS_NEED_CLARIFICATION.equals(br.status)) {
       out.clarify_actual = Boolean.TRUE;

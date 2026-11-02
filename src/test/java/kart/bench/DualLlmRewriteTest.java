@@ -39,10 +39,16 @@ class DualLlmRewriteTest {
   }
 
   TrialResult run(LlmRewriteArm arm, LlmClient client) throws Exception {
+    return run(arm, client, 4);
+  }
+
+  TrialResult run(LlmRewriteArm arm, LlmClient client, int maxLlmCalls) throws Exception {
     try (MemoryBackend kv = SnapshotBuilder.buildFixtureInMemory()) {
+      AppConfig.PlannerConfig planner = AppConfig.PlannerConfig.defaults();
+      planner.max_llm_calls = maxLlmCalls;
       BenchContext c = new BenchContext(root, root, "dual-test", "compare", "dual", "e2e", false, true,
           false, "warm", FixtureBuilder.fixtureManifest(), LayoutContext.from(FixtureBuilder.fixtureManifest()),
-          null, AppConfig.PlannerConfig.defaults(), kv, client, null, null, null);
+          null, planner, kv, client, null, null, null);
       TrialResult r = arm.run(ir, c);
       assertNull(r.error);
       FullScanOracle.Answer expected = FullScanOracle.forFixture().evaluate(ir);
@@ -65,7 +71,9 @@ class DualLlmRewriteTest {
   }
 
   @Test void exactOfflineRuleRevalidatesWithoutModel() throws Exception {
-    TrialResult r = run(arm(rules(true), 1), (m, s, o) -> { fail("offline hit must not call"); return null; });
+    LlmRewriteArm.clearMemo();
+    // max_llm_calls=0: offline-only (no deterministic online residual).
+    TrialResult r = run(arm(rules(true), 1), (m, s, o) -> { fail("offline hit must not call"); return null; }, 0);
     Object g = r.extras.get("gate_decision");
     assertEquals("OFFLINE_RULE", g, String.valueOf(r.extras));
     assertEquals("offline_llm_rule", r.extras.get("final_selection_source"));
@@ -92,53 +100,121 @@ class DualLlmRewriteTest {
     return rs;
   }
 
-  @Test void onlinePatchChangesCurrentRequestAndReusesSignature() throws Exception {
-    AtomicInteger calls = new AtomicInteger();
-    LlmClient model = (m, s, o) -> {
-      calls.incrementAndGet();
-      assertFalse(m.get(1).content.contains("options\""), "no cost-ranked option table");
-      delay(35);
-      return new LlmResponse("{\"meta_probe\":\"on\"}");
-    };
+  @Test void gainfulResidualDoesNotRun() throws Exception {
+    LlmClient forbidden = (m, s, o) -> { fail("gainful path must not call LLM"); return null; };
     LlmRewriteArm.clearMemo();
     LlmRewriteArm a = arm(accessThenMeta(), 1);
-    TrialResult first = run(a, model);
-    assertEquals("ONLINE_ADAPT", first.extras.get("gate_decision"), first.extras.toString());
-    assertEquals("online_llm_patch", first.extras.get("final_selection_source"));
-    assertTrue(first.plan_id.contains("MP"), first.plan_id);
-    assertTrue(first.t_plan_ms >= 30 && first.t_e2e_ms >= first.t_plan_ms);
-    assertEquals(Boolean.FALSE, first.extras.get("memo_enabled"));
-    TrialResult second = run(a, model);
-    assertEquals("ONLINE_ADAPT_MEMO", second.extras.get("gate_decision"), second.extras.toString());
-    assertEquals("online_llm_patch", second.extras.get("final_selection_source"));
-    assertEquals(1, calls.get());
-  }
-
-  @Test void invalidAndKeepResponsesFallbackWithoutHiddenReplacement() throws Exception {
-    LlmRewriteArm.clearMemo();
-    TrialResult keep = run(arm(accessThenMeta(), 1), (m, s, o) -> new LlmResponse("{}"));
-    assertEquals(1, keep.extras.get("llm_calls"));
-    assertEquals("offline_llm_rule", keep.extras.get("final_selection_source"));
-    assertTrue(keep.plan_id.startsWith("P_T"), keep.plan_id);
-    for (String response : new String[] {"{\"meta_probe\":\"bad\"}", "{\"fetch_batch\":\"b2000\"}"}) {
-      LlmRewriteArm.clearMemo();
-      TrialResult r = run(arm(accessThenMeta(), 1), (m, s, o) -> new LlmResponse(response));
-      assertEquals("P_TZ", r.plan_id);
-      assertEquals(1, r.extras.get("llm_calls"));
-      assertEquals("cbo", r.extras.get("final_selection_source"));
-    }
+    TrialResult first = run(a, forbidden);
+    assertEquals("OFFLINE_RULE", first.extras.get("gate_decision"), first.extras.toString());
+    assertEquals("offline_llm_rule", first.extras.get("final_selection_source"));
+    assertEquals(0, first.extras.get("llm_calls"));
+    assertEquals(0, ((Number) first.extras.get("online_residual_rounds")).intValue());
+    assertEquals("disabled", first.extras.get("gainful_residual"));
+    assertTrue(first.plan_id.startsWith("P_T"), first.plan_id);
+    assertFalse(first.plan_id.contains("LB2") || first.plan_id.contains("B2000") || first.plan_id.contains("+MP"),
+        first.plan_id);
+    TrialResult second = run(a, forbidden);
+    assertEquals("OFFLINE_RULE", second.extras.get("gate_decision"), second.extras.toString());
+    assertEquals(0, second.extras.get("llm_calls"));
   }
 
   @Test void budgetScopeAndUnadmittedRulesSkipWithoutCalling() throws Exception {
+    LlmRewriteArm.clearMemo();
     LlmClient forbidden = (m, s, o) -> { fail("must skip"); return null; };
     ArrayNode changed = rules(true);
     ((ObjectNode) changed.get(0).get("scope")).put("stats_version", "changed");
-    assertEquals("no_related_admitted_rule", run(arm(changed, 1), forbidden).extras.get("skip_reason"));
+    // max_llm_calls=0 → offline-only; scoped-out rules must not call LLM.
+    // Selectivity access may still apply without admitted rules (no model).
+    TrialResult scopedOut = run(arm(changed, 1), forbidden, 0);
+    assertEquals(0, scopedOut.extras.get("llm_calls"), String.valueOf(scopedOut.extras));
+    assertEquals(0, scopedOut.extras.get("admitted_rule_count"));
+    assertEquals(0, scopedOut.extras.get("max_llm_calls"));
     ArrayNode unadmitted = rules(true);
     ((ObjectNode) unadmitted.get(0)).remove("admission");
-    assertEquals(0, run(arm(unadmitted, 1), forbidden).extras.get("llm_calls"));
+    assertEquals(0, run(arm(unadmitted, 1), forbidden, 0).extras.get("llm_calls"));
     assertEquals(0, DualRewritePolicy.budget(100, 10000, 1000, 100, 200, 8000));
     assertEquals(0, DualRewritePolicy.budget(10000, 10000, Double.NaN, 100, 200, 8000));
+  }
+
+  @Test void maxLlmCallsZeroSkipsOnlineAfterOffline() throws Exception {
+    LlmRewriteArm.clearMemo();
+    LlmClient forbidden = (m, s, o) -> { fail("max_llm_calls=0 must not call"); return null; };
+    TrialResult r = run(arm(accessThenMeta(), 1), forbidden, 0);
+    assertEquals("OFFLINE_RULE", r.extras.get("gate_decision"), String.valueOf(r.extras));
+    assertEquals(0, r.extras.get("llm_calls"));
+    assertEquals("dual_online_gainful", r.extras.get("llm_budget_semantics"));
+    assertEquals(0, r.extras.get("max_llm_calls"));
+    assertEquals(Boolean.FALSE, r.extras.get("online_shortlist_enabled"));
+    assertTrue(r.plan_id.startsWith("P_T"), r.plan_id);
+  }
+
+  @Test void shortlistFilterSchemaAndGainGate() {
+    List<DualRewritePolicy.ShortlistEntry> all = Arrays.asList(
+        new DualRewritePolicy.ShortlistEntry("P_TZ", 1000),
+        new DualRewritePolicy.ShortlistEntry("P_T", 200),
+        new DualRewritePolicy.ShortlistEntry("P_Z", 900));
+    List<DualRewritePolicy.ShortlistEntry> gainful =
+        DualRewritePolicy.filterGainful(all, "P_TZ", 500, 4);
+    assertEquals(2, gainful.size());
+    assertEquals("P_TZ", gainful.get(0).planId);
+    assertEquals("P_T", gainful.get(1).planId);
+    assertTrue(DualRewritePolicy.shortlistSchema(gainful, "P_TZ").path("properties")
+        .path("plan_id").path("enum").toString().contains("P_T"));
+    assertEquals("P_T", DualRewritePolicy.parseShortlist("{\"plan_id\":\"P_T\"}", gainful, "P_TZ"));
+    assertEquals("P_TZ", DualRewritePolicy.parseShortlist("{\"plan_id\":\"keep\"}", gainful, "P_TZ"));
+    assertTrue(DualRewritePolicy.gainBeatsModel(800, 700, 50, 0));
+    assertFalse(DualRewritePolicy.gainBeatsModel(100, 700, 50, 0));
+  }
+
+  @Test void gainfulResourceOptionsRanksPositiveFastCostSlots() throws Exception {
+    ObjectNode c = RewriteProtocol.newContext("TOP_K");
+    ((ObjectNode) c.get("features")).put("cbo_plan", "P_TZ").put("chunks_keep", 4);
+    RewriteProtocol.addSlot(c, "topk", "off").put("lb2", -120).put("lb8", -40);
+    RewriteProtocol.addSlot(c, "meta_probe", "off").put("on", 5);
+    RewriteProtocol.addSlot(c, "range_budget", "r64").put("r256", 0);
+    ArrayNode gainful = DualRewritePolicy.gainfulResourceOptions(c, null, 1e-9);
+    assertTrue(gainful.size() >= 1, gainful.toString());
+    assertEquals("lb2", gainful.get(0).path("set").path("topk").asText());
+    assertEquals(120.0, DualRewritePolicy.bestResidualGainMs(c, gainful, null), 0.001);
+    RewriteProtocol.Program best = DualRewritePolicy.bestGainfulProgram(c, null);
+    assertEquals("lb2", best.choice.get("topk"));
+    assertNull(DualRewritePolicy.bestGainfulProgram(c,
+        new RewriteProtocol.Program(
+            new TreeMap<String, String>(Collections.singletonMap("topk", "lb2")), "have")));
+  }
+
+  @Test void normalizeOnlineRawUnwrapsSetWrapper() {
+    assertEquals("{\"topk\":\"lb2\"}",
+        DualRewritePolicy.normalizeOnlineRaw("{\"set\":{\"topk\":\"lb2\"},\"predicted_gain_ms\":120}"));
+    assertEquals("{}", DualRewritePolicy.normalizeOnlineRaw("{}"));
+  }
+
+  @Test void gainfulResourceOptionsRanksTwoSlotCombos() throws Exception {
+    ObjectNode c = RewriteProtocol.newContext("TOP_K");
+    ((ObjectNode) c.get("features")).put("cbo_plan", "P_TZ").put("chunks_keep", 4);
+    RewriteProtocol.addSlot(c, "topk", "off").put("lb2", -80);
+    RewriteProtocol.addSlot(c, "meta_probe", "off").put("on", -50);
+    ArrayNode gainful = DualRewritePolicy.gainfulResourceOptions(c, null, 1e-9);
+    assertTrue(gainful.size() >= 1, gainful.toString());
+    assertEquals(130.0, DualRewritePolicy.bestResidualGainMs(c, gainful, null), 0.001);
+    JsonNode top = gainful.get(0).path("set");
+    assertEquals("lb2", top.path("topk").asText());
+    assertEquals("on", top.path("meta_probe").asText());
+  }
+
+  @Test void residualGainIsRelativeToBaseProgram() throws Exception {
+    ObjectNode c = RewriteProtocol.newContext("TRAJECTORY_IDS");
+    ((ObjectNode) c.get("features")).put("cbo_plan", "P_T").put("chunks_keep", 4);
+    RewriteProtocol.addSlot(c, "meta_probe", "off").put("on", -40);
+    ArrayNode residual = M.createArrayNode();
+    residual.addObject().putObject("set").put("meta_probe", "on");
+    Map<String, String> baseChoice = new TreeMap<String, String>(RewriteProtocol.defaults(c).choice);
+    baseChoice.put("access", "drop_spatial_branch");
+    RewriteProtocol.Program base = new RewriteProtocol.Program(baseChoice, "offline");
+    assertEquals(40.0, DualRewritePolicy.bestResidualGainMs(c, residual, base), 0.001);
+    assertEquals(0.0, DualRewritePolicy.bestResidualGainMs(c, residual,
+        new RewriteProtocol.Program(
+            new TreeMap<String, String>(Collections.singletonMap("meta_probe", "on")), "filled")), 0.001);
   }
 
   @Test void residualEmptyWhenExactAlreadyApplied() throws Exception {
@@ -340,11 +416,13 @@ class DualLlmRewriteTest {
         .add(M.createArrayNode().add("chunks_keep").add(">=").add(5000))
         .add(M.createArrayNode().add("z_ranges").add(">=").add(64)));
     rs.add(fetch);
+    // Author r256 on P_TZ (not P_Z) so allowPlanAlias stays on for P_Z and access×fetch pairing
+    // can still bind when the P_TZ idx_rows caps miss.
     ObjectNode r256 = ((ObjectNode) rs.get(0)).deepCopy();
     r256.put("id", "pz_range_budget_r256");
     r256.putObject("set").put("range_budget", "r256");
     r256.set("when", M.createArrayNode()
-        .add(M.createArrayNode().add("cbo_plan").add("==").add("P_Z"))
+        .add(M.createArrayNode().add("cbo_plan").add("==").add("P_TZ"))
         .add(M.createArrayNode().add("z_ranges").add(">=").add(64))
         .add(M.createArrayNode().add("chunks_keep").add(">").add(5000)));
     rs.add(r256);
@@ -693,6 +771,27 @@ class DualLlmRewriteTest {
     assertTrue(r.t_e2e_ms >= 110, r.extras.toString());
     assertEquals("response_wall_after_model_v2", r.extras.get("timing_version"));
     LlmRewriteArm.clearMemo();
+  }
+
+  @Test void selectivityAccessSkipsAdvEvenWhenAliasIsPtz() {
+    ObjectNode c = RewriteProtocol.newContext("RANGE");
+    ObjectNode f = (ObjectNode) c.get("features");
+    f.put("cbo_plan", "P_XZTXZ").put("cbo_plan_alias", "P_TZ")
+        .put("chunks_keep", 500)
+        .put("idx_rows_temporal_branch", 10)
+        .put("idx_rows_spatial_branch", 2000);
+    RewriteProtocol.addSlot(c, "access", "keep")
+        .put("drop_spatial_branch", -500)
+        .put("drop_temporal_branch", -50);
+    assertNull(DualRewritePolicy.exact(M.createArrayNode(), c));
+    TreeMap<String, String> dropFetch = new TreeMap<String, String>();
+    dropFetch.put("access", "drop_spatial_branch");
+    dropFetch.put("fetch_batch", "b2000");
+    RewriteProtocol.Program stripped = DualRewritePolicy.withoutSpatialDrop(
+        new RewriteProtocol.Program(dropFetch, "offline_rule:x"), c);
+    assertNotNull(stripped);
+    assertFalse(DualRewritePolicy.dropsSpatial(stripped));
+    assertEquals("b2000", stripped.choice.get("fetch_batch"));
   }
 
   static void delay(long millis) throws LlmException {

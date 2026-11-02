@@ -4,6 +4,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * HBase-backed KvBackend. Connection is process-scoped singleton via factory.
@@ -33,9 +36,52 @@ import java.util.TreeMap;
 public final class HBaseBackend implements KvBackend {
 
   private final Connection connection;
+  /** Reuse Table handles — open/close per put dominates snapshot build cost. */
+  private final ConcurrentHashMap<String, Table> tables = new ConcurrentHashMap<String, Table>();
+  /** Async write buffer for snapshot builds (flush before verify/read). */
+  private final ConcurrentHashMap<String, BufferedMutator> mutators =
+      new ConcurrentHashMap<String, BufferedMutator>();
+  private static final long WRITE_BUFFER_BYTES = 8L * 1024L * 1024L;
 
   public HBaseBackend(Connection connection) {
     this.connection = connection;
+  }
+
+  private Table table(String name) throws IOException {
+    Table existing = tables.get(name);
+    if (existing != null) {
+      return existing;
+    }
+    Table created = connection.getTable(TableName.valueOf(name));
+    Table raced = tables.putIfAbsent(name, created);
+    if (raced != null) {
+      created.close();
+      return raced;
+    }
+    return created;
+  }
+
+  private BufferedMutator mutator(String name) throws IOException {
+    BufferedMutator existing = mutators.get(name);
+    if (existing != null) {
+      return existing;
+    }
+    BufferedMutatorParams params = new BufferedMutatorParams(TableName.valueOf(name));
+    params.writeBufferSize(WRITE_BUFFER_BYTES);
+    BufferedMutator created = connection.getBufferedMutator(params);
+    BufferedMutator raced = mutators.putIfAbsent(name, created);
+    if (raced != null) {
+      created.close();
+      return raced;
+    }
+    return created;
+  }
+
+  /** Flush all buffered writes so subsequent scans/gets see them. */
+  public void flushWrites() throws IOException {
+    for (BufferedMutator m : mutators.values()) {
+      m.flush();
+    }
   }
 
   public static Connection open(Path siteXml) throws IOException {
@@ -77,6 +123,18 @@ public final class HBaseBackend implements KvBackend {
     }
   }
 
+  /** Truncate every named table (e.g. before {@code --no-resume} snapshot rebuild). */
+  public void truncateTables(Iterable<String> tables) throws IOException {
+    for (String table : tables) {
+      if (table == null || table.isEmpty()) {
+        continue;
+      }
+      System.out.println("TRUNCATE " + table);
+      System.out.flush();
+      truncateTable(table);
+    }
+  }
+
   static byte[][] splitKeys(int shardCount) {
     // Regions for shard prefixes 0x00..0x(S-1): S-1 split keys 0x01, 0x02, ...
     if (shardCount <= 1) {
@@ -91,39 +149,36 @@ public final class HBaseBackend implements KvBackend {
 
   @Override
   public void put(String table, byte[] row, Map<String, byte[]> columns) throws IOException {
-    try (Table t = connection.getTable(TableName.valueOf(table))) {
-      Put put = new Put(row);
-      for (Map.Entry<String, byte[]> e : columns.entrySet()) {
-        String col = e.getKey();
-        // expect "d:qualifier"
-        int colon = col.indexOf(':');
-        byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
-        byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
-        put.addColumn(family, qual, e.getValue());
-      }
-      t.put(put);
+    Put put = new Put(row);
+    for (Map.Entry<String, byte[]> e : columns.entrySet()) {
+      String col = e.getKey();
+      // expect "d:qualifier"
+      int colon = col.indexOf(':');
+      byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
+      byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
+      put.addColumn(family, qual, e.getValue());
     }
+    mutator(table).mutate(put);
   }
 
   public void putBatch(String table, List<PutSpec> puts) throws IOException {
     if (puts.isEmpty()) {
       return;
     }
-    try (Table t = connection.getTable(TableName.valueOf(table))) {
-      List<Put> batch = new ArrayList<Put>(puts.size());
-      for (PutSpec s : puts) {
-        Put put = new Put(s.row);
-        for (Map.Entry<String, byte[]> e : s.columns.entrySet()) {
-          String col = e.getKey();
-          int colon = col.indexOf(':');
-          byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
-          byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
-          put.addColumn(family, qual, e.getValue());
-        }
-        batch.add(put);
+    Table t = table(table);
+    List<Put> batch = new ArrayList<Put>(puts.size());
+    for (PutSpec s : puts) {
+      Put put = new Put(s.row);
+      for (Map.Entry<String, byte[]> e : s.columns.entrySet()) {
+        String col = e.getKey();
+        int colon = col.indexOf(':');
+        byte[] family = Bytes.toBytes(colon < 0 ? "d" : col.substring(0, colon));
+        byte[] qual = Bytes.toBytes(colon < 0 ? col : col.substring(colon + 1));
+        put.addColumn(family, qual, e.getValue());
       }
-      t.put(batch);
+      batch.add(put);
     }
+    t.put(batch);
   }
 
   @Override
@@ -233,10 +288,27 @@ public final class HBaseBackend implements KvBackend {
 
   @Override
   public void close() throws IOException {
-    // caller owns Connection lifecycle
+    for (BufferedMutator m : mutators.values()) {
+      try {
+        m.flush();
+        m.close();
+      } catch (IOException ignored) {
+        // best-effort
+      }
+    }
+    mutators.clear();
+    for (Table t : tables.values()) {
+      try {
+        t.close();
+      } catch (IOException ignored) {
+        // best-effort
+      }
+    }
+    tables.clear();
   }
 
   public void closeConnection() throws IOException {
+    close();
     connection.close();
   }
 

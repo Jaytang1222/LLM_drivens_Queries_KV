@@ -1,0 +1,37 @@
+% English manuscript.
+% Build: latexmk -pdf -outdir=build main.tex
+% The supplied LNCS class, text area, font size and heading styles are preserved.
+\documentclass[a4paper,runningheads]{llncs}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext}
+\usepackage[varvw]{newtxmath}
+\input{preamble}
+\title{KART: Natural-Language Trajectory Queries over Key-Value Stores}
+\titlerunning{KART: Trajectory Queries over Key-Value Stores}
+% Replace with verified author/affiliation details for the appropriate submission stage.
+\author{Anonymous Authors}
+\authorrunning{Anonymous Authors}
+\institute{}
+\begin{document}
+\maketitle
+\begin{abstract}
+Trajectory queries over key-value stores on nature language require query systems to translate user intent into efficient index access while preserving complete result coverage. 
+Existing methods typically rely on the user’s expertise and the query plan design capabilities of traditional key-value databases themselves; at the same time, few of today’s mainstream key-value databases natively support a Cost-Based Optimizer (CBO) similar to those found in relational databases. This often makes it difficult to perform efficient queries on key-value databases.
+We present \KART{}, a natural-language trajectory query system for key-value stores. 
+\KART{} maps requests to a typed intermediate representation, performs bounded cost-guided search over legal access plans, and uses offline LLM assistance to curate rewrite rules and calibrate cost estimates. 
+At the same time, a validator checks the execution plan before execution to ensure the correctness of the results and semantics.
+We implement \KART{} on HBase and evaluate it on the T-Drive and Porto datasets using translation, query-processing, optimizer, and ablation workloads. 
+Experiments on real-world datasets show that KART significantly reduces query latency and improves optimization efficiency for queries of varying complexity. Overall, KART outperforms the best-performing baseline by up to TBD\%.
+\keywords{TBD}
+\end{abstract}
+\input{sections/introduction}
+\input{sections/preliminaries}
+\input{sections/overview}
+\input{sections/methodology}
+\input{sections/experiments}
+\input{sections/related-work}
+\input{sections/conclusion}
+\bibliographystyle{splncs04}
+\bibliography{references}
+\end{document}
+

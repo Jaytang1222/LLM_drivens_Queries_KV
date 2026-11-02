@@ -169,7 +169,7 @@ public final class DraftIrParser {
       if (n.has("missing") && n.get("missing").isArray()) {
         for (JsonNode m : n.get("missing")) {
           String s = m.asText("");
-          if (s.toLowerCase().contains("unsupported_count") || "count".equalsIgnoreCase(s)) {
+          if (s.toLowerCase().contains("unsupported") || "count".equalsIgnoreCase(s)) {
             return true;
           }
         }

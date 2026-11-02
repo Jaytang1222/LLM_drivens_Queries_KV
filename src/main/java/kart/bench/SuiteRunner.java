@@ -18,7 +18,9 @@ import kart.llm.OpenAiCompatibleClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import kart.KartPaths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -61,6 +63,11 @@ public final class SuiteRunner {
 
   public static final class Options {
     public Path root;
+    /** Suite id, YAML path, or {@code path#id}. */
+    public String suiteRef;
+    /** Optional id when {@link #suiteRef} is a suites catalog. */
+    public String suiteId;
+    /** Resolved suite catalog/file path (filled during run for meta). */
     public Path suitePath;
     public String runId;
     public Set<String> armFilter = new LinkedHashSet<String>();
@@ -90,8 +97,13 @@ public final class SuiteRunner {
   }
 
   public Result run(Options opt) throws Exception {
-    SuiteSpec suite = SuiteSpec.load(opt.suitePath);
     Path root = opt.root;
+    String ref = opt.suiteRef;
+    if ((ref == null || ref.trim().isEmpty()) && opt.suitePath != null) {
+      ref = opt.suitePath.toString();
+    }
+    SuiteSpec suite = SuiteSpec.load(root, Paths.get(ref == null ? "" : ref), opt.suiteId);
+    opt.suitePath = resolveSuiteFile(root, ref, opt.suiteId);
     Path resultDir = root.resolve("experiments/results").resolve(opt.runId);
     Files.createDirectories(resultDir);
 
@@ -133,9 +145,19 @@ public final class SuiteRunner {
     List<BoundIr> queries = hasBound ? loadQueries(workloadPath, qLimit)
         : Collections.<BoundIr>emptyList();
     Map<String, OracleChecker.Answer> oracle = Collections.emptyMap();
-    if (hasBound && Files.isRegularFile(oraclePath)) {
+    if (hasBound) {
+      // Prefer answers embedded in the workload JSON (self-contained datasets),
+      // then explicit --oracle / suite.oracle sidecar.
       try {
-        oracle = OracleChecker.load(oraclePath);
+        if (opt.oracleOverride != null && Files.isRegularFile(oraclePath)) {
+          oracle = OracleChecker.load(oraclePath);
+        }
+        if (oracle.isEmpty() && Files.isRegularFile(workloadPath)) {
+          oracle = OracleChecker.load(workloadPath);
+        }
+        if (oracle.isEmpty() && Files.isRegularFile(oraclePath)) {
+          oracle = OracleChecker.load(oraclePath);
+        }
       } catch (Exception e) {
         System.err.println("BENCH warn: oracle load failed: " + e.getMessage());
       }
@@ -190,7 +212,7 @@ public final class SuiteRunner {
       }
     }
 
-    Path site = root.resolve("config/hbase/hbase-site.xml");
+    Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     HBaseBackend kv = new HBaseBackend(HBaseBackend.open(site));
 
     CacheProtocol cacheProtocol = CacheProtocol.from(opt.cache);
@@ -388,10 +410,13 @@ public final class SuiteRunner {
                 int shift = armShift(w + 1, qi, nArm);
                 for (int pos = 0; pos < nArm; pos++) {
                   int ai = armIndex(pos, shift, nArm);
+                  kart.cost.CostPatch.setApply(offlineCostPatch(runnable.get(ai)));
                   try {
                     arms.get(ai).run(ir, warmCtxs.get(ai));
                   } catch (Exception ignore) {
                     // discarded untimed warmup
+                  } finally {
+                    kart.cost.CostPatch.clearApply();
                   }
                 }
               }
@@ -428,10 +453,15 @@ public final class SuiteRunner {
                   cacheProtocol.flushBeforeTrial(kv, layout);
                 }
                 TrialResult tr;
+                boolean costPatch = offlineCostPatch(cell);
+                row.put("offline_cost_patch", Boolean.valueOf(costPatch));
+                kart.cost.CostPatch.setApply(costPatch);
                 try {
                   tr = arms.get(ai).run(ir, ctxs.get(ai));
                 } catch (Exception ex) {
                   tr = TrialResult.fail(ex.toString());
+                } finally {
+                  kart.cost.CostPatch.clearApply();
                 }
                 row.put("plan_id", tr.plan_id);
                 row.put("t_plan_ms", tr.t_plan_ms);
@@ -690,7 +720,7 @@ public final class SuiteRunner {
     } catch (Exception ignored) {
       meta.put("host_name", null);
     }
-    Path hbaseSite = opt.root.resolve("config/hbase/hbase-site.xml");
+    Path hbaseSite = opt.root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     meta.put("hbase_site_sha256", sha256(hbaseSite));
     Path hbaseEvidence = opt.root.resolve("experiments/results/hbase_version_evidence.txt");
     if (Files.isRegularFile(hbaseEvidence)) {
@@ -777,11 +807,22 @@ public final class SuiteRunner {
         }
       }
       meta.put("search_budget", budget);
+      meta.put("llm_budget_semantics", "dual_online_gainful");
       meta.put("param_cells", cellSummaries(cells));
     }
     String model = System.getenv("LLM_MODEL");
     String base = System.getenv("LLM_BASE_URL");
     String temp = System.getenv("KART_LLM_TEMPERATURE");
+    String costPatch = System.getenv("KART_COST_PATCH");
+    if (costPatch != null && !costPatch.isEmpty()) {
+      meta.put("KART_COST_PATCH", costPatch);
+      meta.put("cost_patch_scope", "cost_model_estimated_ms");
+    }
+    String rewritePatch = System.getenv("KART_REWRITE_COST_PATCH");
+    if (rewritePatch != null && !rewritePatch.isEmpty()) {
+      meta.put("KART_REWRITE_COST_PATCH", rewritePatch);
+      meta.put("rewrite_cost_patch_scope", "rewrite_resource_slots_only");
+    }
     if (model != null) {
       meta.put("LLM_MODEL", model);
     }
@@ -893,6 +934,18 @@ public final class SuiteRunner {
       bos.write(buf, 0, n);
     }
     return bos.toByteArray();
+  }
+
+  /** Kart cells use the offline LLM cost patch; {@code cost_patch: false} is w/o costmodel LLM. */
+  static boolean offlineCostPatch(RunCell cell) {
+    if (cell != null && cell.overrides != null && cell.overrides.containsKey("cost_patch")) {
+      Object v = cell.overrides.get("cost_patch");
+      if (v instanceof Boolean) {
+        return ((Boolean) v).booleanValue();
+      }
+      return Boolean.parseBoolean(String.valueOf(v));
+    }
+    return cell != null && "kart".equals(cell.armId);
   }
 
   static final class RunCell {
@@ -1262,7 +1315,7 @@ public final class SuiteRunner {
     }
   }
 
-  /** Param §4.2 strata: SRQ (incl. ST-Ranges), SS, topk. */
+  /** Param §4.2 strata: SRQ, ST-Ranges, SS, topk. */
   static String classifyQueryType(BoundIr ir, Map<String, String> queryTypeById) {
     if (ir != null && ir.query_id != null && queryTypeById != null) {
       String fromCat = queryTypeById.get(ir.query_id);
@@ -1280,7 +1333,7 @@ public final class SuiteRunner {
     String t = raw.trim();
     if ("ST-Ranges".equalsIgnoreCase(t) || "ST_RANGES".equalsIgnoreCase(t)
         || "stranges".equalsIgnoreCase(t)) {
-      return "SRQ";
+      return "ST-Ranges";
     }
     if ("SS".equalsIgnoreCase(t) || "similarity".equalsIgnoreCase(t)) {
       return "SS";
@@ -1306,6 +1359,12 @@ public final class SuiteRunner {
     if (id.contains("_topk_")) {
       return "topk";
     }
+    if (id.contains("_str_")) {
+      return "ST-Ranges";
+    }
+    if (ir.spatial_parts != null && ir.spatial_parts.size() > 1) {
+      return "ST-Ranges";
+    }
     if (ir.result != null && ir.result.mode != null
         && "TOP_K".equalsIgnoreCase(ir.result.mode.trim())) {
       return "topk";
@@ -1313,7 +1372,7 @@ public final class SuiteRunner {
     return "SRQ";
   }
 
-  /** Load frozen e2e_v2 catalog roles once; ST-Ranges kept raw then normalized at classify. */
+  /** Load frozen e2e_v2 catalog roles once; types normalized at classify. */
   static Map<String, String> loadQueryTypeRoles(Path root) {
     Map<String, String> out = new LinkedHashMap<String, String>();
     Path cat = root == null
@@ -1439,7 +1498,7 @@ public final class SuiteRunner {
     }
     AppConfig.PlannerConfig planner = PlannerOverlay.apply(base, c.overrides, root);
     boolean uncal = isUncalibratedOverride(c.overrides);
-    String rel = uncal ? PlannerOverlay.UNCALIBRATED_COEFFS : "config/planner.yaml";
+    String rel = uncal ? PlannerOverlay.UNCALIBRATED_COEFFS : "src/main/resources/config/kart.yaml";
     Path coeffsPath = root != null ? root.resolve(rel) : java.nio.file.Paths.get(rel);
     m.put("id", c.label);
     m.put("arm", c.armId);
@@ -1537,8 +1596,22 @@ public final class SuiteRunner {
     return items;
   }
 
+  private static Path resolveSuiteFile(Path root, String ref, String suiteId) {
+    String raw = ref == null ? "" : ref.replace('\\', '/').trim();
+    int hash = raw.indexOf('#');
+    if (hash >= 0) {
+      raw = raw.substring(0, hash).trim();
+    }
+    boolean bareId = !raw.contains("/") && !raw.endsWith(".yaml") && !raw.endsWith(".yml");
+    if (bareId || (suiteId != null && !suiteId.trim().isEmpty() && raw.isEmpty())) {
+      return root.resolve(KartPaths.SUITES_YAML);
+    }
+    Path p = Paths.get(raw);
+    return p.isAbsolute() ? p : root.resolve(p);
+  }
+
   private static Path resolve(Path root, String rel) {
-    Path p = java.nio.file.Paths.get(rel);
+    Path p = Paths.get(rel);
     return p.isAbsolute() ? p : root.resolve(rel);
   }
 

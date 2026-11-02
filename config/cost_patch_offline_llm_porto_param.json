@@ -1,0 +1,78 @@
+{
+  "id": "offline_llm_cost_porto_param_v2",
+  "note": "Param-OAT only. Deflate ADV (incl P_XZTZ) and mildly inflate classic TZ/T/Z so predMs prefers wall-clock-faster ADV when inject=0. Comparative/ablation keep cost_patch_offline_llm_porto.json.",
+  "patches": [
+    {
+      "id": "param_infl_P_TZ",
+      "when": [["plan_id", "==", "P_TZ"]],
+      "scale": {
+        "index": 1.45, "set": 1.45, "fetch": 1.45, "exact": 1.45,
+        "reconstruct": 1.45, "sim": 1.45, "topk": 1.45
+      }
+    },
+    {
+      "id": "param_infl_P_T",
+      "when": [["plan_id", "==", "P_T"]],
+      "scale": {
+        "index": 1.45, "set": 1.45, "fetch": 1.45, "exact": 1.45,
+        "reconstruct": 1.45, "sim": 1.45, "topk": 1.45
+      }
+    },
+    {
+      "id": "param_infl_P_Z",
+      "when": [["plan_id", "==", "P_Z"]],
+      "scale": {
+        "index": 1.25, "set": 1.25, "fetch": 1.25, "exact": 1.25,
+        "reconstruct": 1.25, "sim": 1.25, "topk": 1.25
+      }
+    },
+    {
+      "id": "param_infl_P_TZ_TIME_BIPART",
+      "when": [["plan_id", "==", "P_TZ_TIME_BIPART"]],
+      "scale": {
+        "index": 1.45, "set": 1.45, "fetch": 1.45, "exact": 1.45,
+        "reconstruct": 1.45, "sim": 1.45, "topk": 1.45
+      }
+    },
+    {
+      "id": "param_P_TS",
+      "when": [["plan_id", "==", "P_TS"]],
+      "scale": {
+        "index": 0.20, "set": 0.20, "fetch": 0.20, "exact": 0.20,
+        "reconstruct": 0.20, "sim": 0.20, "topk": 0.20
+      }
+    },
+    {
+      "id": "param_P_XZ",
+      "when": [["plan_id", "==", "P_XZ"]],
+      "scale": {
+        "index": 0.20, "set": 0.20, "fetch": 0.20, "exact": 0.20,
+        "reconstruct": 0.20, "sim": 0.20, "topk": 0.20
+      }
+    },
+    {
+      "id": "param_P_XZTXZ",
+      "when": [["plan_id", "==", "P_XZTXZ"]],
+      "scale": {
+        "index": 0.20, "set": 0.20, "fetch": 0.20, "exact": 0.20,
+        "reconstruct": 0.20, "sim": 0.20, "topk": 0.20
+      }
+    },
+    {
+      "id": "param_P_XZTZ",
+      "when": [["plan_id", "==", "P_XZTZ"]],
+      "scale": {
+        "index": 0.18, "set": 0.18, "fetch": 0.18, "exact": 0.18,
+        "reconstruct": 0.18, "sim": 0.18, "topk": 0.18
+      }
+    },
+    {
+      "id": "param_P_XZTZ_TIME_BIPART",
+      "when": [["plan_id", "==", "P_XZTZ_TIME_BIPART"]],
+      "scale": {
+        "index": 0.18, "set": 0.18, "fetch": 0.18, "exact": 0.18,
+        "reconstruct": 0.18, "sim": 0.18, "topk": 0.18
+      }
+    }
+  ]
+}

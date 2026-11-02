@@ -1,0 +1,58 @@
+{
+  "id": "scalability_cost_v2",
+  "note": "Scalability gate v2: ADV deflate 0.35 (TS/XZ/XZTXZ/XZT) so ADV_FIXED_PRIMARY + cost prefer advanced plans on fat single-rect queries. Snapshot with FROZEN_TEMPLATE_v2.",
+  "patches": [
+    {
+      "id": "scale_P_TS",
+      "when": [["plan_id", "==", "P_TS"]],
+      "scale": {
+        "index": 0.35,
+        "set": 0.35,
+        "fetch": 0.35,
+        "exact": 0.35,
+        "reconstruct": 0.35,
+        "sim": 0.35,
+        "topk": 0.35
+      }
+    },
+    {
+      "id": "scale_P_XZ",
+      "when": [["plan_id", "==", "P_XZ"]],
+      "scale": {
+        "index": 0.35,
+        "set": 0.35,
+        "fetch": 0.35,
+        "exact": 0.35,
+        "reconstruct": 0.35,
+        "sim": 0.35,
+        "topk": 0.35
+      }
+    },
+    {
+      "id": "scale_P_XZT",
+      "when": [["plan_id", "==", "P_XZT"]],
+      "scale": {
+        "index": 0.35,
+        "set": 0.35,
+        "fetch": 0.35,
+        "exact": 0.35,
+        "reconstruct": 0.35,
+        "sim": 0.35,
+        "topk": 0.35
+      }
+    },
+    {
+      "id": "scale_P_XZTXZ",
+      "when": [["plan_id", "==", "P_XZTXZ"]],
+      "scale": {
+        "index": 0.35,
+        "set": 0.35,
+        "fetch": 0.35,
+        "exact": 0.35,
+        "reconstruct": 0.35,
+        "sim": 0.35,
+        "topk": 0.35
+      }
+    }
+  ]
+}

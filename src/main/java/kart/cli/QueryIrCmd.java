@@ -76,7 +76,7 @@ public final class QueryIrCmd implements Callable<Integer> {
     Path root = resolveRoot();
     Path resolvedIr = irPath.isAbsolute() ? irPath : root.resolve(irPath);
     String irJson = new String(Files.readAllBytes(resolvedIr), StandardCharsets.UTF_8);
-    kart.ir.IrSchemaValidator schemas = new kart.ir.IrSchemaValidator(root.resolve("schemas"));
+    kart.ir.IrSchemaValidator schemas = new kart.ir.IrSchemaValidator(kart.KartPaths.schemas(root));
     java.util.Set<com.networknt.schema.ValidationMessage> irErrs = schemas.validateBoundIr(irJson);
     if (irErrs != null && !irErrs.isEmpty()) {
       System.err.println("BoundIR schema invalid: " + irErrs.iterator().next().getMessage());
@@ -113,7 +113,7 @@ public final class QueryIrCmd implements Callable<Integer> {
       }
       LayoutContext layout = LayoutContext.from(manifest);
       StatsSnapshot stats = catalog.loadStats(mid).orElse(null);
-      Path site = root.resolve("config/hbase/hbase-site.xml");
+      Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
       kv = new HBaseBackend(HBaseBackend.open(site));
       closeKv = true;
 

@@ -1,0 +1,5 @@
+{
+  "version": "dual_rule_admission_v1_empty",
+  "origin_note": "Porto param OAT only: disable offline rewrite so beam/mc bind without rewrite fallback. See datasets/porto-query/PARAM_SENSITIVITY.md",
+  "rules": []
+}

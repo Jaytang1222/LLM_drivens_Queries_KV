@@ -24,7 +24,13 @@ Default table populated from **public map coordinates** (approximate AABBs aroun
 | `capital_airport` | 首都机场 PEK | 116.55–116.65 | 40.04–40.10 |
 | `haidian_central` | 海淀中部粗框 | 116.25–116.36 | 39.95–40.05 |
 | `chaoyang_central` | 朝阳中部粗框 | 116.42–116.55 | 39.90–40.02 |
+| `porto_core` | 波尔图核心区 | −8.65––8.58 | 41.14–41.18 |
+| `porto_ribeira` | Ribeira | −8.625––8.608 | 41.138–41.145 |
+| `porto_boa_vista` | Boa Vista | −8.635––8.615 | 41.155–41.170 |
+| `porto_campanha` | Campanhã | −8.595––8.575 | 41.145–41.160 |
+| `porto_airport` | OPO 机场一带 | −8.695––8.665 | 41.225–41.245 |
+| `porto_smoke_anchor` | Porto smoke 锚点 | −8.630––8.600 | 41.140–41.160 |
 
-These are **not** official 行政区划 boundaries. Tighten/widen boxes in `regions.yaml` if your paper needs a specific study area.
+These are **not** official 行政区划 boundaries. Tighten/widen boxes in `regions.yaml` / `kart.yaml` if your paper needs a specific study area.
 
 `PromptBuilder` injects the registered name list into the LLM system prompt automatically after config reload.

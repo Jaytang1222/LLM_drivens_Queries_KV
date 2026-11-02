@@ -62,8 +62,9 @@ public final class TShapeIndexAdapter {
       }
       raw.addAll(layout.tshapeSfc().ranges(query.minX, query.minY, query.maxX, query.maxY));
     }
-    List<CodeRange> precise = XzStarSfc.fillInternalGaps(
-        CodeRangeBudget.mergeOverlapping(raw));
+    // TShape enumeration already recalled the band queries; gap-fill only added
+    // false-positive chunks. XZ/XZT still use fillRecallGaps.
+    List<CodeRange> precise = CodeRangeBudget.mergeOverlapping(raw);
     List<CodeRange> physical = CodeRangeBudget.mergeToBudgetGapAware(
         precise, maxRanges, layout.tshapePostingGapCost());
     List<CodeRange> filter = Collections.unmodifiableList(precise);

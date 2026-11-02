@@ -220,13 +220,24 @@ DIN_SCHEMA_FIELDS = (
 )
 DIN_FOREIGN_KEYS = "[]"
 
+def default_dataset_id() -> str:
+    """KART_DATASET_ID=porto_v1 for Porto parse arms; default T-Drive."""
+    return os.environ.get("KART_DATASET_ID", "tdrive_v1").strip() or "tdrive_v1"
+
+
+def draft_ir_hint() -> str:
+    did = default_dataset_id()
+    return (
+        'DraftIR JSON shape (ir_version MUST be "1.0"): '
+        '{"ir_version":"1.0",'
+        f'"source":{{"dataset_id":"{did}","entity":"trajectory"}},'
+        '"semantics":{"mode":"OBSERVED_POINT","coupling":"SAME_POINT"},'
+        '"temporal":{"start":"...","end":"..."},'
+        '"spatial":{"region_name":"..."} OR {"geometry":{"type":"RECTANGLE",...}},'
+        '"result":{"mode":"TRAJECTORY_IDS"}}'
+    )
+
+
 # Minimal DraftIR skeleton shown to generators — must match schemas/draft-ir.schema.json
-DRAFT_IR_HINT = (
-    'DraftIR JSON shape (ir_version MUST be "1.0"): '
-    '{"ir_version":"1.0",'
-    '"source":{"dataset_id":"tdrive_v1","entity":"trajectory"},'
-    '"semantics":{"mode":"OBSERVED_POINT","coupling":"SAME_POINT"},'
-    '"temporal":{"start":"...","end":"..."},'
-    '"spatial":{"region_name":"..."} OR {"geometry":{"type":"RECTANGLE",...}},'
-    '"result":{"mode":"TRAJECTORY_IDS"}}'
-)
+# Recomputed at import for back-compat imports; prefer draft_ir_hint() at call time.
+DRAFT_IR_HINT = draft_ir_hint()

@@ -101,7 +101,7 @@ public final class RebuildXztCmd implements Callable<Integer> {
         + " trajs=" + trajs.size() + " parse_reject=" + parseReject);
     System.out.flush();
 
-    Path hbaseSite = root.resolve("config/hbase/hbase-site.xml");
+    Path hbaseSite = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     HBaseBackend hbase = new HBaseBackend(HBaseBackend.open(hbaseSite));
     try {
       if (m.layout.tables != null && m.layout.tables.get("xzt") != null) {

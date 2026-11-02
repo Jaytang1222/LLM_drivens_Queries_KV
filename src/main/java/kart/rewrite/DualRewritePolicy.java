@@ -10,11 +10,24 @@ import java.util.*;
 
 /** Offline-admitted rules and residual online LLM patches. D(q) is not cached; online patches reuse a signature. */
 public final class DualRewritePolicy {
-  public static final String VERSION = "dual_rewrite_v43";
+  public static final String VERSION = "dual_rewrite_v47";
   // Conservative rounded maximum of four v1 protocol calls; v2 latency is not yet measured.
   public static final double DEFAULT_MODEL_MS = 7000;
+  /** Max gainful resource options (1- and 2-slot) exposed to the online LLM schema. */
+  private static final int GAINFUL_SCHEMA_CAP = 8;
   private static final ObjectMapper M = new ObjectMapper();
   private DualRewritePolicy() {}
+
+  /** Validated SafePlan id with Final/FastCost estimate for online shortlist. */
+  public static final class ShortlistEntry {
+    public final String planId;
+    public final double estimatedMs;
+
+    public ShortlistEntry(String planId, double estimatedMs) {
+      this.planId = planId;
+      this.estimatedMs = estimatedMs;
+    }
+  }
 
   /**
    * Map advanced-index plan ids onto legacy families so admitted dual rules still match.
@@ -388,12 +401,80 @@ public final class DualRewritePolicy {
     return "drop_spatial_branch".equals(a) || "drop_temporal_branch".equals(a);
   }
 
+  /**
+   * Fetch-batch and meta-probe on a Z plan lost in measured sweeps (P_Z+B2000 / P_Z+MP).
+   * Keep the access choice; drop those two slots.
+   */
+  public static RewriteProtocol.Program dropLosingResourceOnZ(RewriteProtocol.Program p, JsonNode c) {
+    if (p == null || p.choice == null) {
+      return p;
+    }
+    String acc = p.choice.get(RewriteProtocol.ACCESS);
+    String plan = c == null ? "" : c.path("features").path("cbo_plan").asText("");
+    boolean z = "drop_temporal_branch".equals(acc) || "P_Z".equals(plan) || plan.startsWith("P_Z+");
+    if (!z) {
+      return p;
+    }
+    Map<String, String> m = new TreeMap<String, String>(p.choice);
+    m.remove(RewriteProtocol.META);
+    m.remove("fetch_batch");
+    return new RewriteProtocol.Program(m, p.status);
+  }
+
+  /**
+   * CBO kept P_TZ and no admitted rule matched. Take drop-temporal only when its own
+   * slot delta beats keep by {@code minGainMs} and beats drop-spatial. No fetch/meta.
+   */
+  public static RewriteProtocol.Program tzToZIfClear(JsonNode c, double minGainMs) {
+    if (c == null || !"P_TZ".equals(c.path("features").path("cbo_plan").asText())) {
+      return null;
+    }
+    if (!RewriteProtocol.slots(c).contains(RewriteProtocol.ACCESS)) {
+      return null;
+    }
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    Map<String, String> z = new TreeMap<String, String>(def);
+    z.put(RewriteProtocol.ACCESS, "drop_temporal_branch");
+    Map<String, String> t = new TreeMap<String, String>(def);
+    t.put(RewriteProtocol.ACCESS, "drop_spatial_branch");
+    double ez = RewriteProtocol.estimate(c, z);
+    double et = RewriteProtocol.estimate(c, t);
+    double ek = RewriteProtocol.estimate(c, def);
+    if (!Double.isFinite(ez) || !Double.isFinite(ek) || !(ek - ez >= minGainMs)) {
+      return null;
+    }
+    if (Double.isFinite(et) && et < ez) {
+      return null;
+    }
+    return new RewriteProtocol.Program(z, "access_temporal_drop");
+  }
+
   /** True when the program drops the spatial (Z) branch → P_T. */
   public static boolean dropsSpatial(RewriteProtocol.Program p) {
     if (p == null || p.choice == null) {
       return false;
     }
     return "drop_spatial_branch".equals(p.choice.get(RewriteProtocol.ACCESS));
+  }
+
+  /**
+   * Drop only the illegal spatial-branch access flip; keep measured resource slots.
+   * Returns null when the remainder is the request default (caller should fall through).
+   */
+  public static RewriteProtocol.Program withoutSpatialDrop(RewriteProtocol.Program p, JsonNode c) {
+    if (p == null || p.choice == null || !dropsSpatial(p)) {
+      return p;
+    }
+    Map<String, String> m = new TreeMap<String, String>(p.choice);
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    String keep = def.get(RewriteProtocol.ACCESS);
+    if (keep == null || keep.isEmpty()) {
+      keep = "keep";
+    }
+    m.put(RewriteProtocol.ACCESS, keep);
+    RewriteProtocol.Program out = new RewriteProtocol.Program(m,
+        p.status == null || p.status.isEmpty() ? "resource_keep" : p.status + "+no_spatial_drop");
+    return out.isDefault(c) ? null : out;
   }
 
   /**
@@ -431,8 +512,15 @@ public final class DualRewritePolicy {
   static RewriteProtocol.Program selectivityAccess(JsonNode c) {
     if (c == null) return null;
     JsonNode feats = c.path("features");
+    // Exact CBO id only: ADV plans alias to P_TZ for legacy heuristics, but must not
+    // inherit TZ→T selectivity (keepSpatial then nulls exact and skips ADV resource rules).
+    if (advancedPlan(feats.path("cbo_plan").asText(""))) return null;
     if (!"P_TZ".equals(featureCboFamily(feats))) return null;
     if (!RewriteProtocol.slots(c).contains(RewriteProtocol.ACCESS)) return null;
+    // Short ADV-shaped windows: leave P_TZ intact so no_costmodel_llm (no CostPatch)
+    // stays on classic TZ. Fat/multi-AOI windows keep selectivity rewrite for rule gap.
+    double chunks = feats.path("chunks_keep").asDouble(0.0d);
+    if (chunks > 0.0d && chunks < 400.0d) return null;
     double tRows = feats.path("idx_rows_temporal_branch").asDouble(Double.NaN);
     double zRows = feats.path("idx_rows_spatial_branch").asDouble(Double.NaN);
     if (!Double.isFinite(tRows) || !Double.isFinite(zRows) || tRows <= 0 || zRows <= 0) return null;
@@ -967,14 +1055,47 @@ public final class DualRewritePolicy {
       ObjectNode set = x.putObject("set");
       TreeSet<String> slots = new TreeSet<String>(); r.path("set").fieldNames().forEachRemaining(slots::add);
       for (String slot : slots) set.set(slot, r.path("set").get(slot));
+      if (r.has("predicted_gain_ms") && r.path("predicted_gain_ms").isNumber()) {
+        x.put("predicted_gain_ms", r.path("predicted_gain_ms").asDouble());
+      }
     }
     if (base != null && base.choice != null) {
       ObjectNode off = input.putObject("offline");
       for (String slot : new TreeSet<String>(base.choice.keySet())) off.put(slot, base.choice.get(slot));
     }
-    return Arrays.asList(LlmMessage.system("Apply the single past_rules set if it holds after the offline access rewrite, "
-        + "or return {}. Do not change access. No explanation."),
+    return Arrays.asList(LlmMessage.system("Reply with a flat JSON object of resource slot→value only "
+        + "(e.g. {\"topk\":\"lb2\"} or {\"topk\":\"lb2\",\"meta_probe\":\"on\"}), preferring the past_rules "
+        + "entry with the largest predicted_gain_ms. Or {}. Never wrap in set/when. No access. No prose."),
         LlmMessage.user(input.toString()));
+  }
+
+  /** Unwrap common model wrappers ({@code set}, nested past_rules echo) before schema parse. */
+  public static String normalizeOnlineRaw(String raw) {
+    if (raw == null) {
+      return null;
+    }
+    String t = raw.trim();
+    if (t.isEmpty()) {
+      return t;
+    }
+    try {
+      JsonNode p = M.readTree(t);
+      if (p == null || !p.isObject()) {
+        return t;
+      }
+      if (p.has("set") && p.get("set").isObject()) {
+        return p.get("set").toString();
+      }
+      if (p.has("past_rules") && p.get("past_rules").isArray() && p.get("past_rules").size() > 0) {
+        JsonNode first = p.get("past_rules").get(0);
+        if (first != null && first.has("set") && first.get("set").isObject()) {
+          return first.get("set").toString();
+        }
+      }
+      return t;
+    } catch (Exception e) {
+      return t;
+    }
   }
 
   public static RewriteProtocol.Program parse(String raw, JsonNode c, JsonNode related) {
@@ -984,8 +1105,9 @@ public final class DualRewritePolicy {
   public static RewriteProtocol.Program parse(String raw, JsonNode c, JsonNode related,
       RewriteProtocol.Program base) {
     try {
+      String norm = normalizeOnlineRaw(raw);
       JsonNode p = M.reader().with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_READING_DUP_TREE_KEY)
-          .with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(raw);
+          .with(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(norm);
       if (p == null || !p.isObject() || p.size() > 2) return new RewriteProtocol.Program(null, "invalid_patch");
       if (p.size() == 0) {
         if (base != null && base.choice != null) {
@@ -1021,5 +1143,309 @@ public final class DualRewritePolicy {
       }
       return new RewriteProtocol.Program(m, "online_patch");
     } catch (Exception e) { return new RewriteProtocol.Program(null, "invalid_json"); }
+  }
+
+  /**
+   * Keep current plan plus candidates whose estimate beats current by at least {@code minGainMs}
+   * (enough to pay for an online call). Caps at {@code maxN} entries (current first).
+   */
+  public static List<ShortlistEntry> filterGainful(List<ShortlistEntry> all, String currentId,
+                                                   double minGainMs, int maxN) {
+    List<ShortlistEntry> out = new ArrayList<ShortlistEntry>();
+    if (all == null || all.isEmpty()) {
+      return out;
+    }
+    ShortlistEntry cur = null;
+    for (ShortlistEntry e : all) {
+      if (e != null && e.planId != null && e.planId.equals(currentId)) {
+        cur = e;
+        break;
+      }
+    }
+    if (cur == null) {
+      cur = all.get(0);
+      currentId = cur.planId;
+    }
+    out.add(cur);
+    double need = cur.estimatedMs - Math.max(0.0d, minGainMs);
+    List<ShortlistEntry> alts = new ArrayList<ShortlistEntry>();
+    for (ShortlistEntry e : all) {
+      if (e == null || e.planId == null || e.planId.equals(currentId)) {
+        continue;
+      }
+      if (Double.isFinite(e.estimatedMs) && e.estimatedMs < need) {
+        alts.add(e);
+      }
+    }
+    alts.sort(Comparator.comparingDouble(a -> a.estimatedMs));
+    int cap = Math.max(1, maxN);
+    for (ShortlistEntry e : alts) {
+      if (out.size() >= cap) {
+        break;
+      }
+      out.add(e);
+    }
+    return out;
+  }
+
+  public static ObjectNode shortlistSchema(List<ShortlistEntry> shortlist, String currentId) {
+    ObjectNode s = M.createObjectNode();
+    s.put("type", "object");
+    s.put("additionalProperties", false);
+    ObjectNode props = s.putObject("properties");
+    ArrayNode en = props.putObject("plan_id").put("type", "string").putArray("enum");
+    en.add("keep");
+    TreeSet<String> seen = new TreeSet<String>();
+    seen.add("keep");
+    if (currentId != null) {
+      en.add(currentId);
+      seen.add(currentId);
+    }
+    if (shortlist != null) {
+      for (ShortlistEntry e : shortlist) {
+        if (e == null || e.planId == null || seen.contains(e.planId)) {
+          continue;
+        }
+        en.add(e.planId);
+        seen.add(e.planId);
+      }
+    }
+    return s;
+  }
+
+  public static List<LlmMessage> shortlistMessages(JsonNode c, List<ShortlistEntry> shortlist,
+                                                   String currentId) {
+    ObjectNode input = M.createObjectNode();
+    input.put("current_plan_id", currentId == null ? "" : currentId);
+    if (c != null && c.path("features").has("cbo_plan")) {
+      input.put("cbo_plan", c.path("features").path("cbo_plan").asText());
+    }
+    ArrayNode cand = input.putArray("candidates");
+    if (shortlist != null) {
+      for (ShortlistEntry e : shortlist) {
+        if (e == null || e.planId == null) {
+          continue;
+        }
+        ObjectNode row = cand.addObject();
+        row.put("plan_id", e.planId);
+        if (Double.isFinite(e.estimatedMs)) {
+          row.put("estimated_ms", e.estimatedMs);
+        }
+      }
+    }
+    return Arrays.asList(
+        LlmMessage.system("Pick plan_id from candidates to minimize estimated_ms, or \"keep\". "
+            + "JSON only: {\"plan_id\":\"...\"}. No explanation."),
+        LlmMessage.user(input.toString()));
+  }
+
+  public static String parseShortlist(String raw, List<ShortlistEntry> shortlist, String currentId) {
+    if (raw == null || raw.trim().isEmpty()) {
+      return currentId;
+    }
+    try {
+      JsonNode p = M.readTree(raw);
+      if (p == null || !p.isObject() || !p.has("plan_id") || !p.get("plan_id").isTextual()) {
+        return currentId;
+      }
+      String id = p.get("plan_id").asText();
+      if ("keep".equals(id)) {
+        return currentId;
+      }
+      if (currentId != null && currentId.equals(id)) {
+        return currentId;
+      }
+      if (shortlist != null) {
+        for (ShortlistEntry e : shortlist) {
+          if (e != null && id.equals(e.planId)) {
+            return id;
+          }
+        }
+      }
+      return currentId;
+    } catch (Exception e) {
+      return currentId;
+    }
+  }
+
+  /**
+   * Resource options (no access) whose FastCost estimate improves on {@code base} by at least
+   * {@code minGainMs}. Includes single-slot and two-slot combinations. Sorted best-gain first.
+   */
+  public static ArrayNode gainfulResourceOptions(JsonNode c, RewriteProtocol.Program base,
+                                                 double minGainMs) {
+    ArrayNode out = M.createArrayNode();
+    if (c == null) {
+      return out;
+    }
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    Map<String, String> have = base != null && base.choice != null
+        ? new TreeMap<String, String>(base.choice) : new TreeMap<String, String>(def);
+    double baseEst = RewriteProtocol.estimate(c, have);
+    if (!Double.isFinite(baseEst)) {
+      baseEst = 0.0d;
+    }
+    double need = Math.max(0.0d, minGainMs);
+    List<Object[]> ranked = new ArrayList<Object[]>();
+    String acc = have.get(RewriteProtocol.ACCESS);
+    String cboPlan = c.path("features").path("cbo_plan").asText("");
+    boolean zPlan = "drop_temporal_branch".equals(acc)
+        || "P_Z".equals(cboPlan) || cboPlan.startsWith("P_Z+");
+    List<String> open = new ArrayList<String>();
+    for (String slot : RewriteProtocol.slots(c)) {
+      if (RewriteProtocol.ACCESS.equals(slot)) {
+        continue;
+      }
+      String d = def.get(slot);
+      String cur = have.containsKey(slot) ? have.get(slot) : d;
+      if (d != null && cur != null && !cur.equals(d)) {
+        continue; // already non-default
+      }
+      if (zPlan && (RewriteProtocol.META.equals(slot) || "fetch_batch".equals(slot))) {
+        continue;
+      }
+      open.add(slot);
+      for (String opt : RewriteProtocol.options(c, slot)) {
+        if (opt == null || opt.equals(d) || opt.equals(cur)) {
+          continue;
+        }
+        Map<String, String> trial = new TreeMap<String, String>(have);
+        trial.put(slot, opt);
+        double est = RewriteProtocol.estimate(c, trial);
+        if (!Double.isFinite(est)) {
+          continue;
+        }
+        double gain = baseEst - est;
+        if (gain > 0.0d && gain + 1e-9 >= need) {
+          ObjectNode set = M.createObjectNode();
+          set.put(slot, opt);
+          ranked.add(new Object[] { Double.valueOf(gain), set, slot + "=" + opt });
+        }
+      }
+    }
+    // Two-slot combinations (larger Δexec to pay for model RTT).
+    for (int i = 0; i < open.size(); i++) {
+      for (int j = i + 1; j < open.size(); j++) {
+        String s1 = open.get(i);
+        String s2 = open.get(j);
+        String d1 = def.get(s1);
+        String d2 = def.get(s2);
+        String c1 = have.containsKey(s1) ? have.get(s1) : d1;
+        String c2 = have.containsKey(s2) ? have.get(s2) : d2;
+        for (String o1 : RewriteProtocol.options(c, s1)) {
+          if (o1 == null || o1.equals(d1) || o1.equals(c1)) {
+            continue;
+          }
+          for (String o2 : RewriteProtocol.options(c, s2)) {
+            if (o2 == null || o2.equals(d2) || o2.equals(c2)) {
+              continue;
+            }
+            Map<String, String> trial = new TreeMap<String, String>(have);
+            trial.put(s1, o1);
+            trial.put(s2, o2);
+            double est = RewriteProtocol.estimate(c, trial);
+            if (!Double.isFinite(est)) {
+              continue;
+            }
+            double gain = baseEst - est;
+            if (gain > 0.0d && gain + 1e-9 >= need) {
+              ObjectNode set = M.createObjectNode();
+              set.put(s1, o1);
+              set.put(s2, o2);
+              ranked.add(new Object[] { Double.valueOf(gain), set, s1 + "=" + o1 + "+" + s2 + "=" + o2 });
+            }
+          }
+        }
+      }
+    }
+    ranked.sort(new Comparator<Object[]>() {
+      @Override public int compare(Object[] a, Object[] b) {
+        int g = Double.compare(((Double) b[0]).doubleValue(), ((Double) a[0]).doubleValue());
+        if (g != 0) {
+          return g;
+        }
+        return String.valueOf(a[2]).compareTo(String.valueOf(b[2]));
+      }
+    });
+    int n = 0;
+    for (Object[] row : ranked) {
+      if (n >= GAINFUL_SCHEMA_CAP) {
+        break;
+      }
+      ObjectNode r = out.addObject();
+      r.put("id", "gainful_" + row[2]);
+      r.set("set", (ObjectNode) row[1]);
+      r.put("predicted_gain_ms", ((Double) row[0]).doubleValue());
+      n++;
+    }
+    return out;
+  }
+
+  /** Best single-slot gainful program, or null when none improve FastCost. */
+  public static RewriteProtocol.Program bestGainfulProgram(JsonNode c, RewriteProtocol.Program base) {
+    ArrayNode opts = gainfulResourceOptions(c, base, 1e-9);
+    if (opts == null || opts.size() == 0) {
+      return null;
+    }
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    Map<String, String> m = new TreeMap<String, String>(
+        base != null && base.choice != null ? base.choice : def);
+    JsonNode set = opts.get(0).path("set");
+    for (Iterator<String> it = set.fieldNames(); it.hasNext();) {
+      String slot = it.next();
+      if (!RewriteProtocol.ACCESS.equals(slot)) {
+        m.put(slot, set.path(slot).asText());
+      }
+    }
+    String st = base != null && base.status != null && !base.status.isEmpty()
+        ? base.status + "+online_gainful" : "online_gainful";
+    return new RewriteProtocol.Program(m, st);
+  }
+
+  /**
+   * Best predicted improvement (ms) of a residual resource option vs the current
+   * offline/base program. Uses {@link RewriteProtocol#estimate} deltas (lower better).
+   */
+  public static double bestResidualGainMs(JsonNode c, JsonNode residual, RewriteProtocol.Program base) {
+    if (c == null || residual == null || residual.size() == 0) {
+      return 0.0d;
+    }
+    Map<String, String> def = RewriteProtocol.defaults(c).choice;
+    Map<String, String> have = base != null && base.choice != null
+        ? new TreeMap<String, String>(base.choice) : new TreeMap<String, String>(def);
+    double baseEst = RewriteProtocol.estimate(c, have);
+    if (!Double.isFinite(baseEst)) {
+      baseEst = 0.0d;
+    }
+    double best = 0.0d;
+    for (JsonNode r : residual) {
+      JsonNode set = r.path("set");
+      Map<String, String> trial = new TreeMap<String, String>(have);
+      for (Iterator<String> it = set.fieldNames(); it.hasNext();) {
+        String slot = it.next();
+        if (RewriteProtocol.ACCESS.equals(slot)) {
+          continue;
+        }
+        trial.put(slot, set.path(slot).asText());
+      }
+      double est = RewriteProtocol.estimate(c, trial);
+      if (!Double.isFinite(est)) {
+        continue;
+      }
+      double gain = baseEst - est;
+      if (gain > best) {
+        best = gain;
+      }
+    }
+    return best;
+  }
+
+  /** True when predicted exec gain covers model + overhead + margin. */
+  public static boolean gainBeatsModel(double gainMs, double modelMs, double overheadMs, double marginMs) {
+    if (!Double.isFinite(gainMs) || gainMs <= 0) {
+      return false;
+    }
+    double cost = Math.max(0.0d, modelMs) + Math.max(0.0d, overheadMs) + Math.max(0.0d, marginMs);
+    return gainMs >= cost;
   }
 }

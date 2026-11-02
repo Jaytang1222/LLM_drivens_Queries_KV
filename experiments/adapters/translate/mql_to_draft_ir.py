@@ -22,6 +22,7 @@ Top-K (KART extension, reported separately from base MQL):
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, List, Optional, Tuple
 
 DIALECT = "kart_logical_mql/1.0"
@@ -41,6 +42,21 @@ REGISTERED_REGIONS = {
     "capital_airport",
     "haidian_central",
     "chaoyang_central",
+    # Porto (E1 / NL demos)
+    "porto_smoke_anchor",
+    "porto_topk_box",
+    "porto_topk_wide",
+    "porto_topk_mid",
+    "baixa",
+    "campanha",
+    "cedofeita",
+    "aliados",
+    "ribeira",
+    "porto_airport",
+    "matosinhos",
+    "boavista",
+    "trindade",
+    "foz",
 }
 
 
@@ -223,7 +239,10 @@ def mql_to_draft_ir(pipeline: list) -> Tuple[dict, dict]:
 
     draft: dict[str, Any] = {
         "ir_version": "1.0",
-        "source": {"dataset_id": "tdrive_v1", "entity": "trajectory"},
+        "source": {
+            "dataset_id": os.environ.get("KART_DATASET_ID", "tdrive_v1") or "tdrive_v1",
+            "entity": "trajectory",
+        },
         "semantics": {"mode": "OBSERVED_POINT", "coupling": "SAME_POINT"},
         "result": result,
     }

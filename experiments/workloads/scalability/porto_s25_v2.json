@@ -1,0 +1,604 @@
+{
+  "workload_id": "scalability_porto_s25_v2",
+  "semantics_version": "1.0",
+  "n": 8,
+  "queries": [
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "c_srq_z_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373780106000
+      },
+      "spatial": {
+        "min_x": 530478.2238369605,
+        "max_x": 530758.2238369605,
+        "min_y": 4554710.942152156,
+        "max_y": 4554990.942152156,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "scalability": {
+        "level": "complex",
+        "qtype": "SRQ",
+        "source_id": "c_srq_m01"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "s_srq_z_1",
+      "temporal": {
+        "start_ms": 1376388210000,
+        "end_ms": 1376417010000
+      },
+      "spatial": {
+        "min_x": 530286.3030588202,
+        "max_x": 530466.3030588202,
+        "min_y": 4555906.668271368,
+        "max_y": 4556086.668271368,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "scalability": {
+        "level": "simple",
+        "qtype": "SRQ",
+        "slot": "s_srq",
+        "cand": 2,
+        "proxy_hits": 4,
+        "anchor_tid": 101992,
+        "source_id": "s_srq_m02",
+        "box_m": 180.0,
+        "patch": "s10_srq_box_180"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "c_str_z_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373780106000
+      },
+      "spatial": {
+        "min_x": 530367.204639002,
+        "max_x": 530787.204639002,
+        "min_y": 4554676.298366113,
+        "max_y": 4555096.298366113,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "scalability": {
+        "level": "complex",
+        "qtype": "ST-Ranges",
+        "source_id": "c_str_m01"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "s_str_z_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373772906000
+      },
+      "spatial": {
+        "min_x": 530540.9809648317,
+        "max_x": 530720.9809648317,
+        "min_y": 4554787.449196677,
+        "max_y": 4554967.449196677,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TRAJECTORY_IDS",
+        "tie_breaker": "TID_ASC"
+      },
+      "scalability": {
+        "level": "simple",
+        "qtype": "ST-Ranges",
+        "slot": "s_str",
+        "cand": 1,
+        "proxy_hits": 2,
+        "anchor_tid": 6504,
+        "source_id": "s_str_m01"
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "c_ss_dtw_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373780106000
+      },
+      "spatial": {
+        "min_x": 530405.0421589131,
+        "max_x": 530765.0421589131,
+        "min_y": 4554650.047756547,
+        "max_y": 4555010.047756547,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "tie_breaker": "TID_ASC",
+        "k": 5
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 1243,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "scalability": {
+        "level": "complex",
+        "qtype": "SS",
+        "source_id": "c_ss_m01",
+        "rebind_from": 6504,
+        "rebind_to": 1243,
+        "rebind_mode": "hit0",
+        "rebind_pad_m": 1000.0,
+        "rebind_center_dist_m": 3088.2341376033482,
+        "rebind_overlap_ms": 1200000,
+        "anchor_vehicle": "20000509",
+        "rebind_alts": [
+          1243,
+          15549,
+          35285,
+          39712,
+          45795
+        ]
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "s_ss_dtw_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373772906000
+      },
+      "spatial": {
+        "min_x": 530540.963437371,
+        "max_x": 530740.963437371,
+        "min_y": 4554747.008835781,
+        "max_y": 4554947.008835781,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "tie_breaker": "TID_ASC",
+        "k": 3
+      },
+      "similarity": {
+        "metric": "DTW",
+        "reference_tid": 1243,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "scalability": {
+        "level": "simple",
+        "qtype": "SS",
+        "slot": "s_ss",
+        "cand": 1,
+        "proxy_hits": 2,
+        "anchor_tid": 6504,
+        "source_id": "s_ss_m01",
+        "rebind_from": 6504,
+        "rebind_to": 1243,
+        "rebind_mode": "hit0",
+        "rebind_pad_m": 1000.0,
+        "rebind_center_dist_m": 3047.9307694337544,
+        "rebind_overlap_ms": 1200000,
+        "anchor_vehicle": "20000509",
+        "rebind_alts": [
+          1243,
+          45795
+        ]
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "c_topk_k_1",
+      "temporal": {
+        "start_ms": 1373744106000,
+        "end_ms": 1373780106000
+      },
+      "spatial": {
+        "min_x": 530439.1864293293,
+        "max_x": 530839.1864293293,
+        "min_y": 4554650.0162430955,
+        "max_y": 4555050.0162430955,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "tie_breaker": "TID_ASC",
+        "k": 10
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 1243,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "scalability": {
+        "level": "complex",
+        "qtype": "TOPK",
+        "source_id": "c_topk_m01",
+        "rebind_from": 6504,
+        "rebind_to": 1243,
+        "rebind_mode": "hit0",
+        "rebind_pad_m": 1000.0,
+        "rebind_center_dist_m": 3046.025282034863,
+        "rebind_overlap_ms": 1200000,
+        "anchor_vehicle": "20000509",
+        "rebind_alts": [
+          1243,
+          15549,
+          35285,
+          39712,
+          45795
+        ]
+      }
+    },
+    {
+      "ir_version": "1.0",
+      "source": {
+        "dataset_id": "porto_v1",
+        "entity": "trajectory"
+      },
+      "snapshot": {
+        "manifest_id": "porto_s25_ready"
+      },
+      "semantics": {
+        "mode": "OBSERVED_POINT",
+        "coupling": "SAME_POINT"
+      },
+      "predicates": [],
+      "eval_level": "bound",
+      "query_id": "s_topk_k_1",
+      "temporal": {
+        "start_ms": 1374995930000,
+        "end_ms": 1375024730000
+      },
+      "spatial": {
+        "min_x": 531248.3059290041,
+        "max_x": 531468.3059290041,
+        "min_y": 4555616.205370775,
+        "max_y": 4555836.205370775,
+        "relation": "INTERSECTS",
+        "boundary": "INCLUDED"
+      },
+      "result": {
+        "mode": "TOP_K",
+        "tie_breaker": "TID_ASC",
+        "k": 5
+      },
+      "similarity": {
+        "metric": "FRECHET",
+        "reference_tid": 27947,
+        "scope": "FULL_TRAJECTORY",
+        "exclude_reference": true,
+        "local_distance": "EUCLIDEAN",
+        "normalization": "NONE"
+      },
+      "scalability": {
+        "level": "simple",
+        "qtype": "TOPK",
+        "slot": "s_topk",
+        "cand": 3,
+        "proxy_hits": 4,
+        "anchor_tid": 34701,
+        "source_id": "s_topk_m03",
+        "rebind_from": 34701,
+        "rebind_to": 27947,
+        "rebind_mode": "hit0",
+        "rebind_pad_m": 0.0,
+        "rebind_center_dist_m": 851.7283068786744,
+        "rebind_overlap_ms": 1305000,
+        "anchor_vehicle": "20000440",
+        "rebind_alts": [
+          27947,
+          39488,
+          62288
+        ]
+      }
+    }
+  ],
+  "answers": [
+    {
+      "query_id": "c_srq_z_1",
+      "trajectory_ids": [
+        "20000011-1373752964620000011",
+        "20000083-1373777605620000083",
+        "20000101-1373749246620000101",
+        "20000344-1373746141620000344",
+        "20000488-1373760596620000488"
+      ]
+    },
+    {
+      "query_id": "s_srq_z_1",
+      "trajectory_ids": [
+        "20000089-1376406009620000089",
+        "20000113-1376389317620000113",
+        "20000129-1376409680620000129",
+        "20000252-1376413611620000252",
+        "20000904-1376388149620000904"
+      ]
+    },
+    {
+      "query_id": "c_str_z_1",
+      "trajectory_ids": [
+        "20000011-1373752964620000011",
+        "20000042-1373777560620000042",
+        "20000083-1373777605620000083",
+        "20000101-1373749246620000101",
+        "20000341-1373770721620000341",
+        "20000344-1373746141620000344",
+        "20000488-1373760596620000488",
+        "20000572-1373743099620000572"
+      ]
+    },
+    {
+      "query_id": "s_str_z_1",
+      "trajectory_ids": [
+        "20000011-1373752964620000011",
+        "20000101-1373749246620000101",
+        "20000344-1373746141620000344"
+      ]
+    },
+    {
+      "query_id": "c_ss_dtw_1",
+      "trajectory_ids": [
+        "20000344-1373746141620000344",
+        "20000042-1373777560620000042",
+        "20000011-1373752964620000011",
+        "20000341-1373770721620000341",
+        "20000083-1373777605620000083"
+      ],
+      "top_k": [
+        {
+          "tid": 31151,
+          "trajectory_id": "20000344-1373746141620000344",
+          "distance": 106342.45344535877
+        },
+        {
+          "tid": 4677,
+          "trajectory_id": "20000042-1373777560620000042",
+          "distance": 119176.45299468702
+        },
+        {
+          "tid": 1641,
+          "trajectory_id": "20000011-1373752964620000011",
+          "distance": 146588.249454097
+        },
+        {
+          "tid": 30683,
+          "trajectory_id": "20000341-1373770721620000341",
+          "distance": 160790.29926601527
+        },
+        {
+          "tid": 8282,
+          "trajectory_id": "20000083-1373777605620000083",
+          "distance": 168603.64787009096
+        }
+      ]
+    },
+    {
+      "query_id": "s_ss_dtw_1",
+      "trajectory_ids": [
+        "20000344-1373746141620000344",
+        "20000011-1373752964620000011",
+        "20000101-1373749246620000101"
+      ],
+      "top_k": [
+        {
+          "tid": 31151,
+          "trajectory_id": "20000344-1373746141620000344",
+          "distance": 106342.45344535877
+        },
+        {
+          "tid": 1641,
+          "trajectory_id": "20000011-1373752964620000011",
+          "distance": 146588.249454097
+        },
+        {
+          "tid": 9665,
+          "trajectory_id": "20000101-1373749246620000101",
+          "distance": 213194.38462275526
+        }
+      ]
+    },
+    {
+      "query_id": "c_topk_k_1",
+      "trajectory_ids": [
+        "20000341-1373770721620000341",
+        "20000488-1373760596620000488",
+        "20000344-1373746141620000344",
+        "20000011-1373752964620000011",
+        "20000083-1373777605620000083",
+        "20000101-1373749246620000101"
+      ],
+      "top_k": [
+        {
+          "tid": 30683,
+          "trajectory_id": "20000341-1373770721620000341",
+          "distance": 3489.393381185386
+        },
+        {
+          "tid": 43872,
+          "trajectory_id": "20000488-1373760596620000488",
+          "distance": 4904.168475952035
+        },
+        {
+          "tid": 31151,
+          "trajectory_id": "20000344-1373746141620000344",
+          "distance": 5005.462962902199
+        },
+        {
+          "tid": 1641,
+          "trajectory_id": "20000011-1373752964620000011",
+          "distance": 5064.073868576079
+        },
+        {
+          "tid": 8282,
+          "trajectory_id": "20000083-1373777605620000083",
+          "distance": 5266.742684676112
+        },
+        {
+          "tid": 9665,
+          "trajectory_id": "20000101-1373749246620000101",
+          "distance": 7528.123966859594
+        }
+      ]
+    },
+    {
+      "query_id": "s_topk_k_1",
+      "trajectory_ids": [
+        "20000055-1375014300620000055",
+        "20000054-1375013371620000054",
+        "20000424-1375008431620000424",
+        "20000497-1374995748620000497",
+        "20000359-1375011393620000359"
+      ],
+      "top_k": [
+        {
+          "tid": 5997,
+          "trajectory_id": "20000055-1375014300620000055",
+          "distance": 4286.813656367479
+        },
+        {
+          "tid": 5860,
+          "trajectory_id": "20000054-1375013371620000054",
+          "distance": 4338.726726071946
+        },
+        {
+          "tid": 38052,
+          "trajectory_id": "20000424-1375008431620000424",
+          "distance": 4575.684541951434
+        },
+        {
+          "tid": 44738,
+          "trajectory_id": "20000497-1374995748620000497",
+          "distance": 4920.776764855798
+        },
+        {
+          "tid": 32633,
+          "trajectory_id": "20000359-1375011393620000359",
+          "distance": 4921.219701703343
+        }
+      ]
+    }
+  ],
+  "oracle_embedded": true,
+  "oracle_total": 8,
+  "oracle_non_empty": 8
+}

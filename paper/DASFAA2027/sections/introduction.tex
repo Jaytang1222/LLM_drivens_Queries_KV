@@ -1,0 +1,40 @@
+\section{Introduction}\label{sec:introduction}
+
+Trajectory data represents object movement as sequences of timestamped locations and supports mobility analysis, route retrieval, and regional activity studies.
+  Key-value (KV) stores such as HBase provide scalable storage through RowKey lookups and ordered range scans.
+  A trajectory query system must map spatial, temporal, and attribute predicates to these physical access mechanisms, then refine retrieved candidates to preserve the query semantics.
+  Its performance and correctness therefore depend on data layout, index organization, and access-plan selection.
+
+Large language models (LLMs) make it possible to express database requests in natural language.
+xx et al. have studied text-to-SQL and text-to-NoSQL approaches, and there are also numerous related works on LLM-based query optimization, such as: TBD, TBD
+However, these systems and methods have not yet addressed physical-layer issues related to trace queries on key-value (KV) stores, including RowKey ranges, dedicated trace indexes, and block-level candidate operations. This gives rise to the following three challenges.
+
+\noindent\textbf{Natural-language translation.} Requests may omit or ambiguously express temporal, spatial, attribute, or similarity constraints.
+  A system must resolve intent against supported trajectory semantics and its logical catalog, and request clarification when required information is missing.
+
+\noindent\textbf{Access-path selection.} A query may use or combine temporal, spatial, and attribute indexes, followed by candidate operations and exact filtering.
+  The best path depends on both query selectivity and the costs of scans, retrieval, and refinement; fixed rules may not adapt to these differences.
+
+\noindent\textbf{Plan correctness.} A syntactically valid plan can still omit a relevant index range, change query semantics, or compile to an invalid HBase request.
+  Exact filtering cannot recover records missed during access, so plans require validation for semantics, candidate coverage, and physical safety.
+
+
+\begin{figure}[tbp]
+\centering
+\resultplaceholder{TBD: Diagrams should be provided for the three challenges.}{
+Specifically, there are three subdiagrams—a, b, and c—which should have similar structures and correspond to the three challenges, respectively. Challenges 2 and 3 occur during the query phase, while Challenge 1 occurs during the processing phase.}
+\caption{TBD}
+\label{fig:kart-motivation}
+\end{figure}
+
+To address these limitations, we present \KART{}, a natural-language trajectory query system for KV stores.
+  It maps requests through schema-constrained DraftIR and deterministically bound BoundIR representations, searches a bounded space of legal access plans using cost estimates, and validates compiled candidates before execution.
+  Two offline LLM-assisted paths curate scoped rewrite rules and calibrate plan-cost estimates; runtime proposals remain constrained by the legal operator space, and the cost-based path remains available when a rewrite is rejected or unavailable.
+  In summary, we make the following contributions:
+
+\begin{itemize}
+\item We design an end-to-end query framework that separates language interpretation from binding and physical access planning through typed DraftIR and BoundIR representations.
+\item We develop bounded, cost-guided access-path search with two offline LLM-assisted artifacts: conditional rewrite rules for candidate generation and cost patches for plan ranking.
+\item We have built a multi-layered correctness assurance mechanism. The verification process covers the entire workflow, from semantics to concrete plans. Only plans that pass verification are compiled into HBase operations.
+\item We conducted extensive experiments on two real-world datasets of different sizes, demonstrating KART's query efficiency and robustness across various scenarios and levels of complexity.
+\end{itemize}

@@ -38,6 +38,20 @@ public final class ClarificationDetector {
       {"tdrive_topk_wide", "tdrive_topk_wide", "topk_wide"},
       {"tdrive_topk_mid", "tdrive_topk_mid", "topk_mid"},
       {"tdrive_topk_s1", "tdrive_topk_s1", "topk_s1"},
+      {"porto_airport", "porto_airport", "opo", "Porto Airport"},
+      {"porto_smoke_anchor", "porto_smoke_anchor"},
+      {"porto_topk_box", "porto_topk_box"},
+      {"porto_topk_wide", "porto_topk_wide"},
+      {"porto_topk_mid", "porto_topk_mid"},
+      {"baixa", "baixa", "Baixa", "波尔图市中心", "波尔图"},
+      {"campanha", "campanha", "Campanhã", "Campanha"},
+      {"cedofeita", "cedofeita", "Cedofeita"},
+      {"aliados", "aliados", "Aliados"},
+      {"ribeira", "ribeira", "Ribeira"},
+      {"boavista", "boavista", "Boavista", "boa_vista"},
+      {"matosinhos", "matosinhos", "Matosinhos"},
+      {"trindade", "trindade", "Trindade"},
+      {"foz", "foz", "Foz"},
   };
 
   public static final class Question {
@@ -205,6 +219,7 @@ public final class ClarificationDetector {
     }
 
     draft.missing = new ArrayList<String>(m);
+    materializeExplicitMultiRegionOr(draft, utt);
   }
 
   /**
@@ -366,10 +381,65 @@ public final class ClarificationDetector {
   }
 
   private static boolean needsSpatial(DraftIr d, Set<String> missing) {
+    if (hasSpatialSpec(d)) {
+      return false;
+    }
     if (missingContains(missing, "spatial", "region", "region_name", "geometry")) {
       return true;
     }
     return false;
+  }
+
+  private static final Pattern MULTI_REGION_OR = Pattern.compile("(?i)\\bOR\\b|或|任一");
+
+  /**
+   * Utterance already names two or more registered regions under OR / 或 / 任一.
+   * Fill {@code spatial_parts} from those names so a fully specified ST-Ranges
+   * query is not held back by a contradictory {@code missing:[spatial]}.
+   */
+  private void materializeExplicitMultiRegionOr(DraftIr draft, String utterance) {
+    if (draft == null || isBlank(utterance) || !MULTI_REGION_OR.matcher(utterance).find()) {
+      return;
+    }
+    LinkedHashSet<String> regions = new LinkedHashSet<String>();
+    String u = utterance.toLowerCase(Locale.ROOT);
+    for (String[] row : REGION_ALIASES) {
+      String canonical = row[0];
+      for (int i = 1; i < row.length; i++) {
+        String alias = row[i].toLowerCase(Locale.ROOT);
+        if (!alias.isEmpty() && u.contains(alias)) {
+          regions.add(canonical);
+          break;
+        }
+      }
+    }
+    if (regions.size() < 2) {
+      return;
+    }
+    List<DraftIr.Spatial> parts = new ArrayList<DraftIr.Spatial>();
+    for (String rn : regions) {
+      DraftIr.Spatial part = new DraftIr.Spatial();
+      part.region_name = rn;
+      part.relation = "INTERSECTS";
+      part.boundary = "INCLUDED";
+      parts.add(part);
+    }
+    draft.spatial_parts = parts;
+    draft.spatial = null;
+    if (draft.missing != null) {
+      List<String> keptMissing = new ArrayList<String>();
+      for (String m : draft.missing) {
+        if (m == null) {
+          continue;
+        }
+        String n = m.toLowerCase(Locale.ROOT);
+        if (n.contains("spatial") || n.contains("region") || n.contains("geometry")) {
+          continue;
+        }
+        keptMissing.add(m);
+      }
+      draft.missing = keptMissing;
+    }
   }
 
   private static boolean needsReference(DraftIr d, Set<String> missing) {

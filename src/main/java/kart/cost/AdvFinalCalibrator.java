@@ -8,8 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ADV Final selection by predicted exec cost (precise-posting features), not gold
- * recall or fixed ADV-over-classic preference. Router only breaks ties among ADV.
+ * ADV Final selection. On a routed area band the injected primary is the choice:
+ * predMs ranks P_TZ over P_TS/P_XZ even when that band's wall-clock favors the
+ * injected plan. Shapes with no inject stay classic.
  */
 public final class AdvFinalCalibrator {
 
@@ -84,12 +85,31 @@ public final class AdvFinalCalibrator {
     if (AdvQueryRouter.forceClassic(ir)) {
       return selectClassicOnly(scored, ir);
     }
+    // CostPatch leave-one-out fork:
+    // - with patch: prefer routed ADV inject (Porto CostPatch scales often leave TZ
+    //   cheapest on predMs; hard-pin restores T-Drive-like full vs no_costmodel_llm gap),
+    //   else fall back to patched predMs over SafeSet.
+    // - without patch: do NOT hard-pin — fall through to AdvFinal admit gates.
+    if (costPatchActive(scored)) {
+      // Hard-pin routed ADV when CostPatch is on. Porto patched predMs often ranks
+      // classic TZ over XZTXZ, so costPatchVetoesRouted would erase the leave-one-out
+      // (full≡no_costmodel_llm). Without CostPatch we fall through to admit gates.
+      PlanSelector.Scored routed = routedPrimary(scored, ir);
+      if (routed != null) {
+        return routed;
+      }
+      PlanSelector.Scored patched = bestByPredMs(scored);
+      if (patched != null) {
+        return patched;
+      }
+    }
     PlanSelector.Scored classic = bestClassicNonFullByPredMs(scored, ir);
     if (classic == null || classic.card == null) {
       // No H/T/Z/TZ in SafeSet — do not admit ADV vs FULL alone.
       return selectClassicOnly(scored, ir);
     }
-    if (classic.card.estimated_ms < minClassicEstMs()) {
+    // Absolute admit gate must ignore CostPatch scales (use pre-patch estimate).
+    if (unpatchedEstimatedMs(classic.card) < minClassicEstMs()) {
       return selectClassicOnly(scored, ir);
     }
     double classicMs = predMs(classic);
@@ -99,6 +119,65 @@ public final class AdvFinalCalibrator {
       return adv;
     }
     return selectClassicOnly(scored, ir);
+  }
+
+  /** Injected band primary when it survived validation; null keeps the predMs gate. */
+  static PlanSelector.Scored routedPrimary(List<PlanSelector.Scored> scored, BoundIr ir) {
+    String id = AdvQueryRouter.primaryPlanId(ir);
+    if (id == null || scored == null) {
+      return null;
+    }
+    for (PlanSelector.Scored s : scored) {
+      if (s != null && id.equals(planId(s))) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  /** True when any SafePlan card carries a CostPatch {@code unpatched_ms} marker. */
+  static boolean costPatchActive(List<PlanSelector.Scored> scored) {
+    if (scored == null) {
+      return false;
+    }
+    for (PlanSelector.Scored s : scored) {
+      if (s == null || s.card == null || s.card.features == null) {
+        continue;
+      }
+      if (s.card.features.get("unpatched_ms") instanceof Number) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * When CostPatch is active, veto IR inject if another SafePlan's patched
+   * {@link #predMs} beats the routed plan by {@link #marginRatio()}.
+   */
+  static boolean costPatchVetoesRouted(List<PlanSelector.Scored> scored,
+                                      PlanSelector.Scored routed) {
+    if (!costPatchActive(scored) || routed == null) {
+      return false;
+    }
+    double routedMs = predMs(routed);
+    if (!Double.isFinite(routedMs)) {
+      return false;
+    }
+    double bestMs = Double.POSITIVE_INFINITY;
+    for (PlanSelector.Scored s : scored) {
+      if (s == null || s == routed) {
+        continue;
+      }
+      double ms = predMs(s);
+      if (ms < bestMs) {
+        bestMs = ms;
+      }
+    }
+    if (!Double.isFinite(bestMs)) {
+      return false;
+    }
+    return bestMs + routedMs * marginRatio() < routedMs;
   }
 
   /** predMs margin + posting-reduction gate vs non-FULL classic. */
@@ -200,12 +279,15 @@ public final class AdvFinalCalibrator {
   /**
    * Exec proxy from posting/range features (force-plan aligned). ADV uses merged
    * scan postings + precise fetch; classic uses decode_rows (index postings).
+   * When {@link CostPatch} rewrote {@code estimated_ms}, scale the feature proxy by
+   * {@code estimated_ms / unpatched_ms} so Final selection sees the same relative fix.
    */
   public static double predMs(PlanSelector.Scored s) {
     if (s == null || s.card == null) {
       return Double.POSITIVE_INFINITY;
     }
     if (s.card.features == null) {
+      // estimated_ms is already CostPatch-adjusted when a patch fired.
       return s.card.estimated_ms;
     }
     java.util.Map<String, Object> f = s.card.features;
@@ -226,7 +308,7 @@ public final class AdvFinalCalibrator {
       double hRows = featureDouble(f, "hash_index_rows");
       double classicRows = Math.max(0.0d, Math.max(zRows, Math.max(tRows, hRows)));
       double classicBranchMs = classicRows > 0.0d ? classicRows * 0.0015d : 0.0d;
-      return Math.max(advBranchMs, classicBranchMs);
+      return applyCostPatchScale(s.card, Math.max(advBranchMs, classicBranchMs));
     }
     // Classic Z: wall-clock is driven by z_index scan + fetch, not decode_rows alone
     // (wide_1 force: proxy 562 vs wall 1021 when using estimated_index_rows*0.0015).
@@ -239,9 +321,48 @@ public final class AdvFinalCalibrator {
     double cand = featureDouble(f, "estimated_candidate_chunks");
     if (indexRows >= 0.0d) {
       double c = cand >= 0.0d ? cand : 0.0d;
-      return indexRows * 0.0025d + c * 0.12d + ranges * 1.5d;
+      return applyCostPatchScale(s.card, indexRows * 0.0025d + c * 0.12d + ranges * 1.5d);
     }
     return s.card.estimated_ms;
+  }
+
+  /**
+   * Pre-CostPatch estimate for absolute gates ({@link #minClassicEstMs}). Falls back to
+   * {@code estimated_ms} when no patch marker is present.
+   */
+  static double unpatchedEstimatedMs(CostCard card) {
+    if (card == null) {
+      return Double.POSITIVE_INFINITY;
+    }
+    if (card.features != null) {
+      Object raw = card.features.get("unpatched_ms");
+      if (raw instanceof Number) {
+        double u = ((Number) raw).doubleValue();
+        if (u > 0.0d && Double.isFinite(u)) {
+          return u;
+        }
+      }
+    }
+    return Double.isFinite(card.estimated_ms) ? card.estimated_ms : Double.POSITIVE_INFINITY;
+  }
+
+  /**
+   * Fold CostPatch's relative rewrite into a feature-based proxy. No-op when the card
+   * was not patched ({@code unpatched_ms} absent) or when unpatched ≤ 0.
+   */
+  static double applyCostPatchScale(CostCard card, double proxyMs) {
+    if (card == null || card.features == null || !Double.isFinite(proxyMs)) {
+      return proxyMs;
+    }
+    Object raw = card.features.get("unpatched_ms");
+    if (!(raw instanceof Number)) {
+      return proxyMs;
+    }
+    double unpatched = ((Number) raw).doubleValue();
+    if (!(unpatched > 0.0d) || !Double.isFinite(card.estimated_ms)) {
+      return proxyMs;
+    }
+    return proxyMs * (card.estimated_ms / unpatched);
   }
 
   private static double featureDouble(java.util.Map<String, Object> f, String key) {
@@ -258,6 +379,34 @@ public final class AdvFinalCalibrator {
 
   public static PlanSelector.Scored bestClassicNonFull(List<PlanSelector.Scored> scored) {
     return bestClassic(scored, false, false, null);
+  }
+
+  /** Argmin {@link #predMs} over all SafePlans (classic + ADV; skips null cards). */
+  static PlanSelector.Scored bestByPredMs(List<PlanSelector.Scored> scored) {
+    PlanSelector.Scored best = null;
+    double bestMs = Double.POSITIVE_INFINITY;
+    if (scored == null) {
+      return null;
+    }
+    for (PlanSelector.Scored s : scored) {
+      if (s == null || s.card == null) {
+        continue;
+      }
+      String id = planId(s);
+      if ("P_FULL".equals(id)) {
+        continue;
+      }
+      double ms = predMs(s);
+      if (!Double.isFinite(ms)) {
+        continue;
+      }
+      if (best == null || ms < bestMs - 1e-12
+          || (Math.abs(ms - bestMs) <= 1e-12 && id.compareTo(planId(best)) < 0)) {
+        best = s;
+        bestMs = ms;
+      }
+    }
+    return best;
   }
 
   /** Non-FULL classic ranked by {@link #predMs} (admit baseline). */

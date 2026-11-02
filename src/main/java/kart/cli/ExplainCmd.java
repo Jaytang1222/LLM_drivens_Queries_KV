@@ -263,7 +263,7 @@ public final class ExplainCmd implements Callable<Integer> {
   /** Prefer live HBase RegionLocator; fall back to shard affinity with missing_region_map. */
   private static kart.cost.RegionMapping openRegionMapping(AppConfig cfg, Path root) {
     try {
-      Path site = root.resolve("config/hbase/hbase-site.xml");
+      Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
       if (java.nio.file.Files.isRegularFile(site)) {
         org.apache.hadoop.hbase.client.Connection conn = kart.exec.HBaseBackend.open(site);
         return new kart.cost.HBaseRegionMapping(conn);

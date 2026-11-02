@@ -34,7 +34,7 @@ from mql_to_draft_ir import (  # noqa: E402
     mql_to_draft_ir,
 )
 
-UPSTREAM = "experiments/third_party/text-to-nosql/src/tend/solver/sag/runtime.py"
+UPSTREAM = "experiments/adapters/upstream/text-to-nosql/src/tend/solver/sag/runtime.py"
 K_CONSISTENCY = int(os.environ.get("KART_SAG_K", "1"))
 MAX_REPAIR_ROUNDS = int(os.environ.get("KART_SAG_REPAIR_ROUNDS", "3"))
 

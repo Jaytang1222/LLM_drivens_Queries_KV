@@ -2,7 +2,7 @@
 """
 LLMOpt-style Generator → Selector bridge for KART plan family.
 
-Upstream (experiments/third_party/llmopt):
+Upstream (experiments/adapters/upstream/llmopt):
   - README: "Utilizing An LLM As Generator" then Selector; Tree-CNN/Bao may pick among hints
   - Inference scripts under LLM_training/ (vLLM) — we do NOT run PG or their checkpoints
 
@@ -37,7 +37,7 @@ PLAN_FAMILY = [
 
 PROVENANCE = {
     "method": "llmopt",
-    "upstream_readme": "experiments/third_party/llmopt/README.md",
+    "upstream_readme": "experiments/adapters/upstream/llmopt/README.md",
     "upstream_api": ["Generator (pred_hints)", "Selector (pick one hint/plan)"],
     "intentional_changes": [
         "plan_id family = KART SafePlan constructors (not PG hints)",

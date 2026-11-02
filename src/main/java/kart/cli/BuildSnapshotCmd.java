@@ -22,15 +22,15 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
   private Path catalogDir;
 
   @Option(names = "--format", defaultValue = "tdrive",
-      description = "Input format: tdrive (part-*) or ais (trajectories.txt)")
+      description = "Input format: tdrive (part-*) | ais (trajectories.txt) | porto (CSV)")
   private String format;
 
   @Option(names = "--crs", defaultValue = "EPSG:32650",
-      description = "Projected CRS (AIS: EPSG:32634)")
+      description = "Projected CRS (AIS: EPSG:32634; Porto: EPSG:32629)")
   private String crs;
 
   @Option(names = "--table-prefix",
-      description = "HBase table suffix prefix (e.g. ais_v1 → traj_raw_ais_v1). Empty = legacy v1 names.")
+      description = "HBase table suffix prefix (e.g. ais_v1 / porto_v1 → traj_raw_<prefix>). Empty = legacy v1 names.")
   private String tablePrefix;
 
   @Option(names = "--xmin")
@@ -48,6 +48,27 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
   @Option(names = "--config-root")
   private Path configRoot;
 
+  @Option(names = "--write-batch-size", defaultValue = "500",
+      description = "Flush+checkpoint write progress every N trajectories (HBase resume)")
+  private int writeBatchSize;
+
+  @Option(names = "--no-resume",
+      description = "Ignore checkpoints, truncate all snapshot HBase tables, rebuild from 0")
+  private boolean noResume;
+
+  @Option(names = "--verify-sample-size", defaultValue = "0",
+      description = "Sampled posting verify: check this many trajectories (0=full). "
+          + "Prior consecutive verify.ckpt done prefix still counts as covered.")
+  private int verifySampleSize;
+
+  @Option(names = "--verify-sample-frac", defaultValue = "0",
+      description = "If --verify-sample-size=0 and >0, sample size = ceil(n * frac)")
+  private double verifySampleFrac;
+
+  @Option(names = "--verify-sample-seed", defaultValue = "20261027",
+      description = "RNG seed for sampled verify index set")
+  private long verifySampleSeed;
+
   @Override
   public Integer call() throws Exception {
     Path root = resolveRoot();
@@ -55,11 +76,16 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
     opt.manifestId = manifestId;
     opt.dataDir = dataDir.isAbsolute() ? dataDir : root.resolve(dataDir);
     opt.catalogDir = catalogDir.isAbsolute() ? catalogDir : root.resolve(catalogDir);
-    opt.hbaseSiteXml = root.resolve("config/hbase/hbase-site.xml");
+    opt.hbaseSiteXml = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     opt.epochMs = epochMs;
     opt.format = format;
     opt.crs = crs;
     opt.tablePrefix = tablePrefix;
+    opt.writeBatchSize = Math.max(1, writeBatchSize);
+    opt.resume = !noResume;
+    opt.verifySampleSize = Math.max(0, verifySampleSize);
+    opt.verifySampleFrac = Math.max(0, verifySampleFrac);
+    opt.verifySampleSeed = verifySampleSeed;
     if (xmin != null && xmax != null && ymin != null && ymax != null) {
       opt.domain = new Rect(xmin, ymin, xmax, ymax);
     }
@@ -67,6 +93,9 @@ public final class BuildSnapshotCmd implements Callable<Integer> {
     System.out.println("Building snapshot " + manifestId + " from " + opt.dataDir
         + " format=" + format + " crs=" + crs
         + " tablePrefix=" + (tablePrefix == null ? "<legacy>" : tablePrefix)
+        + " writeBatch=" + opt.writeBatchSize + " resume=" + opt.resume
+        + " verifySampleSize=" + opt.verifySampleSize
+        + " verifySampleFrac=" + opt.verifySampleFrac
         + " [HBase]");
     SnapshotBuilder.BuildResult r = new SnapshotBuilder().build(opt);
     if (r.failureReason != null) {

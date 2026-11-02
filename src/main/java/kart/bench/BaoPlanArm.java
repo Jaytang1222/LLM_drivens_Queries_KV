@@ -1,12 +1,17 @@
 package kart.bench;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import kart.cost.CostCard;
 import kart.ir.BoundIr;
 import kart.query.QueryEngine;
 import kart.search.PlannerMode;
 import kart.validation.SafePlanHandle;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,33 +19,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bao select_plan protocol over KART SafePlan family.
+ * Bao arm: enumerate KART SafePlans, then call upstream
+ * {@code bao_server/main.py BaoModel.select_plan} via Python bridge.
  *
- * Upstream: {@code bao_server/main.py BaoModel.select_plan}:
- *   messages = [*arms, buffers]; if no model → PG_OPTIMIZER_INDEX (0);
- *   else predict reward per arm and {@code argmin}.
- *
- * Transplant:
- *   arms = RULE-enumerated SafePlan plan_ids (stable order by plan_id);
- *   reward surrogate = estimated_ms from CostCard (lower better), optional family
- *   prior from {@code kart_plan_family_weights.json} as additive bias only;
- *   select {@code argmin(reward)} — same decision rule as Bao.
- *
- * Does NOT use PostgreSQL, Bao tree-CNN features, or IMDb/JOB weights.
- * Candidate search runs once; the chosen SafePlan is executed without a second beam.
+ * Decision logic (predict + argmin / PG_OPTIMIZER_INDEX fallback) is upstream.
+ * The model stays in one process ({@code --serve}); per-query {@code t_plan} is
+ * SafePlan enumeration plus one {@code select_plan}, not process startup.
  */
 public final class BaoPlanArm implements Arm {
 
-  /** Mirrors bao_server/constants.py PG_OPTIMIZER_INDEX. */
-  private static final int PG_OPTIMIZER_INDEX = 0;
-
-  private final Map<String, Double> familyWeight;
-  private final boolean weightsFilePresent;
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final String WARMUP =
+      "{\"arms\":[{\"plan_id\":\"P_T\",\"card\":{\"estimated_ms\":1.0,"
+          + "\"features\":{\"estimated_index_rows\":10}}}]}";
+  private final Path root;
+  private final ResidentPyServer server = new ResidentPyServer();
 
   public BaoPlanArm(Path root) {
-    Path wp = root.resolve("experiments/adapters/bao/kart_plan_family_weights.json");
-    this.weightsFilePresent = Files.isRegularFile(wp);
-    this.familyWeight = loadWeights(wp);
+    this.root = root;
   }
 
   @Override
@@ -50,20 +46,24 @@ public final class BaoPlanArm implements Arm {
 
   @Override
   public TrialResult run(BoundIr ir, BenchContext ctx) throws Exception {
+    try {
+      ensureServer();
+    } catch (Exception e) {
+      TrialResult fail = TrialResult.fail("bao server: " + e.getMessage());
+      fail.t_plan_ms = Long.valueOf(0L);
+      return fail;
+    }
+    long t0 = System.currentTimeMillis();
     QueryEngine engine = ctx.newEngine(PlannerMode.RULE);
     Path art = ctx.artifactDir(id(), ir.query_id);
-    long t0 = System.currentTimeMillis();
     QueryEngine.RunResult probe = engine.run(ir, null, true, null);
     if (probe == null || probe.safe == null || probe.safe.isEmpty()) {
-      TrialResult fail = TrialResult.fail("bao: no safe plans");
-      fail.t_plan_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - t0));
-      fail.applyWrapperPlanClock(t0, fail.t_plan_ms.longValue());
-      return fail;
+      return stampFail(t0, "bao: no safe plans");
     }
 
     List<String> arms = new ArrayList<String>();
-    Map<String, Double> costByPid = new HashMap<String, Double>();
     Map<String, SafePlanHandle> handleByPid = new HashMap<String, SafePlanHandle>();
+    Map<String, CostCard> cardByPid = new HashMap<String, CostCard>();
     for (SafePlanHandle h : probe.safe) {
       if (h == null || h.plan() == null || h.plan().plan_id == null) {
         continue;
@@ -76,48 +76,55 @@ public final class BaoPlanArm implements Arm {
     }
     Collections.sort(arms);
     if (probe.costCards != null) {
-      for (kart.cost.CostCard c : probe.costCards) {
+      for (CostCard c : probe.costCards) {
         if (c != null && c.plan_id != null) {
-          costByPid.put(c.plan_id, Double.valueOf(c.estimated_ms));
+          cardByPid.put(c.plan_id, c);
         }
       }
     }
     if (arms.isEmpty()) {
-      TrialResult fail = TrialResult.fail("bao: empty arm list");
-      fail.t_plan_ms = Long.valueOf(Math.max(0L, System.currentTimeMillis() - t0));
-      return fail;
+      return stampFail(t0, "bao: empty arm list");
     }
 
-    boolean haveCostSignal = !costByPid.isEmpty();
-    int chosenIdx;
-    String selectMode;
-    if (!haveCostSignal && !weightsFilePresent) {
-      chosenIdx = Math.min(PG_OPTIMIZER_INDEX, arms.size() - 1);
-      selectMode = "no_model_PG_OPTIMIZER_INDEX";
-    } else {
-      double best = Double.POSITIVE_INFINITY;
-      chosenIdx = 0;
-      for (int i = 0; i < arms.size(); i++) {
-        String pid = arms.get(i);
-        double cost = costByPid.containsKey(pid)
-            ? costByPid.get(pid).doubleValue()
-            : 1.0e12;
-        double prior = weightFor(pid);
-        double reward = cost / Math.max(0.1, prior);
-        if (reward < best) {
-          best = reward;
-          chosenIdx = i;
+    ObjectNode payload = MAPPER.createObjectNode();
+    ArrayNode arr = payload.putArray("arms");
+    for (String pid : arms) {
+      ObjectNode a = arr.addObject();
+      a.put("plan_id", pid);
+      CostCard c = cardByPid.get(pid);
+      ObjectNode card = a.putObject("card");
+      if (c != null) {
+        card.put("estimated_ms", c.estimated_ms);
+        ObjectNode feats = card.putObject("features");
+        if (c.features != null && c.features.get("estimated_index_rows") instanceof Number) {
+          feats.put("estimated_index_rows",
+              ((Number) c.features.get("estimated_index_rows")).doubleValue());
         }
+      } else {
+        card.put("estimated_ms", 1.0e12);
       }
-      selectMode = "surrogate_reward_argmin";
     }
-    String chosen = arms.get(chosenIdx);
+    long tEnum = Math.max(0L, System.currentTimeMillis() - t0);
+    long rpc0 = System.currentTimeMillis();
+    JsonNode rootNode;
+    try {
+      rootNode = server.rpc(MAPPER.writeValueAsString(payload), 60_000L);
+    } catch (Exception e) {
+      return stampFail(t0, "bao server rpc: " + e.getMessage());
+    }
+    long tModel = Math.max(0L, System.currentTimeMillis() - rpc0);
+    if (!"OK".equals(rootNode.path("status").asText())) {
+      return stampFail(t0, rootNode.path("error").asText("bao bridge failed"));
+    }
+    String chosen = rootNode.path("plan_id").asText(null);
+    if (chosen == null || chosen.isEmpty() || !handleByPid.containsKey(chosen)) {
+      return stampFail(t0, "bao: chosen plan missing from safe set: " + chosen);
+    }
+
     SafePlanHandle chosenHandle = handleByPid.get(chosen);
-    if (chosenHandle != null) {
-      probe.selected = chosenHandle;
-    }
+    probe.selected = chosenHandle;
     if (probe.costCards != null) {
-      for (kart.cost.CostCard c : probe.costCards) {
+      for (CostCard c : probe.costCards) {
         if (c != null && chosen.equals(c.plan_id)) {
           probe.selectedCost = c;
           break;
@@ -147,79 +154,56 @@ public final class BaoPlanArm implements Arm {
     } else {
       tr.t_e2e_ms = Long.valueOf(tPlan);
     }
-    tr.extras.put("bao_protocol", "bao_server.select_plan");
-    tr.extras.put("bao_select_mode", selectMode);
+    tr.extras.put("bao_protocol", "upstream_BaoModel.select_plan");
     tr.extras.put("bao_chosen", chosen);
-    tr.extras.put("bao_chosen_index", Integer.valueOf(chosenIdx));
+    tr.extras.put("bao_chosen_index", Integer.valueOf(rootNode.path("chosen_index").asInt()));
     tr.extras.put("bao_n_arms", Integer.valueOf(arms.size()));
-    tr.extras.put("bao_pg_weights", Boolean.FALSE);
-    tr.extras.put("bao_second_search", Boolean.FALSE);
-    tr.extras.put("bao_upstream", "experiments/third_party/bao/bao_server/main.py");
+    tr.extras.put("bao_model_loaded", Boolean.valueOf(rootNode.path("model_loaded").asBoolean()));
+    tr.extras.put("bao_model_dir", baoModelDir().toString());
+    tr.extras.put("t_enum_ms", Long.valueOf(tEnum));
+    tr.extras.put("t_model_ms", Long.valueOf(tModel));
+    tr.extras.put("t_model_load_ms", Long.valueOf(server.loadMs()));
+    if (rootNode.has("infer_ms")) {
+      tr.extras.put("infer_ms", Double.valueOf(rootNode.path("infer_ms").asDouble()));
+    }
+    tr.extras.put("bao_upstream", "experiments/adapters/upstream/bao/bao_server/main.py");
     tr.extras.put("bao_intentional_changes",
-        "KART SafePlan arms + CostCard surrogate reward; no PG tree-CNN / IMDb weights");
+        "resident --serve; t_plan = enum + one select_plan; load excluded");
     return tr;
   }
 
-  private double weightFor(String planId) {
-    String fam = familyOf(planId);
-    Double w = familyWeight.get(fam);
-    if (w != null) {
-      return w.doubleValue();
-    }
-    if ("P_FULL".equals(planId)) {
-      return 0.1;
-    }
-    return 1.0;
+  private void ensureServer() throws Exception {
+    List<String> cmd = new ArrayList<String>();
+    cmd.add(pythonBin());
+    cmd.add("-u");
+    cmd.add(root.resolve("experiments/adapters/bao/bao_bridge.py").toString());
+    cmd.add("--serve");
+    cmd.add("--model-dir");
+    cmd.add(baoModelDir().toString());
+    server.start(cmd, root, WARMUP, 180_000L, 60_000L);
   }
 
-  private static String familyOf(String planId) {
-    if (planId == null) {
-      return "other";
+  /** Override with {@code KART_BAO_MODEL_DIR} (absolute or repo-relative). Default: T-Drive model. */
+  private Path baoModelDir() {
+    String env = System.getenv("KART_BAO_MODEL_DIR");
+    if (env != null && !env.trim().isEmpty()) {
+      Path p = Paths.get(env.trim());
+      return p.isAbsolute() ? p : root.resolve(p);
     }
-    if (planId.startsWith("P_FULL")) {
-      return "FULL";
-    }
-    if (planId.startsWith("P_TZH") || planId.contains("TZ") || planId.contains("TH")
-        || planId.contains("ZH")) {
-      return "COMBO";
-    }
-    if (planId.startsWith("P_T")) {
-      return "T";
-    }
-    if (planId.startsWith("P_Z")) {
-      return "Z";
-    }
-    if (planId.startsWith("P_H")) {
-      return "H";
-    }
-    return "other";
+    return root.resolve("experiments/adapters/bao/kart_bao_model");
   }
 
-  private static Map<String, Double> loadWeights(Path path) {
-    Map<String, Double> m = new HashMap<String, Double>();
-    m.put("T", 3.0);
-    m.put("Z", 2.5);
-    m.put("H", 2.0);
-    m.put("COMBO", 2.2);
-    m.put("FULL", 0.2);
-    m.put("other", 1.0);
-    if (!Files.isRegularFile(path)) {
-      return m;
-    }
-    try {
-      com.fasterxml.jackson.databind.JsonNode root =
-          new com.fasterxml.jackson.databind.ObjectMapper().readTree(path.toFile());
-      if (root.has("weights")) {
-        root = root.get("weights");
-      }
-      java.util.Iterator<String> it = root.fieldNames();
-      while (it.hasNext()) {
-        String k = it.next();
-        m.put(k, Double.valueOf(root.get(k).asDouble()));
-      }
-    } catch (Exception ignore) {
-      // defaults
-    }
-    return m;
+  private static TrialResult stampFail(long t0, String msg) {
+    TrialResult fail = TrialResult.fail(msg);
+    long tPlan = Math.max(0L, System.currentTimeMillis() - t0);
+    fail.t_plan_ms = Long.valueOf(tPlan);
+    fail.applyWrapperPlanClock(t0, tPlan);
+    return fail;
   }
+
+  private static String pythonBin() {
+    String env = System.getenv("KART_PYTHON");
+    return env != null && !env.isEmpty() ? env : "python3";
+  }
+
 }

@@ -254,11 +254,20 @@ public final class BeamSearch {
     result.candidates = new ArrayList<PlanEnvelope>(candidatesById.values());
     if (advancedIndexesEnabled && advancedValidationShortlistEnabled()) {
       int before = result.candidates.size();
-      result.candidates = advancedValidationShortlist(ir, result.candidates, fastCost,
-          advancedValidationCap());
+      // Default shortlist unchanged for comparative/ablation. Porto param OAT
+      // sets KART_PARAM_CANDIDATE_BIND=1 so max_candidates can drop ADV.
+      if (paramCandidateBindEnabled()) {
+        result.candidates = advancedValidationShortlistParamBind(
+            ir, result.candidates, fastCost, advancedValidationCap(), budget.maxCandidates);
+      } else {
+        result.candidates = advancedValidationShortlist(
+            ir, result.candidates, fastCost, advancedValidationCap());
+      }
       if (result.candidates.size() < before) {
         StatusLog.info("ADV", "validation shortlist kept=" + result.candidates.size()
-            + " dropped=" + (before - result.candidates.size()));
+            + " dropped=" + (before - result.candidates.size())
+            + (paramCandidateBindEnabled()
+                ? (" max_candidates=" + budget.maxCandidates + " param_bind=1") : ""));
       }
     }
     long validationStartMs = System.currentTimeMillis();
@@ -346,6 +355,10 @@ public final class BeamSearch {
     if (preferZ) {
       addShortlistCandidate(selected, byPlanId.get("P_Z"), cap);
     }
+    String routedId = AdvQueryRouter.primaryPlanId(ir);
+    if (routedId != null) {
+      addShortlistCandidate(selected, byPlanId.get(routedId), cap);
+    }
     if (ir != null && PlanBuilder.vehicleEqPredicateIndex(ir) >= 0) {
       PlanEnvelope hash = byPlanId.get("P_H");
       if (hash == null) {
@@ -379,6 +392,135 @@ public final class BeamSearch {
       return new ArrayList<PlanEnvelope>(candidates);
     }
     return new ArrayList<PlanEnvelope>(selected.values());
+  }
+
+  /**
+   * Porto param-OAT only ({@code KART_PARAM_CANDIDATE_BIND=1}): classic-first shortlist
+   * capped by {@code max_candidates}; ADV admitted only when {@code max_candidates >= 6}.
+   * Comparative/ablation never call this path.
+   */
+  static List<PlanEnvelope> advancedValidationShortlistParamBind(
+      BoundIr ir, List<PlanEnvelope> candidates, FastCost fastCost,
+      int requestedCap, int maxCandidates) {
+    if (candidates == null || candidates.isEmpty() || fastCost == null) {
+      return candidates == null ? Collections.<PlanEnvelope>emptyList()
+          : new ArrayList<PlanEnvelope>(candidates);
+    }
+    int soft = Math.max(3, Math.min(8, requestedCap));
+    int mcBound = maxCandidates > 0 ? maxCandidates : soft;
+    int cap = Math.max(1, Math.min(soft, mcBound));
+    List<PlanSelector.Scored> rough = new ArrayList<PlanSelector.Scored>();
+    Map<String, PlanEnvelope> byPlanId = new HashMap<String, PlanEnvelope>();
+    for (PlanEnvelope env : candidates) {
+      if (env == null) {
+        continue;
+      }
+      String id = env.plan_id == null ? "" : env.plan_id;
+      if (!id.isEmpty() && !byPlanId.containsKey(id)) {
+        byPlanId.put(id, env);
+      }
+      CostCard card;
+      try {
+        card = fastCost.estimate(env, ir);
+      } catch (RuntimeException e) {
+        card = new CostCard();
+        card.plan_id = id;
+        card.estimated_ms = Double.POSITIVE_INFINITY;
+      }
+      if (card.plan_id == null) {
+        card.plan_id = id;
+      }
+      rough.add(new PlanSelector.Scored(null, card));
+    }
+
+    final AdvQueryRouter.Route route = AdvQueryRouter.route(ir);
+    List<PlanSelector.Scored> adv = new ArrayList<PlanSelector.Scored>();
+    PlanSelector.Scored classic = null;
+    boolean preferZ = BoundIr.hasSpatial(ir)
+        && PlanBuilder.vehicleEqPredicateIndex(ir) < 0;
+    for (PlanSelector.Scored s : rough) {
+      String id = AdvFinalCalibrator.planId(s);
+      if (isAdvancedPlanId(id)) {
+        adv.add(s);
+      } else if (!"P_FULL".equals(id)) {
+        if (preferZ && !AdvFinalCalibrator.classicUsesSpatial(id)) {
+          continue;
+        }
+        if (classic == null || s.card.estimated_ms < classic.card.estimated_ms) {
+          classic = s;
+        }
+      }
+    }
+    Collections.sort(adv, new Comparator<PlanSelector.Scored>() {
+      @Override
+      public int compare(PlanSelector.Scored a, PlanSelector.Scored b) {
+        int c = Double.compare(AdvFinalCalibrator.predMs(a), AdvFinalCalibrator.predMs(b));
+        if (c != 0) {
+          return c;
+        }
+        return Integer.compare(
+            AdvQueryRouter.preferenceRank(AdvFinalCalibrator.planId(a), route),
+            AdvQueryRouter.preferenceRank(AdvFinalCalibrator.planId(b), route));
+      }
+    });
+
+    Map<String, PlanEnvelope> selected = new LinkedHashMap<String, PlanEnvelope>();
+    addShortlistCandidate(selected, byPlanId.get("P_FULL"), cap);
+    if (classic != null) {
+      addShortlistCandidate(selected, byPlanId.get(AdvFinalCalibrator.planId(classic)), cap);
+    }
+    if (preferZ) {
+      addShortlistCandidate(selected, byPlanId.get("P_Z"), cap);
+    }
+    if (ir != null && PlanBuilder.vehicleEqPredicateIndex(ir) >= 0) {
+      PlanEnvelope hash = byPlanId.get("P_H");
+      if (hash == null) {
+        try {
+          hash = PlanBuilder.buildForIndexes(ir, Collections.singleton(IndexId.HASH), null, null);
+        } catch (RuntimeException ignored) {
+          // skip
+        }
+      }
+      addShortlistCandidate(selected, hash, cap);
+    }
+    if (mcBound >= 6) {
+      String routedId = AdvQueryRouter.primaryPlanId(ir);
+      if (routedId != null) {
+        addShortlistCandidate(selected, byPlanId.get(routedId), cap);
+      }
+      for (int i = 0; i < adv.size() && i < 2; i++) {
+        addShortlistCandidate(selected, byPlanId.get(AdvFinalCalibrator.planId(adv.get(i))), cap);
+      }
+    }
+    Collections.sort(rough, new Comparator<PlanSelector.Scored>() {
+      @Override
+      public int compare(PlanSelector.Scored a, PlanSelector.Scored b) {
+        return Double.compare(a.card.estimated_ms, b.card.estimated_ms);
+      }
+    });
+    for (PlanSelector.Scored s : rough) {
+      if (selected.size() >= cap) {
+        break;
+      }
+      // Under tight mc, do not refill with ADV via cost order.
+      if (mcBound < 6 && isAdvancedPlanId(AdvFinalCalibrator.planId(s))) {
+        continue;
+      }
+      addShortlistCandidate(selected, byPlanId.get(AdvFinalCalibrator.planId(s)), cap);
+    }
+    if (selected.isEmpty()) {
+      return new ArrayList<PlanEnvelope>(candidates);
+    }
+    return new ArrayList<PlanEnvelope>(selected.values());
+  }
+
+  static boolean paramCandidateBindEnabled() {
+    String v = System.getenv("KART_PARAM_CANDIDATE_BIND");
+    if (v == null || v.isEmpty()) {
+      return false;
+    }
+    v = v.trim().toLowerCase();
+    return "1".equals(v) || "true".equals(v) || "on".equals(v) || "yes".equals(v);
   }
 
   private static void addShortlistCandidate(Map<String, PlanEnvelope> selected,

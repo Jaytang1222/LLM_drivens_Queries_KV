@@ -17,6 +17,7 @@ Point predicates (AND only), all apply to the same observed point row:
 """
 from __future__ import annotations
 
+import os
 import re
 from typing import Any, Optional, Tuple
 
@@ -37,6 +38,21 @@ REGISTERED_REGIONS = {
     "capital_airport",
     "haidian_central",
     "chaoyang_central",
+    # Porto (E1 / NL demos)
+    "porto_smoke_anchor",
+    "porto_topk_box",
+    "porto_topk_wide",
+    "porto_topk_mid",
+    "baixa",
+    "campanha",
+    "cedofeita",
+    "aliados",
+    "ribeira",
+    "porto_airport",
+    "matosinhos",
+    "boavista",
+    "trindade",
+    "foz",
 }
 
 # Word-bounded: the token "path" must not match table name trajectory_point.
@@ -272,7 +288,10 @@ def sql_to_draft_ir(sql: str) -> Tuple[dict, dict]:
 
     draft: dict[str, Any] = {
         "ir_version": "1.0",
-        "source": {"dataset_id": "tdrive_v1", "entity": "trajectory"},
+        "source": {
+            "dataset_id": os.environ.get("KART_DATASET_ID", "tdrive_v1") or "tdrive_v1",
+            "entity": "trajectory",
+        },
         "semantics": {"mode": "OBSERVED_POINT", "coupling": "SAME_POINT"},
         "result": result,
     }

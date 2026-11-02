@@ -25,12 +25,12 @@ public final class ArmRegistry {
     register(new FullScanArm());
 
     register(new BaoPlanArm(root));
+    register(new ParamTreePlanArm(root));
     register(new LlmOptPlanArm(root));
     register(CboLlmProposalArm.withoutCache());
     register(CboLlmProposalArm.withCache());
     register(new LlmRewriteArm());
     register(new FixedPlanIdArm());
-    register(new PilotSafetyProbeArm());
     register(SharedPoolPlanArm.cbo(root));
     register(SharedPoolPlanArm.bao(root));
     register(SharedPoolPlanArm.llm(root));

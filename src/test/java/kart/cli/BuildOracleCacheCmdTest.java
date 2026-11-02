@@ -8,6 +8,7 @@ import kart.geo.Rect;
 import kart.ir.BoundIr;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class BuildOracleCacheCmdTest {
 
@@ -62,12 +64,14 @@ public final class BuildOracleCacheCmdTest {
   }
 
   @Test
-  void advancedDiagnosticSuiteLoadsWithNativeComparisonArms() throws Exception {
-    SuiteSpec suite = SuiteSpec.load(
-        Paths.get("experiments/suites/e2e-adv-complex-diagnostic.yaml"));
-    assertEquals("e2e-adv-complex-diagnostic", suite.id);
-    assertEquals(1, suite.trials);
-    assertEquals(Arrays.asList("fullscan", "rbo", "cbo", "kart"), suite.arms);
+  void formalE2eLearnedSuiteLoadsWithNativeComparisonArms() throws Exception {
+    Path root = Paths.get(".").toAbsolutePath().normalize();
+    SuiteSpec suite = SuiteSpec.load(root, Paths.get("e2e-learned"), null);
+    assertEquals("e2e-learned", suite.id);
+    assertTrue(suite.arms.contains("fullscan"));
+    assertTrue(suite.arms.contains("rbo"));
+    assertTrue(suite.arms.contains("cbo"));
+    assertTrue(suite.arms.contains("kart"));
   }
 
   private static List<Long> anchorTids(List<BuildOracleCacheCmd.Anchor> anchors) {

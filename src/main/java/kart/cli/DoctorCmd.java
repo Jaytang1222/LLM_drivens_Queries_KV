@@ -34,7 +34,7 @@ public final class DoctorCmd implements Callable<Integer> {
       System.out.println("WARN: expected Java 8; got " + javaVersion);
     }
 
-    Path siteXml = root.resolve("config/hbase/hbase-site.xml");
+    Path siteXml = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
     if (!Files.isRegularFile(siteXml)) {
       System.out.println("FAIL: missing " + siteXml);
       ok = false;

@@ -1,0 +1,594 @@
+# Formal experiment suites (select with --suite <id>).
+suites:
+  parse:
+    kind: compare
+    id: parse
+    workload: datasets/tdrive-query/E1_query.json
+    oracle: datasets/tdrive-query/E1_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: false
+    trials: 1
+    stages:
+      - parse
+    arms:
+      - kart
+      - direct-draftir
+      - din-sql-spider
+      - din-sql-bird
+      - sag-mql-nofeedback
+      # requires real WorldAccess (not sample JSON):
+      # - sag-mql
+      # diagnostic DraftIR-direct (legacy):
+      # - din-spider
+      # - din-bird
+      # - sag
+
+  plan:
+    kind: compare
+    id: plan
+    workload: datasets/tdrive-query/complex_query.json
+    oracle: datasets/tdrive-query/complex_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: false
+    trials: 10
+    stages:
+      - plan
+    arms:
+      - kart
+      - cbo
+      - bao
+      - llmopt
+
+  plan-simple:
+    kind: compare
+    id: plan-simple
+    workload: datasets/tdrive-query/simple_query.json
+    oracle: datasets/tdrive-query/simple_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - plan
+    arms:
+      - kart
+      - cbo
+      - rbo
+      - fullscan
+
+  e2e:
+    kind: compare
+    id: e2e
+    workload: datasets/tdrive-query/complex_query.json
+    oracle: datasets/tdrive-query/complex_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - kart
+
+  e2e-simple:
+    kind: compare
+    id: e2e-simple
+    workload: datasets/tdrive-query/simple_query.json
+    oracle: datasets/tdrive-query/simple_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - kart
+      - cbo
+      - rbo
+      - fullscan
+
+  e2e-learned:
+    kind: compare
+    id: e2e-learned
+    workload: datasets/tdrive-query/complex_query.json
+    oracle: datasets/tdrive-query/complex_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - bao
+      - paramtree
+      - kart
+
+  e2e-learned-simple:
+    kind: compare
+    id: e2e-learned-simple
+    workload: datasets/tdrive-query/simple_query.json
+    oracle: datasets/tdrive-query/simple_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - bao
+      - paramtree
+      - kart
+
+  ablation:
+    kind: ablation
+    id: ablation
+    # Same frozen comparative set as E2/E3 (bound_ir_complex_v3, 2026-10-17).
+    workload: datasets/tdrive-query/complex_query.json
+    oracle: datasets/tdrive-query/complex_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    factors:
+      # KART w/o rule LLM — drop offline admitted rewrite rules
+      - id: no_rule_llm
+        enabled: true
+        overrides:
+          action_mode: dual-online-only
+      # KART w/o costmodel LLM — drop offline LLM CostPatch (KART_COST_PATCH)
+      - id: no_costmodel_llm
+        enabled: true
+        overrides:
+          cost_patch: false
+      # KART w/o costmodel — native CBO arm (no AdvFinalCalibrator; not kart+plan_id)
+      - id: no_costmodel
+        enabled: true
+        overrides:
+          arm: cbo
+      # KART w/o verify — CoverageCheck off (risk table only)
+      - id: no_verify
+        enabled: true
+        unsafe: true
+        overrides:
+          skip_coverage_check: true
+
+  ablation-simple:
+    kind: ablation
+    id: ablation-simple
+    # Same frozen comparative set as E2/E3 (bound_ir_simple_v3, 2026-10-17).
+    workload: datasets/tdrive-query/simple_query.json
+    oracle: datasets/tdrive-query/simple_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    factors:
+      - id: no_rule_llm
+        enabled: true
+        overrides:
+          action_mode: dual-online-only
+      - id: no_costmodel_llm
+        enabled: true
+        overrides:
+          cost_patch: false
+      - id: no_costmodel
+        enabled: true
+        overrides:
+          arm: cbo
+      - id: no_verify
+        enabled: true
+        unsafe: true
+        overrides:
+          skip_coverage_check: true
+
+  param:
+    kind: param
+    id: param
+    # Same frozen comparative set as E2/E3 (bound_ir_complex_v3, 2026-10-17).
+    workload: datasets/tdrive-query/complex_query.json
+    oracle: datasets/tdrive-query/complex_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    # Align with kart.yaml planner defaults (beam=3, max_candidates=8).
+    # OAT grids center on defaults with step 2: beam 1–3–5(–7), mc 4–6–8–10.
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+      max_candidates: [4, 6, 8, 10]
+
+  param-simple:
+    kind: param
+    id: param-simple
+    # Same frozen comparative set as E2/E3 (bound_ir_simple_v3, 2026-10-17).
+    workload: datasets/tdrive-query/simple_query.json
+    oracle: datasets/tdrive-query/simple_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+      max_candidates: [4, 6, 8, 10]
+
+  # Porto dataset (manifest porto_v1_ready). Workloads under datasets/porto-query/
+  # after build-oracle-cache / stratified expand (same shape as tdrive-query).
+  e2e-porto:
+    kind: compare
+    id: e2e-porto
+    workload: datasets/porto-query/complex_query.json
+    oracle: datasets/porto-query/complex_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - bao
+      - paramtree
+      - kart
+
+  e2e-porto-simple:
+    kind: compare
+    id: e2e-porto-simple
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - bao
+      - paramtree
+      - kart
+
+  e2e-porto-smoke:
+    kind: compare
+    id: e2e-porto-smoke
+    # Smoke retargeted to §2.A simple (smoke_query archived 20261101_slim).
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 1
+    stages:
+      - e2e
+    # Train experience for Bao/ParamTree (disjoint from formal complex).
+    # Align sample shape with T-Drive: multi-arm × warm trials → ~480 rows.
+    arms:
+      - fullscan
+      - rbo
+      - cbo
+      - kart
+
+  parse-porto:
+    kind: compare
+    id: parse-porto
+    workload: datasets/porto-query/E1_query.json
+    oracle: datasets/porto-query/E1_query.json
+    manifest: porto_v1_ready
+    trials: 1
+    stages:
+      - parse
+    arms:
+      - kart
+      - direct-draftir
+      - din-sql-spider
+      - din-sql-bird
+      - sag-mql-nofeedback
+
+  ablation-porto:
+    kind: ablation
+    id: ablation-porto
+    workload: datasets/porto-query/complex_query.json
+    oracle: datasets/porto-query/complex_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    factors:
+      - id: no_rule_llm
+        enabled: true
+        overrides:
+          action_mode: dual-online-only
+      - id: no_costmodel_llm
+        enabled: true
+        overrides:
+          cost_patch: false
+      - id: no_costmodel
+        enabled: true
+        overrides:
+          arm: cbo
+      - id: no_verify
+        enabled: true
+        unsafe: true
+        overrides:
+          skip_coverage_check: true
+
+  ablation-porto-simple:
+    kind: ablation
+    id: ablation-porto-simple
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    factors:
+      - id: no_rule_llm
+        enabled: true
+        overrides:
+          action_mode: dual-online-only
+      - id: no_costmodel_llm
+        enabled: true
+        overrides:
+          cost_patch: false
+      - id: no_costmodel
+        enabled: true
+        overrides:
+          arm: cbo
+      - id: no_verify
+        enabled: true
+        unsafe: true
+        overrides:
+          skip_coverage_check: true
+
+  # Porto param OAT: same frozen §2.A as E3/ablation (CANONICAL_2A; *_param archived 20261101_slim).
+  # Grid/defaults unchanged; scripts/parameter.sh sets KART_ADV_INJECT=0 for porto only.
+  param-porto:
+    kind: param
+    id: param-porto
+    workload: datasets/porto-query/complex_query.json
+    oracle: datasets/porto-query/complex_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+      max_candidates: [4, 6, 8, 10]
+
+  param-porto-simple:
+    kind: param
+    id: param-porto-simple
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 10
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+      max_candidates: [4, 6, 8, 10]
+
+  # Beam-only confirm (no mc axis). Use before full param-porto OAT.
+  param-porto-beam-gate:
+    kind: param
+    id: param-porto-beam-gate
+    workload: datasets/porto-query/complex_query.json
+    oracle: datasets/porto-query/complex_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+
+  param-porto-beam-gate-simple:
+    kind: param
+    id: param-porto-beam-gate-simple
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      beam_width: [1, 3, 5, 7]
+
+  # MC-only confirm (beam pinned to default 3). Use after beam lock; before full OAT.
+  param-porto-mc-gate:
+    kind: param
+    id: param-porto-mc-gate
+    workload: datasets/porto-query/complex_query.json
+    oracle: datasets/porto-query/complex_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      max_candidates: [4, 6, 8, 10]
+
+  param-porto-mc-gate-simple:
+    kind: param
+    id: param-porto-mc-gate-simple
+    workload: datasets/porto-query/simple_query.json
+    oracle: datasets/porto-query/simple_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages:
+      - e2e
+    base_arm: kart
+    grid_mode: oat
+    defaults:
+      beam_width: 3
+      max_candidates: 8
+    grid:
+      max_candidates: [4, 6, 8, 10]
+
+  # Workload SRQ dist×range (merged 2026-11-01): skewed+gaussian+uniform in one file.
+  # query_id prefix srq_{dist}_* → xlsx Workload columns; prefer file suite if jar catalog stale.
+  workload-dist-tdrive:
+    kind: compare
+    id: workload-dist-tdrive
+    workload: datasets/tdrive-query/workload_query.json
+    oracle: datasets/tdrive-query/workload_query.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  # Scalability v2 formal — by dataset template (GATE_v2).
+  # Canonical pack copy: datasets/{tdrive,porto}-query/scalability_query.json
+  # Runnable extracts (answers embedded): experiments/workloads/scalability/*_v2.json
+  scalability-tdrive-x1-v2:
+    kind: compare
+    id: scalability-tdrive-x1-v2
+    workload: experiments/workloads/scalability/tdrive_x1_v2.json
+    oracle: experiments/workloads/scalability/tdrive_x1_v2.json
+    manifest: tdrive_v1_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-tdrive-x10-v2:
+    kind: compare
+    id: scalability-tdrive-x10-v2
+    workload: experiments/workloads/scalability/tdrive_x10_v2.json
+    oracle: experiments/workloads/scalability/tdrive_x10_v2.json
+    manifest: tdrive_x10_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-tdrive-x50-v2:
+    kind: compare
+    id: scalability-tdrive-x50-v2
+    workload: experiments/workloads/scalability/tdrive_x50_v2.json
+    oracle: experiments/workloads/scalability/tdrive_x50_v2.json
+    manifest: tdrive_x50_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-tdrive-x100-v2:
+    kind: compare
+    id: scalability-tdrive-x100-v2
+    workload: experiments/workloads/scalability/tdrive_x100_v2.json
+    oracle: experiments/workloads/scalability/tdrive_x100_v2.json
+    manifest: tdrive_x100_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  workload-dist-porto:
+    kind: compare
+    id: workload-dist-porto
+    workload: datasets/porto-query/workload_query.json
+    oracle: datasets/porto-query/workload_query.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-porto-s100-v2:
+    kind: compare
+    id: scalability-porto-s100-v2
+    workload: experiments/workloads/scalability/porto_s100_v2.json
+    oracle: experiments/workloads/scalability/porto_s100_v2.json
+    manifest: porto_v1_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-porto-s50-v2:
+    kind: compare
+    id: scalability-porto-s50-v2
+    workload: experiments/workloads/scalability/porto_s50_v2.json
+    oracle: experiments/workloads/scalability/porto_s50_v2.json
+    manifest: porto_s50_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-porto-s25-v2:
+    kind: compare
+    id: scalability-porto-s25-v2
+    workload: experiments/workloads/scalability/porto_s25_v2.json
+    oracle: experiments/workloads/scalability/porto_s25_v2.json
+    manifest: porto_s25_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]
+
+  scalability-porto-s10-v2:
+    kind: compare
+    id: scalability-porto-s10-v2
+    workload: experiments/workloads/scalability/porto_s10_v2.json
+    oracle: experiments/workloads/scalability/porto_s10_v2.json
+    manifest: porto_s10_ready
+    require_oracle: true
+    trials: 5
+    stages: [e2e]
+    arms: [kart, fullscan, rbo, cbo, bao, paramtree]

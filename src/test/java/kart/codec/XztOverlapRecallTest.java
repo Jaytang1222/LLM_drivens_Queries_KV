@@ -2,6 +2,7 @@ package kart.codec;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -56,6 +57,19 @@ public class XztOverlapRecallTest {
     }
     assertTrue(total > 100, "sample size");
     assertTrue(miss == 0, "XZT overlap SRQ FN=" + miss + "/" + total);
+  }
+
+  @Test
+  void recallGapClosesShortHolesOnly() {
+    List<CodeRange> ranges = new ArrayList<CodeRange>();
+    ranges.add(new CodeRange(1, 10, false));
+    ranges.add(new CodeRange(20, 30, false));
+    ranges.add(new CodeRange(10_000, 10_010, false));
+    List<CodeRange> narrow = XzStarSfc.fillRecallGaps(ranges);
+    assertTrue(covers(narrow, 15));
+    assertTrue(!covers(narrow, 5_000));
+    List<CodeRange> span = XzStarSfc.fillInternalGaps(ranges);
+    assertTrue(covers(span, 5_000));
   }
 
   @Test

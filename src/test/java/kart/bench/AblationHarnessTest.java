@@ -48,31 +48,36 @@ public final class AblationHarnessTest {
   @Test
   void suiteYamlIsFullKartLeaveOneOut() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     assertEquals("ablation", s.kind);
     assertEquals("kart", s.base_arm);
-    assertEquals("experiments/workloads/bound_ir_complex_v2.json", s.workload);
+    assertEquals("datasets/tdrive-query/complex_query.json", s.workload);
     List<String> ids = s.enabledFactorIds();
-    assertTrue(ids.contains("cbo_only"));
-    assertTrue(ids.contains("no_online_llm"));
-    assertTrue(ids.contains("no_offline_llm"));
-    assertTrue(ids.contains("no_fast_cost"));
-    assertTrue(ids.contains("no_final_cost"));
-    assertTrue(ids.contains("no_coverage"));
-    assertFalse(ids.contains("no_llm_rule"));
-    assertFalse(ids.contains("llm_direct"));
-    assertFalse(ids.contains("single_index"));
-    assertFalse(ids.contains("uncalibrated"));
-    assertFalse(ids.contains("narrow_beam"));
-    boolean coverageUnsafe = false;
+    assertTrue(ids.contains("no_rule_llm"));
+    assertTrue(ids.contains("no_costmodel_llm"));
+    assertTrue(ids.contains("no_costmodel"));
+    assertTrue(ids.contains("no_verify"));
+    assertFalse(ids.contains("cbo_only"));
+    assertFalse(ids.contains("no_online_llm"));
+    assertFalse(ids.contains("no_offline_llm"));
+    assertFalse(ids.contains("no_fast_cost"));
+    assertFalse(ids.contains("no_final_cost"));
+    assertFalse(ids.contains("no_coverage"));
+    boolean verifyUnsafe = false;
     for (SuiteSpec.Factor f : s.factors) {
-      if ("no_coverage".equals(f.id)) {
-        coverageUnsafe = f.unsafe;
+      if ("no_verify".equals(f.id)) {
+        verifyUnsafe = f.unsafe;
         assertTrue(Boolean.TRUE.equals(f.overrides.get("skip_coverage_check"))
             || "true".equals(String.valueOf(f.overrides.get("skip_coverage_check"))));
       }
+      if ("no_costmodel_llm".equals(f.id)) {
+        assertEquals(Boolean.FALSE, f.overrides.get("cost_patch"));
+      }
+      if ("no_costmodel".equals(f.id)) {
+        assertEquals("cbo", String.valueOf(f.overrides.get("arm")));
+      }
     }
-    assertTrue(coverageUnsafe);
+    assertTrue(verifyUnsafe);
   }
 
   @Test
@@ -214,31 +219,31 @@ public final class AblationHarnessTest {
   @Test
   void factorFilterPairsFullForSafeArm() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     SuiteRunner.Options opt = newOptions(root);
-    opt.factorFilter.add("cbo_only");
+    opt.factorFilter.add("no_rule_llm");
     List<String> labels = cellLabels(s, opt);
     assertEquals(2, labels.size(), labels.toString());
     assertEquals("full", labels.get(0));
-    assertEquals("cbo_only", labels.get(1));
+    assertEquals("no_rule_llm", labels.get(1));
     List<SuiteRunner.RunCell> cells =
         SuiteRunner.expandCells(s, new ArmRegistry(root), opt, false);
     assertEquals("kart", cells.get(0).armId);
     assertEquals("kart", cells.get(1).armId);
-    assertEquals("cbo_only", cells.get(1).overrides.get("action_mode"));
-    assertEquals("cbo_only", cells.get(1).extras.get("action_mode"));
+    assertEquals("dual-online-only", cells.get(1).overrides.get("action_mode"));
+    assertEquals("dual-online-only", cells.get(1).extras.get("action_mode"));
   }
 
   @Test
   void riskOnlyFactorDoesNotPairFull() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     SuiteRunner.Options opt = newOptions(root);
-    opt.factorFilter.add("no_coverage");
+    opt.factorFilter.add("no_verify");
     opt.allowUnsafe = true;
     List<String> labels = cellLabels(s, opt);
     assertEquals(1, labels.size(), labels.toString());
-    assertEquals("no_coverage", labels.get(0));
+    assertEquals("no_verify", labels.get(0));
     assertFalse(SuiteRunner.shouldPairFull(s, opt));
     assertFalse(SuiteRunner.cellsIncludeFull(
         SuiteRunner.expandCells(s, new ArmRegistry(root), opt, false)));
@@ -247,7 +252,7 @@ public final class AblationHarnessTest {
   @Test
   void pairFullFlagFollowsExpandedCells() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     ArmRegistry registry = new ArmRegistry(root);
 
     SuiteRunner.Options main = newOptions(root);
@@ -256,12 +261,12 @@ public final class AblationHarnessTest {
         "shouldPairFull is only for --factor auto-include; default main already has full");
 
     SuiteRunner.Options safe = newOptions(root);
-    safe.factorFilter.add("cbo_only");
+    safe.factorFilter.add("no_rule_llm");
     assertTrue(SuiteRunner.shouldPairFull(s, safe));
     assertTrue(SuiteRunner.cellsIncludeFull(SuiteRunner.expandCells(s, registry, safe, false)));
 
     SuiteRunner.Options solo = newOptions(root);
-    solo.factorFilter.add("no_fast_cost");
+    solo.factorFilter.add("no_costmodel");
     solo.noPairFull = true;
     assertFalse(SuiteRunner.cellsIncludeFull(SuiteRunner.expandCells(s, registry, solo, false)));
   }
@@ -269,34 +274,50 @@ public final class AblationHarnessTest {
   @Test
   void noPairFullKeepsSingleSafeFactor() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     SuiteRunner.Options opt = newOptions(root);
-    opt.factorFilter.add("no_fast_cost");
+    opt.factorFilter.add("no_costmodel");
     opt.noPairFull = true;
     List<String> labels = cellLabels(s, opt);
     assertEquals(1, labels.size(), labels.toString());
-    assertEquals("no_fast_cost", labels.get(0));
+    assertEquals("no_costmodel", labels.get(0));
+    SuiteRunner.RunCell only = SuiteRunner.expandCells(s, new ArmRegistry(root), opt, false).get(0);
+    assertEquals("cbo", only.armId);
+    assertFalse(SuiteRunner.offlineCostPatch(only),
+        "native cbo factor does not apply KART CostPatch (kart-only default gate)");
   }
 
   @Test
   void defaultAblationSkipsUnsafeAndKeepsFull() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     List<String> labels = cellLabels(s, newOptions(root));
     assertTrue(labels.contains("full"));
-    assertTrue(labels.contains("cbo_only"));
-    assertTrue(labels.contains("no_online_llm"));
-    assertTrue(labels.contains("no_offline_llm"));
-    assertTrue(labels.contains("no_fast_cost"));
-    assertTrue(labels.contains("no_final_cost"));
-    assertFalse(labels.contains("no_coverage"));
-    assertEquals(6, labels.size(), labels.toString());
+    assertTrue(labels.contains("no_rule_llm"));
+    assertTrue(labels.contains("no_costmodel_llm"));
+    assertTrue(labels.contains("no_costmodel"));
+    assertFalse(labels.contains("no_verify"));
+    assertEquals(4, labels.size(), labels.toString());
+    List<SuiteRunner.RunCell> cells =
+        SuiteRunner.expandCells(s, new ArmRegistry(root), newOptions(root), false);
+    boolean fullOn = false;
+    boolean noPatchOff = false;
+    for (SuiteRunner.RunCell c : cells) {
+      if ("full".equals(c.label)) {
+        fullOn = SuiteRunner.offlineCostPatch(c);
+      }
+      if ("no_costmodel_llm".equals(c.label)) {
+        noPatchOff = !SuiteRunner.offlineCostPatch(c);
+      }
+    }
+    assertTrue(fullOn);
+    assertTrue(noPatchOff);
   }
 
   @Test
   void factorAuditKeepsKartArmAndCalibratedCoeffs() throws Exception {
     Path root = Paths.get(".").toAbsolutePath().normalize();
-    SuiteSpec s = SuiteSpec.load(root.resolve("experiments/suites/ablation.yaml"));
+    SuiteSpec s = SuiteSpec.load(root, Paths.get("ablation"), null);
     SuiteRunner.Options opt = newOptions(root);
     List<SuiteRunner.RunCell> cells =
         SuiteRunner.expandCells(s, new ArmRegistry(root), opt, false);
@@ -304,27 +325,28 @@ public final class AblationHarnessTest {
     base.cost.calibrated = true;
     List<Map<String, Object>> audit = SuiteRunner.factorAudit(root, base, cells);
     Map<String, Object> full = findAudit(audit, "full");
-    Map<String, Object> cboOnly = findAudit(audit, "cbo_only");
+    Map<String, Object> noRule = findAudit(audit, "no_rule_llm");
     assertEquals("kart", full.get("arm"));
-    assertEquals("kart", cboOnly.get("arm"));
+    assertEquals("kart", noRule.get("arm"));
     assertEquals(Boolean.TRUE, full.get("cost_calibrated"));
-    assertEquals(Boolean.TRUE, cboOnly.get("cost_calibrated"));
-    assertEquals("config/planner.yaml", full.get("cost_coeffs_path"));
+    assertEquals(Boolean.TRUE, noRule.get("cost_calibrated"));
+    assertEquals("src/main/resources/config/kart.yaml", full.get("cost_coeffs_path"));
   }
 
   @Test
-  void rewriteActionModeOverlayResolvesCboOnlyAndOffline() {
+  void rewriteActionModeOverlayResolvesNewAndLegacyAliases() {
     BenchContext base = dummyCtx(null);
     assertEquals("dual-rules", LlmRewriteArm.effectiveMode(base, "dual-rules"));
     assertEquals("cbo_only", LlmRewriteArm.effectiveMode(dummyCtx("cbo_only"), "dual-rules"));
+    assertEquals("dual-rules",
+        LlmRewriteArm.effectiveMode(dummyCtx("no_costmodel_llm"), "dual-rules"),
+        "no_costmodel_llm must not remap action_mode; CostPatch gate is SuiteRunner");
     assertEquals("dual-offline-rules",
         LlmRewriteArm.effectiveMode(dummyCtx("no_online_llm"), "dual-rules"));
-    assertEquals("dual-offline-rules",
-        LlmRewriteArm.effectiveMode(dummyCtx("dual-offline-rules"), "dual-rules"));
+    assertEquals("dual-online-only",
+        LlmRewriteArm.effectiveMode(dummyCtx("no_rule_llm"), "dual-rules"));
     assertEquals("dual-online-only",
         LlmRewriteArm.effectiveMode(dummyCtx("no_offline_llm"), "dual-rules"));
-    assertEquals("dual-online-only",
-        LlmRewriteArm.effectiveMode(dummyCtx("dual-online-only"), "dual-rules"));
   }
 
   private static BenchContext dummyCtx(String actionMode) {

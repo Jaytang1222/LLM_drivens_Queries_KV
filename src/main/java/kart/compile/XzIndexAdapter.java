@@ -40,9 +40,8 @@ public final class XzIndexAdapter {
       }
       raw.addAll(layout.xzSfc().ranges(query.minX, query.minY, query.maxX, query.maxY));
     }
-    // Span-fill holes: XZ* range enumeration can omit SFC codes of geometrically
-    // overlapping MBRs; without fill, e2e oracle misses (P_XZ / P_XZTXZ).
-    List<CodeRange> precise = XzStarSfc.fillInternalGaps(
+    // Close only short SFC holes. A full span-fill scans ~100× more postings.
+    List<CodeRange> precise = XzStarSfc.fillRecallGaps(
         CodeRangeBudget.mergeOverlapping(raw));
     List<CodeRange> physical = CodeRangeBudget.mergeToBudgetGapAware(
         precise, maxRanges, layout.xzPostingGapCost());

@@ -3,7 +3,7 @@
 DIN-SQL upstream-backed bridge for KART.
 
 Authenticity (spec §5.2 / §5.4):
-  - Loads experiments/third_party/din-sql/DIN-SQL.py (spider) or DIN-SQL_BIRD.py (bird)
+  - Loads experiments/adapters/upstream/din-sql/DIN-SQL.py (spider) or DIN-SQL_BIRD.py (bird)
   - Calls upstream module order:
       schema_linking → classification → easy|medium|hard generation → self-correction
   - Spider: real prompt_maker() functions from DIN-SQL.py (sanitized load)
@@ -27,10 +27,11 @@ sys.path.insert(0, os.path.join(ROOT, "experiments", "adapters"))
 from llm_client import (  # noqa: E402
     DIN_FOREIGN_KEYS,
     DIN_SCHEMA_FIELDS,
-    DRAFT_IR_HINT,
     LlmHttpError,
     LOGICAL_CATALOG,
     chat,
+    default_dataset_id,
+    draft_ir_hint,
     extract_json,
     merge_usage,
 )
@@ -181,8 +182,8 @@ def _llm(prompt: str, usage: dict, *, as_json: bool) -> str:
         msgs[0]["content"] = (
             prompt
             + "\n\nIMPORTANT: Reply with ONLY a DraftIR JSON object (not SQL). "
-            + DRAFT_IR_HINT
-            + " Use OBSERVED_POINT semantics; source.dataset_id=tdrive_v1."
+            + draft_ir_hint()
+            + f" Use OBSERVED_POINT semantics; source.dataset_id={default_dataset_id()}."
         )
     content, u = chat(msgs, temperature=0.0, json_mode=as_json)
     merge_usage(usage, u)
@@ -222,7 +223,7 @@ def _retarget_sql_surface(prompt: str) -> str:
 
 
 def run_din_spider(utterance: str, knowledge: str) -> dict:
-    path = os.path.join(ROOT, "experiments", "third_party", "din-sql", "DIN-SQL.py")
+    path = os.path.join(ROOT, "experiments", "adapters", "upstream", "din-sql", "DIN-SQL.py")
     if not os.path.isfile(path):
         raise FileNotFoundError(
             f"missing upstream {path}; run experiments/adapters/clone-third-party.sh"
@@ -266,7 +267,7 @@ def run_din_spider(utterance: str, knowledge: str) -> dict:
 
 
 def run_din_bird(utterance: str, knowledge: str) -> dict:
-    path = os.path.join(ROOT, "experiments", "third_party", "din-sql", "DIN-SQL_BIRD.py")
+    path = os.path.join(ROOT, "experiments", "adapters", "upstream", "din-sql", "DIN-SQL_BIRD.py")
     if not os.path.isfile(path):
         raise FileNotFoundError(
             f"missing upstream {path}; run experiments/adapters/clone-third-party.sh"

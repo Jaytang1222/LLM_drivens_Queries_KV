@@ -172,7 +172,7 @@ public final class CacheProtocol {
   }
 
   /**
-   * Preferred passwordless helper installed by {@code scripts/install-kart-drop-page-cache.sh}.
+   * Preferred passwordless helper installed by {@code scripts/kart.sh drop-cache-install}.
    * Avoids fragile sudoers matching of {@code sh -c "...; ..."}.
    */
   public static final String DROP_PAGE_CACHE_HELPER = "/usr/local/sbin/kart-drop-page-cache";

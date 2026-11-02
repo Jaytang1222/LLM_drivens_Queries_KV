@@ -62,7 +62,7 @@ public final class QueryDraftCmd implements Callable<Integer> {
     Path root = resolveRoot();
     Path resolved = draftPath.isAbsolute() ? draftPath : root.resolve(draftPath);
     String draftJson = new String(Files.readAllBytes(resolved), StandardCharsets.UTF_8);
-    IrSchemaValidator schemas = new IrSchemaValidator(root.resolve("schemas"));
+    IrSchemaValidator schemas = new IrSchemaValidator(kart.KartPaths.schemas(root));
     java.util.Set<com.networknt.schema.ValidationMessage> errs = schemas.validateDraftIr(draftJson);
     if (errs != null && !errs.isEmpty()) {
       emitError("draft_schema_invalid", errs.iterator().next().getMessage());
@@ -85,14 +85,16 @@ public final class QueryDraftCmd implements Callable<Integer> {
     try {
       LayoutContext layout = LayoutContext.from(manifest);
       StatsSnapshot stats = catalog.loadStats(manifestId).orElse(null);
-      Path site = root.resolve("config/hbase/hbase-site.xml");
+      Path site = root.resolve("src/main/resources/config/hbase/hbase-site.xml");
       kv = new HBaseBackend(HBaseBackend.open(site));
       closeKv = true;
 
+      String crs = manifest.layout != null ? manifest.layout.crs : null;
       IrBinder binder = new IrBinder(
           cfg.regions(), kv, layout.tableMeta, layout.shardCount,
           manifestId,
-          manifest.semantics_version != null ? manifest.semantics_version : "point_similarity_v2");
+          manifest.semantics_version != null ? manifest.semantics_version : "point_similarity_v2",
+          crs);
       IrBinder.BindResult br = binder.bind(draft, System.currentTimeMillis());
       if (!IrBinder.STATUS_OK.equals(br.status) || br.bound == null) {
         emitError(br.status != null ? br.status : "bind_failed", br.error);

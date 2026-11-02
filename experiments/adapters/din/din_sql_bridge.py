@@ -171,7 +171,7 @@ def _translate_with_repair(
 
 
 def run_din_sql_spider(utterance: str, knowledge: str) -> dict:
-    path = os.path.join(ROOT, "experiments", "third_party", "din-sql", "DIN-SQL.py")
+    path = os.path.join(ROOT, "experiments", "adapters", "upstream", "din-sql", "DIN-SQL.py")
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
@@ -212,7 +212,7 @@ def run_din_sql_spider(utterance: str, knowledge: str) -> dict:
 
 
 def run_din_sql_bird(utterance: str, knowledge: str) -> dict:
-    path = os.path.join(ROOT, "experiments", "third_party", "din-sql", "DIN-SQL_BIRD.py")
+    path = os.path.join(ROOT, "experiments", "adapters", "upstream", "din-sql", "DIN-SQL_BIRD.py")
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}

@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class BeamSearchAdvancedShortlistTest {
@@ -55,5 +56,42 @@ public final class BeamSearchAdvancedShortlistTest {
     assertTrue(ids.contains("P_H"), "retain vehicle-equality hash access");
     assertTrue(ids.stream().anyMatch(id -> id.startsWith("P_XZ") || id.startsWith("P_TS")
         || id.startsWith("P_XZT")), "retain an advanced-index alternative");
+  }
+
+  @Test
+  void tightMaxCandidatesDropsAdvancedAfterClassicFirst() {
+    BoundIr ir = new BoundIr();
+    ir.temporal = new BoundIr.Temporal();
+    ir.temporal.start_ms = 1_200_000_000_000L;
+    ir.temporal.end_ms = ir.temporal.start_ms + 48L * 3600L * 1000L;
+    ir.spatial = new BoundIr.Spatial();
+    ir.spatial.min_x = 0.0d;
+    ir.spatial.min_y = 0.0d;
+    ir.spatial.max_x = 1_000.0d;
+    ir.spatial.max_y = 1_000.0d;
+
+    List<PlanEnvelope> candidates = new ArrayList<PlanEnvelope>();
+    candidates.add(PlanBuilder.buildForIndexes(ir, Collections.<String>emptyList(), null, null));
+    candidates.add(PlanBuilder.buildForAccess(ir, true, true, false));
+    candidates.add(PlanBuilder.buildForIndexes(ir, Collections.singleton(IndexId.ZORDER), null, null));
+    candidates.add(PlanBuilder.buildForIndexes(ir, Collections.singleton(IndexId.XZT), null, null));
+    candidates.add(PlanBuilder.buildForIndexes(ir,
+        Arrays.asList(IndexId.XZ, IndexId.TIME, IndexId.ZORDER), "HASH_SET", null));
+
+    // Param-bind path only: tight max_candidates drops ADV (comparative untouched).
+    List<PlanEnvelope> shortlisted = BeamSearch.advancedValidationShortlistParamBind(
+        ir, candidates, new FastCost(null), 6, 3);
+    List<String> ids = new ArrayList<String>();
+    for (PlanEnvelope p : shortlisted) {
+      ids.add(p.plan_id);
+    }
+    assertTrue(shortlisted.size() <= 3);
+    assertTrue(ids.contains("P_FULL"));
+    assertFalse(ids.stream().anyMatch(BeamSearchAdvancedShortlistTest::isAdv),
+        "tight max_candidates must drop ADV after classic-first fill: " + ids);
+  }
+
+  private static boolean isAdv(String id) {
+    return id != null && (id.startsWith("P_XZ") || id.startsWith("P_TS") || id.startsWith("P_XZT"));
   }
 }

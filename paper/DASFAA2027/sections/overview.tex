@@ -1,0 +1,17 @@
+\section{Overview}\label{sec:overview}
+
+\KART{} supports natural-language trajectory queries by coordinating dataset indexing, bounded access-plan optimization, and deterministic validation. These components turn user requests into efficient HBase operations while preserving query semantics and complete result coverage. Figure~\ref{fig:kart-architecture} summarizes the end-to-end workflow.
+
+\begin{figure}[H]
+\centering
+\fbox{\begin{minipage}[c][4.2cm][c]{0.92\textwidth}
+\centering\large\bfseries Overall Architecture Figure Placeholder
+\end{minipage}}
+\caption{Overview of the \KART{} architecture.}\label{fig:kart-architecture}
+\end{figure}
+
+\noindent\textbf{1. Dataset preparation and optimizer configuration.} \KART{} normalizes each input dataset into trajectory chunks, builds the configured indexes, and derives statistics for plan costing. Historical workload evidence is also used offline to prepare scoped rewrite rules and cost patches.
+
+\noindent\textbf{2. Natural-language interpretation and plan generation.} Given a request and its dialogue context, the query interpreter produces a typed representation; a deterministic binder resolves its values against the catalog and selected dataset snapshot. The planner then searches a bounded space of legal access plans, and the compiler maps retained candidates to HBase scan tasks.
+
+\noindent\textbf{3. Plan validation and query execution.} Before execution, a deterministic validator checks that each compiled plan preserves query semantics, covers all possible matches, and uses safe HBase scan ranges. The executor runs an accepted plan, applies exact predicates to retrieved trajectory data, and returns the requested result.
